@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         PERMISSIONS
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- ① Đọc trạng thái cuộc gọi (RINGING / OFFHOOK / IDLE) -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <!-- ② Đọc CallLog để lấy số điện thoại và thời lượng thực tế -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+
+    <!-- ③ Quét file ghi âm: Android 9 trở xuống -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- ④ Quét file ghi âm: Android 13+ -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
+    <!-- ⑤ Chạy foreground service để lắng nghe cuộc gọi liên tục -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- ⑥ Kết nối internet để upload file lên server -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- ⑦ Hiển thị thông báo (WorkManager, Foreground Service notification) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ⑧ Hiển thị WarningActivity đè lên các ứng dụng khác từ background & Rung khẩn cấp -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:name=".TelesalesApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.TelesalesApp"
+        android:windowSoftInputMode="adjustResize">
+
+        <!-- ── Màn hình chính ─────────────────────────────────────────── -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- ── Màn hình cảnh báo toàn màn hình ─────────────────────────── -->
+        <activity
+            android:name=".WarningActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:theme="@style/Theme.TelesalesApp"
+            android:turnScreenOn="true" />
+
+        <!-- ── Receiver lắng nghe sự kiện thay đổi trạng thái cuộc gọi ──── -->
+        <receiver
+            android:name=".CallStateReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ── Foreground Service lắng nghe cuộc gọi ─────────────────── -->
+        <service
+            android:name=".TelesalesForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Lắng nghe trạng thái cuộc gọi để kiểm soát tuân thủ telesales" />
+        </service>
+
+    </application>
+
+</manifest>
