@@ -1,30 +1,25 @@
 package com.nhakhoaquangninh.telesales.ui.auth
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -37,7 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,10 +45,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.nhakhoaquangninh.telesales.core.Quadruple
-import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
 import com.nhakhoaquangninh.telesales.domain.common.Resource
+import com.nhakhoaquangninh.telesales.ui.components.ErrorDialog
 
 @Composable
 fun OtpVerifyScreen(
@@ -63,10 +58,18 @@ fun OtpVerifyScreen(
     modifier: Modifier = Modifier,
     viewModel: OtpVerifyViewModel = viewModel()
 ) {
-    val otpInput by viewModel.otpInput.collectAsState()
-    val otpError by viewModel.otpError.collectAsState()
-    val uiState by viewModel.uiState.collectAsState()
+    val otpInput by viewModel.otpInput.collectAsStateWithLifecycle()
+    val otpError by viewModel.otpError.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    // Tự động chuyển sang màn hình Main và xóa backstack khi xác thực thành công
+    LaunchedEffect(uiState) {
+        if (uiState is Resource.Success) {
+            viewModel.resetState()
+            onVerifySuccess()
+        }
+    }
 
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(
@@ -76,10 +79,20 @@ fun OtpVerifyScreen(
         )
     )
 
+    // Popup Error Dialog
+    if (uiState is Resource.Error) {
+        ErrorDialog(
+            error = uiState as Resource.Error,
+            onDismiss = { viewModel.resetState() }
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(backgroundGradient)
+            .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -180,16 +193,6 @@ fun OtpVerifyScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                if (otpError != null) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = otpError!!,
-                        color = Color(0xFFF87171),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.align(Alignment.Start)
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // ── Action Button: Confirm OTP ─────────────────────────────
@@ -225,11 +228,14 @@ fun OtpVerifyScreen(
                     } else {
                         Text(
                             text = "XÁC NHẬN OTP & ĐĂNG NHẬP",
-                            style = MaterialTheme.typography.titleMedium.copy(
+                            style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp
+                                fontSize = 14.sp
                             ),
-                            color = Color.White
+                            color = Color.White,
+                            maxLines = 1,
+                            softWrap = false,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -244,143 +250,7 @@ fun OtpVerifyScreen(
                 ) {
                     Text("Quay lại nhập ID khác")
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // ── Status Banner (Success / Error Categorized) ─────────────
-                AnimatedVisibility(
-                    visible = uiState is Resource.Success || uiState is Resource.Error,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    when (val state = uiState) {
-                        is Resource.Success -> {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFF065F46)),
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(14.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.CheckCircle,
-                                            contentDescription = null,
-                                            tint = Color(0xFF34D399)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = "Xác thực thành công!",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Bearer Token đã được lưu vĩnh viễn.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFFA7F3D0)
-                                    )
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Button(
-                                        onClick = onVerifySuccess,
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = Color(
-                                                0xFF10B981
-                                            )
-                                        ),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text("Vào Ứng Dụng Ngay")
-                                    }
-                                }
-                            }
-                        }
-
-                        is Resource.Error -> {
-                            val (cardColor, headerTitle, icon, badgeBgColor) = when (state.source) {
-                                ErrorSource.APP_CLIENT -> Quadruple(
-                                    Color(0xFF7C2D12),
-                                    "📱 LỖI ỨNG DỤNG (APP CLIENT)",
-                                    Icons.Default.PhoneAndroid,
-                                    Color(0xFFC2410C)
-                                )
-
-                                ErrorSource.NETWORK -> Quadruple(
-                                    Color(0xFF713F12),
-                                    "🌐 LỖI KẾT NỐI MẠNG (NETWORK)",
-                                    Icons.Default.WifiOff,
-                                    Color(0xFFD97706)
-                                )
-
-                                ErrorSource.SERVER -> Quadruple(
-                                    Color(0xFF7F1D1D),
-                                    "🖥️ LỖI TỪ MÁY CHỦ (SERVER ${state.code?.let { "HTTP $it" } ?: ""})",
-                                    Icons.Default.CloudOff,
-                                    Color(0xFFDC2626)
-                                )
-                            }
-
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = cardColor),
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.padding(14.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(badgeBgColor, RoundedCornerShape(6.dp))
-                                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    imageVector = icon,
-                                                    contentDescription = null,
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = headerTitle,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color.White
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Text(
-                                        text = state.message,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = Color(0xFFFEF2F2),
-                                        fontWeight = FontWeight.Medium
-                                    )
-
-                                    if (!state.rawDetails.isNull_or_empty()) {
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "Chi tiết: ${state.rawDetails}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color(0xFFFCA5A5)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        else -> {}
-                    }
-                }
             }
         }
     }
 }
-
-private fun String?.isNull_or_empty(): Boolean = this.isNullOrEmpty()

@@ -51,17 +51,19 @@ class AuthRepositoryImpl(
 
         val code = response.code()
         return if (response.isSuccessful && code == 200) {
-            val body = response.body()
-            val token = body?.token
+            val baseResp = response.body()
+            val data = baseResp?.data
+            val token = data?.token
+            val user = data?.user
             if (!token.isNullOrEmpty()) {
                 val session = UserSession(
                     userId = userId,
                     token = token,
-                    userName = body.user?.name,
-                    email = body.user?.email
+                    userName = user?.name,
+                    email = user?.email
                 )
                 tokenManager.saveSession(session)
-                Resource.Success(data = session, message = body.message)
+                Resource.Success(data = session, message = baseResp.message)
             } else {
                 Resource.Error(
                     message = "Server không trả về Token xác thực!",

@@ -1,9 +1,9 @@
 package com.nhakhoaquangninh.telesales.data.remote
 
+import com.nhakhoaquangninh.telesales.data.remote.dto.BaseResponse
 import com.nhakhoaquangninh.telesales.data.remote.dto.RequestOtpRequest
-import com.nhakhoaquangninh.telesales.data.remote.dto.RequestOtpResponse
+import com.nhakhoaquangninh.telesales.data.remote.dto.VerifyOtpData
 import com.nhakhoaquangninh.telesales.data.remote.dto.VerifyOtpRequest
-import com.nhakhoaquangninh.telesales.data.remote.dto.VerifyOtpResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.ResponseBody
@@ -20,13 +20,13 @@ interface ApiService {
     suspend fun requestOtp(
         @Header("X-Api-Key") apiKey: String,
         @Body request: RequestOtpRequest
-    ): Response<RequestOtpResponse>
+    ): Response<BaseResponse<Unit>>
 
     @POST("auth/verify-otp")
     suspend fun verifyOtp(
         @Header("X-Api-Key") apiKey: String,
         @Body request: VerifyOtpRequest
-    ): Response<VerifyOtpResponse>
+    ): Response<BaseResponse<VerifyOtpData>>
 
     @Multipart
     @POST("call-records")

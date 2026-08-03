@@ -7,13 +7,6 @@ data class RequestOtpRequest(
     val userId: Int
 )
 
-data class RequestOtpResponse(
-    @SerializedName("message")
-    val message: String? = null,
-    @SerializedName("status")
-    val status: Int? = null
-)
-
 data class VerifyOtpRequest(
     @SerializedName("user_id")
     val userId: Int,
@@ -21,9 +14,7 @@ data class VerifyOtpRequest(
     val otp: String
 )
 
-data class VerifyOtpResponse(
-    @SerializedName("message")
-    val message: String? = null,
+data class VerifyOtpData(
     @SerializedName("token")
     val token: String? = null,
     @SerializedName("user")
@@ -36,12 +27,17 @@ data class UserInfoDto(
     @SerializedName("name")
     val name: String? = null,
     @SerializedName("email")
-    val email: String? = null
+    val email: String? = null,
+    @SerializedName("phone")
+    val phone: String? = null,
+    @SerializedName("department")
+    val department: String? = null,
+    @SerializedName("branch")
+    val branch: String? = null
 )
 
 /**
  * Generic API error body parsed from JSON.
- * Server is expected to return { "message": "...", ... } for error responses.
  */
 data class ApiErrorBody(
     @SerializedName("message")

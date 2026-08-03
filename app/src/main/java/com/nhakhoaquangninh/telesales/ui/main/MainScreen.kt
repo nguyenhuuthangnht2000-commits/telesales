@@ -21,7 +21,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -42,8 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation3.runtime.NavKey
-import com.nhakhoaquangninh.telesales.VoIPCall
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -52,7 +49,6 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    onItemClick: (NavKey) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainScreenViewModel = viewModel()
 ) {
@@ -187,12 +183,7 @@ fun MainScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                actions = {
-                    IconButton(onClick = { onItemClick(VoIPCall) }) {
-                        Text(text = "📞", style = MaterialTheme.typography.titleLarge)
-                    }
-                }
+                )
             )
         },
         floatingActionButton = {
@@ -260,7 +251,7 @@ fun MainScreen(
                             onDeleteClick = {
                                 if (currentlyPlayingPath == file.absolutePath) {
                                     mediaPlayerRef.value?.apply {
-                                        if (isPlaying) stop()
+                                        if (this.isPlaying) stop()
                                         reset()
                                         release()
                                     }
@@ -268,7 +259,8 @@ fun MainScreen(
                                     currentlyPlayingPath = null
                                 }
                                 viewModel.deleteFile(file)
-                            }
+                            },
+                            modifier = Modifier.animateItem()
                         )
                     }
                 }
@@ -282,10 +274,11 @@ fun AudioFileItem(
     file: File,
     isPlaying: Boolean,
     onPlayClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
@@ -316,7 +309,7 @@ fun AudioFileItem(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2
                 )
-                val sdf = SimpleDateFormat("HH:mm - dd/MM/yyyy", Locale.getDefault())
+                val sdf = remember { SimpleDateFormat("HH:mm - dd/MM/yyyy", Locale.getDefault()) }
                 Text(
                     text = "${sdf.format(Date(file.lastModified()))}  •  ${file.length() / 1024} KB",
                     style = MaterialTheme.typography.bodySmall,
