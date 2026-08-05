@@ -74,6 +74,11 @@ Tất cả các API gửi lên Server backend đều tuân thủ các quy tắc 
    - Không tự ý thêm Hilt/Koin nếu chưa có sự đồng ý của Team Leader. Tất cả dependency injection hiện tại được đăng ký gọn nhẹ qua `ServiceLocator.kt`.
 5. **Xử lý Lỗi trên UI:**
    - Sử dụng `ErrorDialog` trong `ui/components/ErrorDialog.kt` để hiển thị thông báo lỗi đồng nhất cho người dùng.
+6. **Ngôn ngữ Giao diện UI (100% Tiếng Việt):**
+   - Tất cả văn bản hiển thị trên giao diện người dùng (tiêu đề, nhãn input, placeholder, nút bấm, thông báo lỗi, dialog, helper text) BẮT BUỘC phải sử dụng **Tiếng Việt**, chuẩn hóa theo ngữ cảnh doanh nghiệp Việt Nam (Nha Khoa Quảng Ninh). Tuyệt đối không dùng Tiếng Anh cho các văn bản hiển thị tới người dùng cuối.
+7. **Quản lý Màu sắc Tập trung (Tuyệt đối KHÔNG hardcode mã màu trên UI):**
+   - Tất cả mã màu (Color hex) và Design Tokens BẮT BUỘC phải được khai báo tập trung tại tệp `com.nhakhoaquangninh.telesales.theme.Color.kt` (hoặc `MaterialTheme.colorScheme` / `res/values/colors.xml`).
+   - Tuyệt đối KHÔNG hardcode trực tiếp mã màu (ví dụ: `Color(0xFF005C55)`) hoặc tạo các biến màu private riêng lẻ trong từng file Composable màn hình.
 
 ---
 

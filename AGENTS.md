@@ -74,6 +74,18 @@ Tất cả các API gửi lên Server backend đều tuân thủ các quy tắc 
    - Không tự ý thêm Hilt/Koin nếu chưa có sự đồng ý của Team Leader. Tất cả dependency injection hiện tại được đăng ký gọn nhẹ qua `ServiceLocator.kt`.
 5. **Xử lý Lỗi trên UI:**
    - Sử dụng `ErrorDialog` trong `ui/components/ErrorDialog.kt` để hiển thị thông báo lỗi đồng nhất cho người dùng.
+6. **Ngôn ngữ Giao diện UI (100% Tiếng Việt):**
+   - Tất cả văn bản hiển thị trên giao diện người dùng (tiêu đề, nhãn input, placeholder, nút bấm, thông báo lỗi, dialog, helper text) BẮT BUỘC phải sử dụng **Tiếng Việt**, chuẩn hóa theo ngữ cảnh doanh nghiệp Việt Nam (Nha Khoa Quảng Ninh). Tuyệt đối không dùng Tiếng Anh cho các văn bản hiển thị tới người dùng cuối.
+7. **Quản lý Màu sắc Tập trung (Tuyệt đối KHÔNG hardcode mã màu trên UI):**
+   - Tất cả mã màu (Color hex) và Design Tokens BẮT BUỘC phải được khai báo tập trung tại tệp `com.nhakhoaquangninh.telesales.theme.Color.kt` (hoặc `MaterialTheme.colorScheme` / `res/values/colors.xml`).
+   - Tuyệt đối KHÔNG hardcode trực tiếp mã màu (ví dụ: `Color(0xFF005C55)`) hoặc tạo các biến màu private riêng lẻ trong từng file Composable màn hình.
+8. **Tuyệt đối KHÔNG Hardcode String và Dimension (dp, sp):**
+   - **String:** Tất cả các chuỗi văn bản (text) hiển thị trên UI phải được khai báo trong `res/values/strings.xml` và gọi qua `stringResource(id = R.string.xxx)`.
+   - **Dimension:** Tất cả các kích thước padding, margin, size (dp), cỡ chữ (sp) phải được khai báo tập trung. Đối với Compose, khuyến khích tạo file `theme/Dimens.kt` (chứa các biến `val PaddingSmall = 8.dp`) hoặc dùng `dimensionResource` thay vì gõ trực tiếp `16.dp` hay `14.sp` vào code.
+9. **Mobile-First UI Adaptation (Chuyển đổi UI Web sang Mobile):**
+   - Khi tham khảo các bản thiết kế HTML/Web (ví dụ `code.html`), BẮT BUỘC phải chủ động chuyển đổi sang bố cục chuẩn của Mobile App.
+   - Các thành phần dàn hàng ngang (Row/Grid) trên Web phải được chuyển thành hàng dọc (Column) trên Mobile để tránh bị tràn màn hình hoặc khó nhìn.
+   - Kích thước chữ, nút bấm phải tuân thủ hướng dẫn thiết kế cảm ứng của Material 3.
 
 ---
 

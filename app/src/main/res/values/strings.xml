@@ -1,3 +1,65 @@
 <resources>
     <string name="app_name">TelesalesApp</string>
+    <!-- HomeScreenContent Strings -->
+    <string name="service_title">Dịch vụ Ghi âm Cuộc gọi</string>
+    <string name="service_active">HOẠT ĐỘNG</string>
+    <string name="service_inactive">ĐÃ TẮT</string>
+    <string name="service_desc">Dịch vụ liên tục theo dõi và tự động ghi âm các cuộc gọi GSM để đảm bảo tuân thủ quy trình.</string>
+    <string name="today_stats">Thống kê hôm nay</string>
+    <string name="total_calls">Tổng cuộc gọi</string>
+    <string name="synced_calls">Đã đồng bộ</string>
+    <string name="pending_calls">Chờ tải lên</string>
+    <string name="sync_now">Đồng bộ</string>
+    <string name="recent_calls">Cuộc gọi gần đây</string>
+    <string name="recent_calls_empty_desc">Lịch sử cuộc gọi sẽ hiển thị tại đây khi trong ca làm việc.</string>
+    <string name="sys_permissions_status">Trạng thái Quyền Hệ thống</string>
+    <string name="perm_record_audio">Ghi âm cuộc gọi (RECORD_AUDIO)</string>
+    <string name="perm_read_call_log">Nhật ký cuộc gọi (READ_CALL_LOG)</string>
+    <string name="battery_opt">Tối ưu hóa Pin</string>
+    <string name="battery_opt_ignored">Đã bỏ qua (Tốt)</string>
+    <string name="battery_opt_needed">Cần tắt tối ưu pin để không bị dừng ngầm</string>
+    <string name="fix_issue">Khắc phục</string>
+    <string name="compliance_note_title">Quy định Bảo mật &amp; Tuân thủ</string>
+    <string name="compliance_note_desc">Vui lòng tuân thủ quy trình giao tiếp với khách hàng của Nha Khoa Quảng Ninh. File ghi âm được mã hóa bảo mật khi đồng bộ lên Server.</string>
+    <string name="perm_granted">Đã cấp</string>
+    <string name="perm_denied">Chưa cấp</string>
+
+    <!-- MainScreen Strings -->
+    <string name="avatar_desc">Avatar</string>
+    <string name="app_title">DentalConnect</string>
+    <string name="active_shift">Ca hoạt động</string>
+    <string name="no_notifications">🔔 Không có thông báo mới</string>
+    <string name="notifications_desc">Thông báo</string>
+    <string name="tab_home">Trang chủ</string>
+    <string name="tab_history">Lịch sử</string>
+    <string name="tab_settings">Cài đặt</string>
+    <string name="sync_started">🔄 Đã kích hoạt đồng bộ dữ liệu...</string>
+    <string name="sync_error">Lỗi đồng bộ: %s</string>
+    <string name="no_audio_files">Chưa phát hiện file ghi âm cuộc gọi nào!</string>
+    <string name="compliance_guide_title">📋 Hướng dẫn tuân thủ:</string>
+    <string name="compliance_guide_steps">1. Mở ứng dụng Điện thoại trên máy\n2. Vào Cài đặt (⚙️) ➔ Ghi âm cuộc gọi\n3. Bật tính năng \'Tự động ghi âm cuộc gọi\'\n4. Thực hiện cuộc gọi để ứng dụng ghi nhận</string>
+    <string name="now_playing">⏵ Đang phát...</string>
+    <string name="btn_stop">■ Stop</string>
+    <string name="btn_play">▶ Play</string>
+
+    <!-- Settings Strings -->
+    <string name="settings_employee_info">👤 Thông tin Nhân viên Telesales</string>
+    <string name="settings_user_id_label">Mã nhân viên (User ID):</string>
+    <string name="settings_na">N/A</string>
+    <string name="settings_name_label">Họ và tên:</string>
+    <string name="settings_default_name">Nhân viên Telesales</string>
+    <string name="settings_email_label">Email quản lý:</string>
+    <string name="settings_not_updated">chưa cập nhật</string>
+    <string name="settings_server_conn">🌐 Kết nối Server Backend</string>
+    <string name="settings_rest_api_label">Máy chủ REST API:</string>
+    <string name="settings_server_name">Hệ thống Quảng Ninh</string>
+    <string name="settings_token_status_label">Trạng thái Token:</string>
+    <string name="settings_token_valid">✅ Đã xác thực Bearer</string>
+    <string name="settings_auto_sync_label">Tự động đồng bộ:</string>
+    <string name="settings_auto_sync_on">Bật (WorkManager)</string>
+    <string name="settings_app_info">📱 Thông tin Ứng dụng</string>
+    <string name="settings_app_label">Ứng dụng:</string>
+    <string name="settings_app_version">Telesales App v2.0</string>
+    <string name="settings_dev_label">Đơn vị phát triển:</string>
+    <string name="settings_dev_name">Nha Khoa Quảng Ninh</string>
 </resources>
