@@ -1,5 +1,7 @@
 package com.nhakhoaquangninh.telesales.data.repository
 
+import android.util.Log
+import android.webkit.MimeTypeMap
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.data.remote.ApiService
 import com.nhakhoaquangninh.telesales.data.remote.RetrofitClient
@@ -29,7 +31,11 @@ class CallRecordRepositoryImpl(
         }
 
         val file = File(metadata.filePath)
-        val requestFile = file.asRequestBody("audio/*".toMediaTypeOrNull())
+        // 1. Lấy đúng MIME Type thay vì fix cứng "audio/*"
+        val extension = file.extension.lowercase()
+        val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "application/octet-stream"
+        Log.d("UploadAudio", "Preparing upload - File: ${file.name} | Extension: $extension | MimeType: $mimeType")
+        val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
         val bodyPart = MultipartBody.Part.createFormData("recording", file.name, requestFile)
         val textMediaType = "text/plain".toMediaTypeOrNull()
 

@@ -9,6 +9,7 @@ import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
 import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
 import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
+import java.io.File
 
 class UploadAudioWorker(
     context: Context,
@@ -49,13 +50,11 @@ class UploadAudioWorker(
         )
 
         Log.d(TAG, "🚀 Bắt đầu upload file: $filePath")
-        val fileName = java.io.File(filePath).name
+        val fileName = File(filePath).name
         val syncStatusManager = SyncStatusManager.getInstance(applicationContext)
         syncStatusManager.setStatus(fileName, SyncStatus.UPLOADING)
 
-        val result = uploadUseCase(metadata)
-
-        return when (result) {
+        return when (val result = uploadUseCase(metadata)) {
             is Resource.Success -> {
                 Log.d(TAG, "✅ Upload thành công: ${result.message}")
                 syncStatusManager.setStatus(fileName, SyncStatus.SYNCED)

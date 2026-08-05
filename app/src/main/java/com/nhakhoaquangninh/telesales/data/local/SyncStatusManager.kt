@@ -2,6 +2,7 @@ package com.nhakhoaquangninh.telesales.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 enum class SyncStatus {
     PENDING, UPLOADING, SYNCED, FAILED
@@ -24,7 +25,7 @@ class SyncStatusManager private constructor(context: Context) {
     }
 
     fun setStatus(fileName: String, status: SyncStatus) {
-        prefs.edit().putString(fileName, status.name).apply()
+        prefs.edit { putString(fileName, status.name) }
     }
 
     fun getStatus(fileName: String): SyncStatus {
@@ -37,6 +38,6 @@ class SyncStatusManager private constructor(context: Context) {
     }
 
     fun removeStatus(fileName: String) {
-        prefs.edit().remove(fileName).apply()
+        prefs.edit { remove(fileName) }
     }
 }
