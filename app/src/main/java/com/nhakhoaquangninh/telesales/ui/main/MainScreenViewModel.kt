@@ -6,13 +6,20 @@ import android.provider.MediaStore
 import android.util.Log
 import com.nhakhoaquangninh.telesales.CallStateReceiver
 import com.nhakhoaquangninh.telesales.core.BaseViewModel
+import com.nhakhoaquangninh.telesales.data.local.SyncStatus
+import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 
+data class AudioItemState(
+    val file: File,
+    val status: SyncStatus
+)
+
 class MainScreenViewModel : BaseViewModel() {
-    private val _audioFiles = MutableStateFlow<List<File>>(emptyList())
-    val audioFiles: StateFlow<List<File>> = _audioFiles
+    private val _audioFiles = MutableStateFlow<List<AudioItemState>>(emptyList())
+    val audioFiles: StateFlow<List<AudioItemState>> = _audioFiles
 
     companion object {
         private const val TAG = "MainScreenViewModel"
@@ -76,9 +83,14 @@ class MainScreenViewModel : BaseViewModel() {
         val sortedList = foundFiles
             .distinctBy { it.absolutePath }
             .sortedByDescending { it.lastModified() }
+            
+        val syncManager = SyncStatusManager.getInstance(context)
+        val stateList = sortedList.map { file ->
+            AudioItemState(file, syncManager.getStatus(file.name))
+        }
 
-        Log.d(TAG, "Tổng cộng tìm thấy ${sortedList.size} file ghi âm cuộc gọi hợp lệ")
-        _audioFiles.value = sortedList
+        Log.d(TAG, "Tổng cộng tìm thấy ${stateList.size} file ghi âm cuộc gọi hợp lệ")
+        _audioFiles.value = stateList
     }
 
     private fun isCallRecording(file: File, deviceDirs: List<String>): Boolean {
@@ -109,7 +121,7 @@ class MainScreenViewModel : BaseViewModel() {
     fun deleteFile(file: File) {
         if (file.exists() && file.delete()) {
             val currentList = _audioFiles.value.toMutableList()
-            currentList.remove(file)
+            currentList.removeAll { it.file.absolutePath == file.absolutePath }
             _audioFiles.value = currentList
         }
     }

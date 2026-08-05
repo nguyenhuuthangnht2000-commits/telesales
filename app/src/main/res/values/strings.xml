@@ -24,6 +24,15 @@
     <string name="perm_granted">Đã cấp</string>
     <string name="perm_denied">Chưa cấp</string>
 
+    <!-- History Screen Strings -->
+    <string name="history_title">Lịch sử cuộc gọi</string>
+    <string name="history_desc">Xem lại và quản lý cuộc gọi gần đây.</string>
+    <string name="tab_all_calls">Tất cả</string>
+    <string name="sync_status_pending">Chờ tải lên</string>
+    <string name="sync_status_synced">Đã đồng bộ</string>
+    <string name="sync_status_failed">Lỗi</string>
+    <string name="manual_sync_all">Đồng bộ tất cả</string>
+
     <!-- MainScreen Strings -->
     <string name="avatar_desc">Avatar</string>
     <string name="app_title">DentalConnect</string>

@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.nhakhoaquangninh.telesales.data.local.SyncStatus
+import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
 import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
 import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
@@ -47,16 +49,22 @@ class UploadAudioWorker(
         )
 
         Log.d(TAG, "🚀 Bắt đầu upload file: $filePath")
+        val fileName = java.io.File(filePath).name
+        val syncStatusManager = SyncStatusManager.getInstance(applicationContext)
+        syncStatusManager.setStatus(fileName, SyncStatus.UPLOADING)
+
         val result = uploadUseCase(metadata)
 
         return when (result) {
             is Resource.Success -> {
                 Log.d(TAG, "✅ Upload thành công: ${result.message}")
+                syncStatusManager.setStatus(fileName, SyncStatus.SYNCED)
                 Result.success()
             }
 
             is Resource.Error -> {
                 Log.e(TAG, "❌ Upload thất bại: ${result.message}")
+                syncStatusManager.setStatus(fileName, SyncStatus.FAILED)
                 if (result.code in 500..599 || result.source == ErrorSource.NETWORK) {
                     Result.retry()
                 } else {
@@ -64,7 +72,10 @@ class UploadAudioWorker(
                 }
             }
 
-            else -> Result.failure()
+            else -> {
+                syncStatusManager.setStatus(fileName, SyncStatus.FAILED)
+                Result.failure()
+            }
         }
     }
 }

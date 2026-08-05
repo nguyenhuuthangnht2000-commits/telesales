@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -92,6 +93,7 @@ import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
 import com.nhakhoaquangninh.telesales.theme.OutlineVariant
+import com.nhakhoaquangninh.telesales.ui.main.components.HistoryScreenContent
 import com.nhakhoaquangninh.telesales.ui.main.components.HomeScreenContent
 import java.io.File
 import java.text.SimpleDateFormat
@@ -350,10 +352,22 @@ fun MainScreen(
         },
         floatingActionButton = {
             if (selectedTab == 1) {
-                FloatingActionButton(onClick = {
-                    viewModel.loadFiles(context)
-                }) {
-                    Text(text = "🔄", style = MaterialTheme.typography.titleLarge)
+                FloatingActionButton(
+                    onClick = {
+                        try {
+                            val workManager = WorkManager.getInstance(context)
+                            val request = OneTimeWorkRequestBuilder<UploadAudioWorker>().build()
+                            workManager.enqueue(request)
+                            Toast.makeText(context, context.getString(R.string.sync_started), Toast.LENGTH_SHORT).show()
+                            viewModel.loadFiles(context)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, context.getString(R.string.sync_error, e.message), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    containerColor = PrimaryTeal,
+                    contentColor = Color.White
+                ) {
+                    Icon(Icons.Default.Sync, contentDescription = stringResource(R.string.manual_sync_all))
                 }
             }
         }
@@ -414,72 +428,11 @@ fun MainScreen(
                 }
 
                 1 -> {
-                    if (audioFiles.isEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(horizontal = Dimens.PaddingLarge),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("⚠️", style = MaterialTheme.typography.displayMedium)
-                            Spacer(modifier = Modifier.height(Dimens.CornerRadiusMedium))
-                            Text(
-                                text = stringResource(R.string.no_audio_files),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                            Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.padding(Dimens.PaddingMedium)) {
-                                    Text(
-                                        text = stringResource(R.string.compliance_guide_title),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        text = stringResource(R.string.compliance_guide_steps),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(vertical = Dimens.PaddingSmall)
-                        ) {
-                            items(audioFiles, key = { it.absolutePath }) { file ->
-                                val isPlaying = currentlyPlayingPath == file.absolutePath
-                                AudioFileItem(
-                                    file = file,
-                                    isPlaying = isPlaying,
-                                    onPlayClick = { playOrStop(file.absolutePath) },
-                                    onDeleteClick = {
-                                        if (currentlyPlayingPath == file.absolutePath) {
-                                            mediaPlayerRef.value?.apply {
-                                                if (this.isPlaying) stop()
-                                                reset()
-                                                release()
-                                            }
-                                            mediaPlayerRef.value = null
-                                            currentlyPlayingPath = null
-                                        }
-                                        viewModel.deleteFile(file)
-                                    },
-                                    modifier = Modifier.animateItem()
-                                )
-                            }
-                        }
-                    }
+                    HistoryScreenContent(
+                        audioFiles = audioFiles,
+                        currentlyPlayingPath = currentlyPlayingPath,
+                        onPlayClick = { filePath -> playOrStop(filePath) }
+                    )
                 }
 
                 2 -> {
@@ -622,78 +575,4 @@ fun SettingsContent(
     }
 }
 
-@Composable
-fun AudioFileItem(
-    file: File,
-    isPlaying: Boolean,
-    onPlayClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = Dimens.PaddingMedium, vertical = 6.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isPlaying)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.CornerRadiusMedium),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Icon micrô bên trái
-            Text(
-                text = if (isPlaying) "🔊" else "🎙️",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(end = Dimens.CornerRadiusMedium)
-            )
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = file.nameWithoutExtension,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2
-                )
-                val sdf = remember { SimpleDateFormat("HH:mm - dd/MM/yyyy", Locale.getDefault()) }
-                Text(
-                    text = "${sdf.format(Date(file.lastModified()))}  •  ${file.length() / 1024} KB",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (isPlaying) {
-                    Text(
-                        text = stringResource(R.string.now_playing),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            // Nút Play / Stop
-            FilledTonalButton(
-                onClick = onPlayClick,
-                contentPadding = PaddingValues(horizontal = Dimens.CornerRadiusMedium, vertical = Dimens.PaddingExtraSmall)
-            ) {
-                Text(if (isPlaying) stringResource(R.string.btn_stop) else stringResource(R.string.btn_play))
-            }
-
-            Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-
-            // Nút Xóa
-            OutlinedButton(
-                onClick = onDeleteClick,
-                contentPadding = PaddingValues(horizontal = Dimens.PaddingSmall, vertical = Dimens.PaddingExtraSmall)
-            ) {
-                Text("🗑")
-            }
-        }
-    }
-}
+// AudioFileItem has been replaced by HistoryScreenContent components
