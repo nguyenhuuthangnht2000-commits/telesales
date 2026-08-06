@@ -2,49 +2,36 @@ package com.nhakhoaquangninh.telesales.ui.main
 
 import android.Manifest
 import android.app.ActivityManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
-import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,7 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -75,34 +61,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.nhakhoaquangninh.telesales.R
 import com.nhakhoaquangninh.telesales.TelesalesForegroundService
-import com.nhakhoaquangninh.telesales.UploadAudioWorker
+import com.nhakhoaquangninh.telesales.data.local.SyncStatus
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
-import com.nhakhoaquangninh.telesales.theme.ActiveEmerald
 import com.nhakhoaquangninh.telesales.theme.BackgroundLight
 import com.nhakhoaquangninh.telesales.theme.Dimens
+import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
+import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
+import com.nhakhoaquangninh.telesales.theme.OutlineVariant
 import com.nhakhoaquangninh.telesales.theme.PrimaryTeal
 import com.nhakhoaquangninh.telesales.theme.SecondaryContainer
 import com.nhakhoaquangninh.telesales.theme.SurfaceContainer
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
-import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
-import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
-import com.nhakhoaquangninh.telesales.theme.OutlineVariant
 import com.nhakhoaquangninh.telesales.ui.main.components.HistoryScreenContent
 import com.nhakhoaquangninh.telesales.ui.main.components.HomeScreenContent
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.nhakhoaquangninh.telesales.ui.main.components.SettingsScreenContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
+    onLogout: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MainScreenViewModel = viewModel()
 ) {
@@ -194,16 +178,16 @@ fun MainScreen(
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.loadFiles(context)
                 isServiceRunning = isServiceRunningCheck()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
 
-        val receiver = object : android.content.BroadcastReceiver() {
-            override fun onReceive(ctx: Context?, intent: android.content.Intent?) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
                 viewModel.loadFiles(context)
                 isServiceRunning = isServiceRunningCheck()
             }
@@ -254,7 +238,10 @@ fun MainScreen(
                             .size(Dimens.IconSizeExtraLarge),
                         shape = CircleShape,
                         color = SurfaceLowest,
-                        border = BorderStroke(Dimens.BorderThickness, OutlineVariant.copy(alpha = 0.5f))
+                        border = BorderStroke(
+                            Dimens.BorderThickness,
+                            OutlineVariant.copy(alpha = 0.5f)
+                        )
                     ) {
                         Icon(
                             imageVector = Icons.Default.Person,
@@ -283,7 +270,11 @@ fun MainScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            Toast.makeText(context, context.getString(R.string.no_notifications), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.no_notifications),
+                                Toast.LENGTH_SHORT
+                            ).show()
                         },
                         modifier = Modifier.padding(end = Dimens.PaddingMedium)
                     ) {
@@ -318,7 +309,12 @@ fun MainScreen(
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.tab_home)) },
+                    icon = {
+                        Icon(
+                            Icons.Default.Home,
+                            contentDescription = stringResource(R.string.tab_home)
+                        )
+                    },
                     label = { Text(stringResource(R.string.tab_home)) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = PrimaryTeal,
@@ -329,7 +325,12 @@ fun MainScreen(
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.History, contentDescription = stringResource(R.string.tab_history)) },
+                    icon = {
+                        Icon(
+                            Icons.Default.History,
+                            contentDescription = stringResource(R.string.tab_history)
+                        )
+                    },
                     label = { Text(stringResource(R.string.tab_history)) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = PrimaryTeal,
@@ -340,7 +341,12 @@ fun MainScreen(
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.tab_settings)) },
+                    icon = {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.tab_settings)
+                        )
+                    },
                     label = { Text(stringResource(R.string.tab_settings)) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = PrimaryTeal,
@@ -354,20 +360,27 @@ fun MainScreen(
             if (selectedTab == 1) {
                 FloatingActionButton(
                     onClick = {
-                        try {
-                            val workManager = WorkManager.getInstance(context)
-                            val request = OneTimeWorkRequestBuilder<UploadAudioWorker>().build()
-                            workManager.enqueue(request)
-                            Toast.makeText(context, context.getString(R.string.sync_started), Toast.LENGTH_SHORT).show()
-                            viewModel.loadFiles(context)
-                        } catch (e: Exception) {
-                            Toast.makeText(context, context.getString(R.string.sync_error, e.message), Toast.LENGTH_SHORT).show()
+                        val filesToSync =
+                            audioFiles.filter { it.status == SyncStatus.PENDING || it.status == SyncStatus.FAILED }
+                        if (filesToSync.isEmpty()) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.msg_no_file_to_sync),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            viewModel.syncFiles(context, filesToSync) { msg, success ->
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            }
                         }
                     },
                     containerColor = PrimaryTeal,
                     contentColor = Color.White
                 ) {
-                    Icon(Icons.Default.Sync, contentDescription = stringResource(R.string.manual_sync_all))
+                    Icon(
+                        Icons.Default.Sync,
+                        contentDescription = stringResource(R.string.manual_sync_all)
+                    )
                 }
             }
         }
@@ -401,24 +414,31 @@ fun MainScreen(
                             isServiceRunning = enable
                         },
                         onSyncNowClick = {
-                            try {
-                                val workManager = WorkManager.getInstance(context)
-                                val request = OneTimeWorkRequestBuilder<UploadAudioWorker>().build()
-                                workManager.enqueue(request)
-                                Toast.makeText(context, context.getString(R.string.sync_started), Toast.LENGTH_SHORT).show()
-                            } catch (e: Exception) {
-                                Toast.makeText(context, context.getString(R.string.sync_error, e.message), Toast.LENGTH_SHORT).show()
+                            val filesToSync =
+                                audioFiles.filter { it.status == SyncStatus.PENDING || it.status == SyncStatus.FAILED }
+                            if (filesToSync.isEmpty()) {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.msg_no_file_to_sync),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                viewModel.syncFiles(context, filesToSync) { msg, success ->
+                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                }
                             }
                         },
                         onFixBatteryOptClick = {
                             try {
-                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                    data = Uri.parse("package:${context.packageName}")
-                                }
+                                val intent =
+                                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                        data = "package:${context.packageName}".toUri()
+                                    }
                                 context.startActivity(intent)
                             } catch (e: Exception) {
                                 try {
-                                    val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                    val fallbackIntent =
+                                        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                                     context.startActivity(fallbackIntent)
                                 } catch (_: Exception) {
                                 }
@@ -431,148 +451,37 @@ fun MainScreen(
                     HistoryScreenContent(
                         audioFiles = audioFiles,
                         currentlyPlayingPath = currentlyPlayingPath,
-                        onPlayClick = { filePath -> playOrStop(filePath) }
+                        onPlayClick = { filePath -> playOrStop(filePath) },
+                        onSyncClick = { item ->
+                            viewModel.syncFiles(context, listOf(item)) { msg, success ->
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            }
+                        }
                     )
                 }
 
                 2 -> {
-                    SettingsContent(context = context)
+                    SettingsScreenContent(
+                        context = context,
+                        onLogoutClick = onLogout
+                    )
+                }
+            }
+
+            val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
+            if (isSyncing) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable(enabled = false) {},
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        color = PrimaryTeal
+                    )
                 }
             }
         }
     }
 }
-
-@Composable
-fun SettingsContent(
-    context: Context,
-    modifier: Modifier = Modifier
-) {
-    val session = remember { TokenManager.getInstance(context).getSession() }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(BackgroundLight)
-            .verticalScroll(rememberScrollState())
-            .padding(Dimens.PaddingMedium),
-        verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium)
-    ) {
-        // Card thông tin cá nhân nhân viên
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(Dimens.CornerRadiusLarge),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = Dimens.ElevationSmall)
-        ) {
-            Column(modifier = Modifier.padding(Dimens.PaddingMedium)) {
-                Text(
-                    text = stringResource(R.string.settings_employee_info),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryTeal
-                )
-                Spacer(modifier = Modifier.height(Dimens.CornerRadiusMedium))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.settings_user_id_label), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                    Text("${session?.userId ?: stringResource(R.string.settings_na)}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.settings_name_label), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                    Text(session?.userName ?: stringResource(R.string.settings_default_name), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.settings_email_label), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                    Text(session?.email ?: stringResource(R.string.settings_not_updated), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-
-        // Card kết nối máy chủ
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(Dimens.CornerRadiusLarge),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = Dimens.ElevationSmall)
-        ) {
-            Column(modifier = Modifier.padding(Dimens.PaddingMedium)) {
-                Text(
-                    text = stringResource(R.string.settings_server_conn),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryTeal
-                )
-                Spacer(modifier = Modifier.height(Dimens.CornerRadiusMedium))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.settings_rest_api_label), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                    Text(stringResource(R.string.settings_server_name), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.settings_token_status_label), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                    Text(stringResource(R.string.settings_token_valid), style = MaterialTheme.typography.bodyMedium, color = ActiveEmerald, fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.settings_auto_sync_label), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                    Text(stringResource(R.string.settings_auto_sync_on), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-
-        // Card thông tin ứng dụng
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(Dimens.CornerRadiusLarge),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = Dimens.ElevationSmall)
-        ) {
-            Column(modifier = Modifier.padding(Dimens.PaddingMedium)) {
-                Text(
-                    text = stringResource(R.string.settings_app_info),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryTeal
-                )
-                Spacer(modifier = Modifier.height(Dimens.CornerRadiusMedium))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.settings_app_label), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                    Text(stringResource(R.string.settings_app_version), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.settings_dev_label), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                    Text(stringResource(R.string.settings_dev_name), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-    }
-}
-
-// AudioFileItem has been replaced by HistoryScreenContent components

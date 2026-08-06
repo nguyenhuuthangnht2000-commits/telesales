@@ -6,13 +6,15 @@ import com.nhakhoaquangninh.telesales.data.remote.RetrofitClient
 import com.nhakhoaquangninh.telesales.data.remote.dto.RequestOtpRequest
 import com.nhakhoaquangninh.telesales.data.remote.dto.VerifyOtpRequest
 import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
+import com.nhakhoaquangninh.telesales.domain.common.MessageProvider
 import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.UserSession
 import com.nhakhoaquangninh.telesales.domain.repository.AuthRepository
 
 class AuthRepositoryImpl(
     private val apiService: ApiService = RetrofitClient.apiService,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val messageProvider: MessageProvider
 ) : AuthRepository {
 
     override suspend fun requestOtp(userId: Int): Resource<String> {
@@ -23,15 +25,15 @@ class AuthRepositoryImpl(
 
         val code = response.code()
         return if (response.isSuccessful && code == 200) {
-            val msg = response.body()?.message ?: "Mã OTP đã được gửi về email của quản lý."
+            val msg = response.body()?.message ?: messageProvider.getOtpSentMessage()
             Resource.Success(data = msg)
         } else {
             val errBody = response.errorBody()?.string()
             val fallback = when (code) {
-                401 -> "API Key không hợp lệ!"
-                404 -> "Không tìm thấy nhân viên ID $userId trên hệ thống!"
-                500 -> "Máy chủ chưa cấu hình gửi Email hoặc bị lỗi nội bộ."
-                else -> "Yêu cầu OTP thất bại."
+                401 -> messageProvider.getApiKeyInvalidMessage()
+                404 -> messageProvider.getUserNotFoundMessage(userId)
+                500 -> messageProvider.getServerErrorMessage()
+                else -> messageProvider.getOtpRequestFailedMessage()
             }
             val message = ApiErrorParser.getServerMessageOrDefault(errBody, fallback)
             Resource.Error(
@@ -66,16 +68,16 @@ class AuthRepositoryImpl(
                 Resource.Success(data = session, message = baseResp.message)
             } else {
                 Resource.Error(
-                    message = "Server không trả về Token xác thực!",
+                    message = messageProvider.getServerNoTokenMessage(),
                     source = ErrorSource.SERVER
                 )
             }
         } else {
             val errBody = response.errorBody()?.string()
             val fallback = when (code) {
-                401 -> "Mã OTP không chính xác hoặc đã hết hạn (15 phút)!"
-                404 -> "Không tìm thấy thông tin nhân viên!"
-                else -> "Xác thực OTP thất bại."
+                401 -> messageProvider.getOtpInvalidMessage()
+                404 -> messageProvider.getUserInfoMissingMessage()
+                else -> messageProvider.getOtpVerifyFailedMessage()
             }
             val message = ApiErrorParser.getServerMessageOrDefault(errBody, fallback)
             Resource.Error(

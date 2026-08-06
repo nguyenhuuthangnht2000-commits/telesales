@@ -2,21 +2,13 @@ package com.nhakhoaquangninh.telesales.ui.auth
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -24,26 +16,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.Mail
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,16 +36,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nhakhoaquangninh.telesales.R
 import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.theme.BackgroundLight
-import com.nhakhoaquangninh.telesales.theme.OnPrimaryContainer
+import com.nhakhoaquangninh.telesales.theme.Dimens
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
 import com.nhakhoaquangninh.telesales.theme.OutlineVariant
-import com.nhakhoaquangninh.telesales.theme.PrimaryContainer
 import com.nhakhoaquangninh.telesales.theme.PrimaryTeal
+import com.nhakhoaquangninh.telesales.theme.SurfaceContainer
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
 import com.nhakhoaquangninh.telesales.ui.components.ErrorDialog
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun OtpVerifyScreen(
@@ -75,8 +62,18 @@ fun OtpVerifyScreen(
     val otpError by viewModel.otpError.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
 
-    // Tự động chuyển sang màn hình Main khi xác thực thành công
+    // Countdown Timer for Resend
+    var timeLeft by remember { mutableIntStateOf(45) }
+    LaunchedEffect(timeLeft) {
+        if (timeLeft > 0) {
+            delay(1000L.milliseconds)
+            timeLeft--
+        }
+    }
+
+    // Auto navigate on success
     LaunchedEffect(uiState) {
         if (uiState is Resource.Success) {
             viewModel.resetState()
@@ -84,11 +81,15 @@ fun OtpVerifyScreen(
         }
     }
 
-    // Popup Error Dialog
+    // Error Dialog
     if (uiState is Resource.Error) {
         ErrorDialog(
             error = uiState as Resource.Error,
-            onDismiss = { viewModel.resetState() }
+            onDismiss = { 
+                viewModel.resetState() 
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            }
         )
     }
 
@@ -98,149 +99,132 @@ fun OtpVerifyScreen(
             .background(BackgroundLight)
             .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(Dimens.PaddingMedium),
         contentAlignment = Alignment.Center
     ) {
-        // Decorative Teal Orbs
-        Box(
-            modifier = Modifier
-                .size(240.dp)
-                .align(Alignment.TopStart)
-                .background(
-                    color = PrimaryTeal.copy(alpha = 0.05f),
-                    shape = CircleShape
-                )
-        )
-        Box(
-            modifier = Modifier
-                .size(280.dp)
-                .align(Alignment.BottomEnd)
-                .background(
-                    color = PrimaryContainer.copy(alpha = 0.05f),
-                    shape = CircleShape
-                )
-        )
-
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 440.dp),
+                .widthIn(max = 420.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = SurfaceLowest
-            ),
-            border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.4f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            colors = CardDefaults.cardColors(containerColor = SurfaceLowest),
+            border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // ── Card Header ────────────────────────────────────────────
+                // Decorative Gradient Line at top
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(PrimaryTeal, Color(0xFF0D9488))
+                            )
+                        )
+                )
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(SurfaceLowest)
-                        .padding(top = 28.dp, bottom = 20.dp, start = 24.dp, end = 24.dp),
+                        .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .background(PrimaryContainer, shape = CircleShape),
-                        contentAlignment = Alignment.Center
+                    // Lock Icon inside Circle
+                    Surface(
+                        shape = CircleShape,
+                        color = SurfaceContainer,
+                        modifier = Modifier.size(64.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = "Shield Icon",
-                            tint = OnPrimaryContainer,
-                            modifier = Modifier.size(36.dp)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = PrimaryTeal,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Title
                     Text(
-                        text = "Xác thực mã OTP",
-                        style = MaterialTheme.typography.headlineMedium.copy(
+                        text = stringResource(R.string.otp_security_verification),
+                        style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 24.sp
                         ),
-                        color = PrimaryTeal,
+                        color = OnSurfaceDark,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
+                    // Subtitle
                     Text(
-                        text = "Mã OTP 6 số đã gửi tới Email quản lý của ID #$userId",
+                        text = stringResource(R.string.otp_enter_code_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = OnSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
-                }
 
-                HorizontalDivider(color = OutlineVariant.copy(alpha = 0.3f))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // ── Card Body ──────────────────────────────────────────────
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    OutlinedTextField(
+                    // Email Badge Chip
+                    Surface(
+                        shape = CircleShape,
+                        color = SurfaceContainer.copy(alpha = 0.6f),
+                        border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mail,
+                                contentDescription = null,
+                                tint = PrimaryTeal,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "${stringResource(R.string.otp_sent_to_email)} (#$userId)",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = OnSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // 6-Digit OTP Input
+                    OtpSixDigitInput(
                         value = otpInput,
                         onValueChange = { viewModel.onOtpChanged(it) },
-                        label = { Text("Mã OTP (6 chữ số)") },
-                        placeholder = { Text("Ví dụ: 123456") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = OnSurfaceVariant
-                            )
-                        },
-                        isError = otpError != null,
-                        supportingText = if (otpError != null) {
-                            { Text(text = otpError ?: "") }
-                        } else null,
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                keyboardController?.hide()
-                                viewModel.verifyOtp(userId)
-                            }
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryTeal,
-                            unfocusedBorderColor = OutlineVariant,
-                            focusedLabelColor = PrimaryTeal,
-                            unfocusedLabelColor = OnSurfaceVariant,
-                            focusedTextColor = OnSurfaceDark,
-                            unfocusedTextColor = OnSurfaceDark,
-                            cursorColor = PrimaryTeal,
-                            focusedContainerColor = BackgroundLight,
-                            unfocusedContainerColor = BackgroundLight
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        focusRequester = focusRequester,
+                        onDone = {
+                            keyboardController?.hide()
+                            viewModel.verifyOtp(userId)
+                        }
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    if (otpError != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = otpError ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                    }
 
-                    Text(
-                        text = "Mã OTP có hiệu lực trong 15 phút. Vui lòng kiểm tra hộp thư email.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = OnSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
+                    // Verify & Start Button
                     val isLoading = uiState is Resource.Loading
 
                     Button(
@@ -248,17 +232,16 @@ fun OtpVerifyScreen(
                             keyboardController?.hide()
                             viewModel.verifyOtp(userId)
                         },
-                        enabled = !isLoading,
+                        enabled = !isLoading && otpInput.length == 6,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        shape = RoundedCornerShape(26.dp),
+                        shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PrimaryTeal,
                             contentColor = Color.White,
-                            disabledContainerColor = OutlineVariant
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                            disabledContainerColor = OutlineVariant.copy(alpha = 0.5f)
+                        )
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
@@ -266,22 +249,11 @@ fun OtpVerifyScreen(
                                 modifier = Modifier.size(24.dp),
                                 strokeWidth = 2.5.dp
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = "Đang xác thực...",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = Color.White
-                            )
                         } else {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Xác nhận & Đăng nhập",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 16.sp
-                                    ),
+                                    text = stringResource(R.string.otp_verify_and_start),
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color.White
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -295,29 +267,62 @@ fun OtpVerifyScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                    OutlinedButton(
-                        onClick = onBackToLogin,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryTeal),
-                        border = BorderStroke(1.dp, OutlineVariant)
+                    // Timer & Resend
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = null,
-                                tint = PrimaryTeal,
-                                modifier = Modifier.size(18.dp)
+                        Text(
+                            text = stringResource(R.string.otp_didnt_receive) + " ",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = OnSurfaceVariant
+                        )
+                        if (timeLeft > 0) {
+                            Text(
+                                text = stringResource(R.string.otp_resend_in, String.format("0:%02d", timeLeft)),
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = OnSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Quay lại nhập ID khác")
+                        } else {
+                            Text(
+                                text = stringResource(R.string.otp_resend_now),
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = PrimaryTeal,
+                                modifier = Modifier.clickable {
+                                    timeLeft = 45
+                                    // Could trigger resend action here
+                                }
+                            )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                    HorizontalDivider(color = OutlineVariant.copy(alpha = 0.3f))
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Return to Login Link
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onBackToLogin() }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = PrimaryTeal,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.otp_return_to_login),
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                            color = PrimaryTeal
+                        )
                     }
                 }
             }
@@ -325,3 +330,84 @@ fun OtpVerifyScreen(
     }
 }
 
+@Composable
+private fun OtpSixDigitInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    focusRequester: FocusRequester,
+    onDone: () -> Unit
+) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var textFieldValue by remember(value) {
+        mutableStateOf(
+            androidx.compose.ui.text.input.TextFieldValue(
+                text = value,
+                selection = androidx.compose.ui.text.TextRange(value.length)
+            )
+        )
+    }
+
+    Box(contentAlignment = Alignment.Center) {
+        // Hidden BasicTextField to capture actual keyboard inputs
+        BasicTextField(
+            value = textFieldValue,
+            onValueChange = { newValue ->
+                val newText = newValue.text
+                if (newText.length <= 6 && newText.all { it.isDigit() }) {
+                    textFieldValue = newValue
+                    if (newText != value) {
+                        onValueChange(newText)
+                    }
+                }
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(onDone = { onDone() }),
+            modifier = Modifier
+                .focusRequester(focusRequester)
+                .size(1.dp)
+        )
+
+        // Row of 6 Visual Boxes
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.clickable { 
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            }
+        ) {
+            for (i in 0 until 6) {
+                val digit = value.getOrNull(i)?.toString() ?: ""
+                val isFocused = value.length == i || (value.length == 6 && i == 5)
+
+                val boxBg = if (isFocused) SurfaceContainer else SurfaceContainer.copy(alpha = 0.6f)
+                val borderColor = if (isFocused) PrimaryTeal else OutlineVariant.copy(alpha = 0.5f)
+
+                Box(
+                    modifier = Modifier
+                        .width(44.dp)
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                        .background(boxBg)
+                        .border(
+                            width = if (isFocused) 2.dp else 1.dp,
+                            color = borderColor,
+                            shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = digit,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp
+                        ),
+                        color = OnSurfaceDark
+                    )
+                }
+            }
+        }
+    }
+}

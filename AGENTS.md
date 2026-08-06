@@ -86,6 +86,13 @@ Tất cả các API gửi lên Server backend đều tuân thủ các quy tắc 
    - Khi tham khảo các bản thiết kế HTML/Web (ví dụ `code.html`), BẮT BUỘC phải chủ động chuyển đổi sang bố cục chuẩn của Mobile App.
    - Các thành phần dàn hàng ngang (Row/Grid) trên Web phải được chuyển thành hàng dọc (Column) trên Mobile để tránh bị tràn màn hình hoặc khó nhìn.
    - Kích thước chữ, nút bấm phải tuân thủ hướng dẫn thiết kế cảm ứng của Material 3.
+10. **Chống Memory Leak và API Deprecated:**
+    - **Context Leaks:** BẮT BUỘC sử dụng `context.applicationContext` khi khởi tạo các Singleton (như Repositories, Managers, ServiceLocator) thay vì truyền Activity Context, để tránh giam giữ bộ nhớ của Activity.
+    - **Coroutine Scope:** Hạn chế tối đa dùng `GlobalScope`. Ưu tiên dùng `lifecycleScope` (Activity/Fragment) hoặc `viewModelScope` (ViewModel).
+    - **Modern APIs:** Luôn dùng các giải pháp thay thế hiện đại của Google (VD: dùng `registerForActivityResult` thay cho `startActivityForResult`, dùng `VibrationEffect` thay cho `vibrate(long)`, sử dụng `WorkManager` thay cho Background Services truyền thống nếu không cần Foreground).
+11. **Bắt buộc sử dụng `launchSafe` trong ViewModel:**
+    - Tuyệt đối không dùng `viewModelScope.launch` trần (raw). Luôn luôn sử dụng hàm `launchSafe(onError = { ... }) { ... }` được cung cấp sẵn trong `BaseViewModel` để đảm bảo mọi Exception (Network, IO, Crash) đều được bắt và chuyển thành `Resource.Error` chuẩn hóa.
+    - Mọi tác vụ đọc ghi file, truy vấn Database, hoặc MediaStore trong ViewModel BẮT BUỘC phải đặt trong `launchSafe` kết hợp `withContext(Dispatchers.IO)` để tránh treo giao diện (ANR).
 
 ---
 
@@ -101,6 +108,7 @@ Mỗi khi `git pull` code mới về, thực hiện các bước sau:
 ---
 
 ## 📚 TÀI LIỆU THAM KHẢO TRONG DỰ ÁN
+- [`UPDATE_SUMMARY.md`](file:///d:/telesales/UPDATE_SUMMARY.md): **Tóm tắt tổng quan toàn bộ cập nhật tính năng mới & refactor kiến trúc gần nhất (Bắt buộc đọc khi pull code về máy mới).**
 - [`huong-dan-tich-hop-api.md`](file:///d:/New%20folder/TelesalesApp/huong-dan-tich-hop-api.md): Chi tiết các API Endpoint, format DTO & Upload Multipart.
 - [`huong_dan_khac_phuc_service.md`](file:///d:/New%20folder/TelesalesApp/huong_dan_khac_phuc_service.md): Xử lý sự cố Foreground Service bị OS kill (Battery Optimization, Xiaomi/Samsung OEM restrictions).
 - [`huong_dan_su_dung.md`](file:///d:/New%20folder/TelesalesApp/huong_dan_su_dung.md): Hướng dẫn vận hành ứng dụng cho nhân viên telesales.

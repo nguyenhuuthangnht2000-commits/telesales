@@ -52,6 +52,7 @@
     <string name="btn_play">▶ Play</string>
 
     <!-- Settings Strings -->
+    <string name="settings_subtitle">Cấu hình tài khoản, kết nối máy chủ và hệ thống ghi âm.</string>
     <string name="settings_employee_info">👤 Thông tin Nhân viên Telesales</string>
     <string name="settings_user_id_label">Mã nhân viên (User ID):</string>
     <string name="settings_na">N/A</string>
@@ -59,16 +60,62 @@
     <string name="settings_default_name">Nhân viên Telesales</string>
     <string name="settings_email_label">Email quản lý:</string>
     <string name="settings_not_updated">chưa cập nhật</string>
+    <string name="settings_shift_active">Đang trong ca làm việc</string>
     <string name="settings_server_conn">🌐 Kết nối Server Backend</string>
     <string name="settings_rest_api_label">Máy chủ REST API:</string>
-    <string name="settings_server_name">Hệ thống Quảng Ninh</string>
+    <string name="settings_server_name">https://quangninh.dentalconnect.vn/api/mobile</string>
     <string name="settings_token_status_label">Trạng thái Token:</string>
     <string name="settings_token_valid">✅ Đã xác thực Bearer</string>
-    <string name="settings_auto_sync_label">Tự động đồng bộ:</string>
+    <string name="settings_auto_sync_label">Tự động đồng bộ cuộc gọi:</string>
     <string name="settings_auto_sync_on">Bật (WorkManager)</string>
+    <string name="settings_test_conn_btn">Kiểm tra kết nối Máy chủ</string>
+    <string name="settings_test_conn_success">✅ Kết nối máy chủ REST API thành công! (200 OK)</string>
+    <string name="settings_service_storage">🎙️ Dịch vụ &amp; Bộ nhớ Ghi âm</string>
+    <string name="settings_storage_dir_label">Thư mục ghi âm:</string>
+    <string name="settings_storage_dir_path">/storage/emulated/0/Recordings/Telesales/</string>
+    <string name="settings_auto_clean_label">Tự dọn dẹp sau đồng bộ:</string>
     <string name="settings_app_info">📱 Thông tin Ứng dụng</string>
     <string name="settings_app_label">Ứng dụng:</string>
-    <string name="settings_app_version">Telesales App v2.0</string>
+    <string name="settings_app_version">DentalConnect Telesales v2.0.4</string>
     <string name="settings_dev_label">Đơn vị phát triển:</string>
-    <string name="settings_dev_name">Nha Khoa Quảng Ninh</string>
+    <string name="settings_dev_name">Nha Khoa Quảng Ninh Enterprise</string>
+    <string name="settings_faq_btn">Hướng dẫn khắc phục sự cố</string>
+    <string name="settings_logout_btn">Đăng xuất tài khoản</string>
+    <string name="settings_logout_dialog_title">Xác nhận Đăng xuất</string>
+    <string name="settings_logout_dialog_msg">Bạn có chắc chắn muốn đăng xuất khỏi ca làm việc hiện tại?</string>
+    <string name="settings_logout_cancel">Hủy</string>
+    <string name="settings_logout_confirm">Đăng xuất</string>
+
+    <!-- OTP Verification Strings -->
+    <string name="otp_security_verification">Xác thực bảo mật</string>
+    <string name="otp_enter_code_desc">Nhập mã xác thực 6 chữ số.</string>
+    <string name="otp_sent_to_email">Mã OTP đã được gửi đến email quản lý</string>
+    <string name="otp_verify_and_start">Xác thực &amp; Bắt đầu</string>
+    <string name="otp_didnt_receive">Chưa nhận được mã?</string>
+    <string name="otp_resend_in">Gửi lại sau %s</string>
+    <string name="otp_resend_now">Gửi lại mã OTP</string>
+    <string name="otp_return_to_login">Quay lại Đăng nhập</string>
+    <!-- API & Server Fallback Strings -->
+    <string name="msg_token_missing">Chưa có Token xác thực. Vui lòng đăng nhập lại!</string>
+    <string name="msg_upload_success">Tải file ghi âm thành công!</string>
+    <string name="msg_token_expired">Phiên đăng nhập hết hạn hoặc Token không hợp lệ.</string>
+    <string name="msg_upload_failed">Tải file thất bại.</string>
+    <string name="msg_otp_sent">Mã OTP đã được gửi về email của quản lý.</string>
+    <string name="msg_api_key_invalid">API Key không hợp lệ!</string>
+    <string name="msg_user_not_found">Không tìm thấy nhân viên ID %d trên hệ thống!</string>
+    <string name="msg_server_error">Máy chủ chưa cấu hình gửi Email hoặc bị lỗi nội bộ.</string>
+    <string name="msg_otp_request_failed">Yêu cầu OTP thất bại.</string>
+    <string name="msg_server_no_token">Server không trả về Token xác thực!</string>
+    <string name="msg_otp_invalid">Mã OTP không chính xác hoặc đã hết hạn (15 phút)!</string>
+    <string name="msg_user_info_missing">Không tìm thấy thông tin nhân viên!</string>
+    <string name="msg_otp_verify_failed">Xác thực OTP thất bại.</string>
+    <string name="msg_no_file_to_sync">Không có file nào cần đồng bộ</string>
+    <!-- WarningActivity Strings -->
+    <string name="warning_title">CẢNH BÁO VI PHẠM</string>
+    <string name="warning_violation_count">⚠️ Phát hiện vi phạm lần thứ %d trong ngày</string>
+    <string name="warning_message">Cuộc gọi vừa kết thúc KHÔNG CÓ file ghi âm!\n\nBạn đang vi phạm quy trình quản lý chất lượng cuộc gọi. Vui lòng bật lại Ghi âm cuộc gọi ngay để tiếp tục làm việc.</string>
+    <string name="warning_instruction_title">📋 Hướng dẫn xử lý vi phạm:</string>
+    <string name="warning_instruction_body">1. Bấm nút \'⚙️ Mở Cài Đặt Điện Thoại\' bên dưới\n2. Vào mục Ghi âm cuộc gọi ➔ Bật Tự động ghi âm\n3. Quay lại ứng dụng để tiếp tục cuộc gọi tiếp theo</string>
+    <string name="warning_btn_open_settings">⚙️ Mở Cài Đặt Điện Thoại Ngay</string>
+    <string name="warning_btn_confirm">Tôi đã bật lại ghi âm — Quay lại làm việc</string>
 </resources>

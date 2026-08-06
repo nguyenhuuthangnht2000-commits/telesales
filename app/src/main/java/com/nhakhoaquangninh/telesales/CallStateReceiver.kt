@@ -9,14 +9,26 @@ import android.os.Looper
 import android.telephony.TelephonyManager
 import android.util.Log
 import android.widget.Toast
+import androidx.core.app.NotificationCompat
+import androidx.work.Constraints
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.nhakhoaquangninh.telesales.CallStateReceiver.Companion.FILE_FRESHNESS_MS
+import android.provider.CallLog
+import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
+import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
+import com.nhakhoaquangninh.telesales.data.local.SyncStatus
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 /**
- * CallStateReceiver v2 — KHÔNG TỰ GHI ÂM.
+ * CallStateReceiver
  *
  * Chiến lược:
  *  1. Lắng nghe IDLE sau OFFHOOK → cuộc gọi vừa kết thúc.
@@ -168,7 +180,7 @@ class CallStateReceiver : BroadcastReceiver() {
             }
 
             // Nếu không có thư mục nào tồn tại, vẫn trả về toàn bộ để đảm bảo quét
-            return if (existingDirs.isNotEmpty()) existingDirs else allDirs
+            return existingDirs.ifEmpty { allDirs }
         }
     }
 
@@ -282,12 +294,12 @@ class CallStateReceiver : BroadcastReceiver() {
                 notificationManager?.createNotificationChannel(channel)
             }
 
-            val notification = androidx.core.app.NotificationCompat.Builder(context, channelId)
+            val notification = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("✅ Đã ghi nhận file ghi âm cuộc gọi")
                 .setContentText("File: ${file.name} ($sizeKb KB)")
-                .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(msg))
-                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(msg))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .build()
 
@@ -455,16 +467,16 @@ class CallStateReceiver : BroadcastReceiver() {
                 notificationManager?.createNotificationChannel(channel)
             }
 
-            val notification = androidx.core.app.NotificationCompat.Builder(context, channelId)
+            val notification = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("🚨 CẢNH BÁO VI PHẠM TUÂN THỦ GHI ÂM")
                 .setContentText("Không tìm thấy file ghi âm cuộc gọi vừa rồi!")
                 .setStyle(
-                    androidx.core.app.NotificationCompat.BigTextStyle()
+                    NotificationCompat.BigTextStyle()
                         .bigText("CẢNH BÁO: Cuộc gọi vừa kết thúc KHÔNG CÓ file ghi âm!\n\nVui lòng mở Cài đặt ứng dụng Điện thoại ➔ Ghi âm cuộc gọi ➔ Bật tính năng Tự động ghi âm để tiếp tục làm việc.")
                 )
-                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MAX)
-                .setCategory(androidx.core.app.NotificationCompat.CATEGORY_ALARM)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setFullScreenIntent(fullScreenPendingIntent, true)
                 .setContentIntent(fullScreenPendingIntent)
                 .setAutoCancel(true)
@@ -476,45 +488,105 @@ class CallStateReceiver : BroadcastReceiver() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Upload
-    // ─────────────────────────────────────────────────────────────────────────
+    private fun getLatestCallDetails(context: Context): CallRecordMetadata? {
+        try {
+            val projection = arrayOf(
+                CallLog.Calls.NUMBER,
+                CallLog.Calls.TYPE,
+                CallLog.Calls.DURATION,
+                CallLog.Calls.DATE
+            )
+            val cursor = context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                projection,
+                null,
+                null,
+                "${CallLog.Calls.DATE} DESC LIMIT 1"
+            )
+
+            cursor?.use { c ->
+                if (c.moveToFirst()) {
+                    val numberIndex = c.getColumnIndex(CallLog.Calls.NUMBER)
+                    val typeIndex = c.getColumnIndex(CallLog.Calls.TYPE)
+                    val durationIndex = c.getColumnIndex(CallLog.Calls.DURATION)
+                    val dateIndex = c.getColumnIndex(CallLog.Calls.DATE)
+
+                    if (numberIndex != -1 && typeIndex != -1 && durationIndex != -1) {
+                        val number = c.getString(numberIndex) ?: ""
+                        val type = c.getInt(typeIndex)
+                        val duration = c.getInt(durationIndex)
+                        val date = if (dateIndex != -1) c.getLong(dateIndex) else System.currentTimeMillis()
+                        // Check if call is very recent (e.g., within the last 5 minutes)
+                        if (System.currentTimeMillis() - date > 5 * 60 * 1000) {
+                            Log.w(TAG, "Call log is too old.")
+                            return null
+                        }
+                        val callTypeStr = when (type) {
+                            CallLog.Calls.INCOMING_TYPE -> "incoming"
+                            else -> "outgoing"
+                        }
+                        val phoneFrom = if (callTypeStr == "incoming") number else null
+                        val phoneTo = if (callTypeStr == "outgoing") number else null
+                        return CallRecordMetadata(
+                            filePath = "", // Placeholder
+                            phoneNumberFrom = phoneFrom,
+                            phoneNumberTo = phoneTo,
+                            callType = callTypeStr,
+                            durationSeconds = duration,
+                            callAtFormatted = null // Placeholder
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Lỗi đọc CallLog: ${e.message}")
+        }
+        return null
+    }
 
     private fun enqueueUpload(context: Context, filePath: String) {
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
-            timeZone = java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh")
+            timeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh")
         }
         val callAtFormatted = sdf.format(Date())
-
-        val inputData = androidx.work.Data.Builder()
+        val latestCall = getLatestCallDetails(context)
+        val phoneFrom = latestCall?.phoneNumberFrom
+        val phoneTo = latestCall?.phoneNumberTo ?: savedNumber
+        val callType = latestCall?.callType ?: "outgoing"
+        val duration = latestCall?.durationSeconds ?: 0
+        val inputData = Data.Builder()
             .putString(UploadAudioWorker.KEY_FILE_PATH, filePath)
-            .putString(UploadAudioWorker.KEY_PHONE_TO, savedNumber)
-            .putString(UploadAudioWorker.KEY_CALL_TYPE, "outgoing")
+            .putString(UploadAudioWorker.KEY_PHONE_FROM, phoneFrom)
+            .putString(UploadAudioWorker.KEY_PHONE_TO, phoneTo)
+            .putString(UploadAudioWorker.KEY_CALL_TYPE, callType)
+            .putInt(UploadAudioWorker.KEY_DURATION, duration)
             .putString(UploadAudioWorker.KEY_CALL_AT, callAtFormatted)
             .build()
-
-        val constraints = androidx.work.Constraints.Builder()
-            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+        // Cập nhật metadata cục bộ để màn Lịch sử đọc được ngay
+        val meta = CallRecordMetadata(
+            filePath = filePath,
+            phoneNumberFrom = phoneFrom,
+            phoneNumberTo = phoneTo,
+            callType = callType,
+            durationSeconds = duration,
+            callAtFormatted = callAtFormatted
+        )
+        SyncStatusManager.getInstance(context).setMetadata(File(filePath).name, SyncStatus.PENDING, meta)
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
-
-        val request = androidx.work.OneTimeWorkRequestBuilder<UploadAudioWorker>()
+        val request = OneTimeWorkRequestBuilder<UploadAudioWorker>()
             .setInputData(inputData)
             .setConstraints(constraints)
             .build()
-
-        androidx.work.WorkManager.getInstance(context.applicationContext)
+        WorkManager.getInstance(context.applicationContext)
             .enqueueUniqueWork(
                 "Telesales_Upload_Queue",
-                androidx.work.ExistingWorkPolicy.APPEND_OR_REPLACE,
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
                 request
             )
-
         Log.d(TAG, "📤 Đã xếp hàng upload file ($callAtFormatted): $filePath")
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Helper
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun formatTime(ms: Long): String =
         SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date(ms))

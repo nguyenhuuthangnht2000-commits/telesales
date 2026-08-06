@@ -7,6 +7,8 @@ import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.UserSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class OtpVerifyViewModel : BaseViewModel() {
 
@@ -35,7 +37,7 @@ class OtpVerifyViewModel : BaseViewModel() {
         _uiState.value = Resource.Loading
 
         launchSafe(onError = { error -> _uiState.value = error }) {
-            val result = verifyOtpUseCase(userId, otp)
+            val result = withContext(Dispatchers.IO) { verifyOtpUseCase(userId, otp) }
             if (result is Resource.Error && result.source == ErrorSource.APP_CLIENT) {
                 _otpError.value = result.message
             }

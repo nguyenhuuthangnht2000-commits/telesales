@@ -49,6 +49,11 @@ fun MainNavigation() {
                 }
                 entry<Main> {
                     MainScreen(
+                        onLogout = {
+                            tokenManager.clearSession()
+                            backStack.clear()
+                            backStack.add(Login)
+                        },
                         modifier = Modifier.safeDrawingPadding()
                     )
                 }

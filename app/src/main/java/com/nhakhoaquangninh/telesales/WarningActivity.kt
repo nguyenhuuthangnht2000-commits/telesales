@@ -1,6 +1,5 @@
 package com.nhakhoaquangninh.telesales
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -23,6 +22,8 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
 
 /**
  * WarningActivity — Màn hình cảnh báo vi phạm toàn màn hình với tính răn đe cao.
@@ -36,7 +37,7 @@ import android.widget.TextView
  *  4. Có nút bấm "⚙️ Mở Cài Đặt Điện Thoại" đưa thẳng nhân viên tới nơi bật lại ghi âm.
  *  5. Không làm gián đoạn luồng làm việc nếu nhân viên ĐÃ BẬT ghi âm tuân thủ.
  */
-class WarningActivity : Activity() {
+class WarningActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "WarningActivity"
@@ -44,6 +45,11 @@ class WarningActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // ── Chặn nút Back hoàn toàn (Cách làm mới chuẩn Jetpack) ─────────
+        onBackPressedDispatcher.addCallback(this) {
+            Log.w(TAG, "⚠️ Nhân viên cố thoát bằng Back — bị chặn hoàn toàn.")
+        }
 
         // ── Hiển thị đè lên màn hình khoá + giữ màn hình sáng ──────────
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -96,13 +102,6 @@ class WarningActivity : Activity() {
         }
     }
 
-    // ── Chặn nút Back hoàn toàn ─────────────────────────────────────────
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        Log.w(TAG, "⚠️ Nhân viên cố thoát bằng Back — bị chặn hoàn toàn.")
-        // Không làm gì → giữ màn hình cảnh báo
-    }
-
     private fun buildUI(violationCount: Int): View {
         // ── Root container ────────────────────────────────────────────────
         val root = LinearLayout(this)
@@ -125,7 +124,7 @@ class WarningActivity : Activity() {
 
         // ── Tiêu đề RĂN ĐE ────────────────────────────────────────────────
         val titleView = TextView(this)
-        titleView.text = "CẢNH BÁO VI PHẠM"
+        titleView.text = getString(R.string.warning_title)
         titleView.textSize = 30f
         titleView.setTextColor(Color.WHITE)
         titleView.gravity = Gravity.CENTER
@@ -143,7 +142,7 @@ class WarningActivity : Activity() {
         badgeBg.cornerRadius = dp(20).toFloat()
 
         val violationBadge = TextView(this)
-        violationBadge.text = "⚠️ Phát hiện vi phạm lần thứ $violationCount trong ngày"
+        violationBadge.text = getString(R.string.warning_violation_count, violationCount)
         violationBadge.textSize = 14f
         violationBadge.setTextColor(Color.WHITE)
         violationBadge.typeface = Typeface.DEFAULT_BOLD
@@ -159,8 +158,7 @@ class WarningActivity : Activity() {
 
         // ── Nội dung thông báo vi phạm ─────────────────────────────────────
         val messageView = TextView(this)
-        messageView.text =
-            "Cuộc gọi vừa kết thúc KHÔNG CÓ file ghi âm!\n\nBạn đang vi phạm quy trình quản lý chất lượng cuộc gọi. Vui lòng bật lại Ghi âm cuộc gọi ngay để tiếp tục làm việc."
+        messageView.text = getString(R.string.warning_message)
         messageView.textSize = 18f
         messageView.setTextColor(Color.WHITE)
         messageView.gravity = Gravity.CENTER
@@ -183,11 +181,7 @@ class WarningActivity : Activity() {
         instructionBox.background = instructionBg
 
         val instructionText = TextView(this)
-        instructionText.text =
-            "📋 Hướng dẫn xử lý vi phạm:\n\n" +
-                    "1. Bấm nút '⚙️ Mở Cài Đặt Điện Thoại' bên dưới\n" +
-                    "2. Vào mục Ghi âm cuộc gọi ➔ Bật Tự động ghi âm\n" +
-                    "3. Quay lại ứng dụng để tiếp tục cuộc gọi tiếp theo"
+        instructionText.text = "${getString(R.string.warning_instruction_title)}\n\n${getString(R.string.warning_instruction_body)}"
         instructionText.textSize = 14f
         instructionText.setTextColor(Color.parseColor("#E1BEE7"))
         instructionText.setLineSpacing(0f, 1.3f)
@@ -210,7 +204,7 @@ class WarningActivity : Activity() {
         openSettingsBg.cornerRadius = dp(30).toFloat()
 
         val openSettingsBtn = Button(this)
-        openSettingsBtn.text = "⚙️ Mở Cài Đặt Điện Thoại Ngay"
+        openSettingsBtn.text = getString(R.string.warning_btn_open_settings)
         openSettingsBtn.textSize = 16f
         openSettingsBtn.typeface = Typeface.DEFAULT_BOLD
         openSettingsBtn.setTextColor(Color.BLACK)
@@ -229,7 +223,7 @@ class WarningActivity : Activity() {
 
         // ── Nút 2: Tôi đã sửa xong ─────────────────────────────────────────
         val confirmBtn = Button(this)
-        confirmBtn.text = "Tôi đã bật lại ghi âm — Quay lại làm việc"
+        confirmBtn.text = getString(R.string.warning_btn_confirm)
         confirmBtn.textSize = 14f
         confirmBtn.typeface = Typeface.DEFAULT_BOLD
         confirmBtn.setTextColor(Color.WHITE)

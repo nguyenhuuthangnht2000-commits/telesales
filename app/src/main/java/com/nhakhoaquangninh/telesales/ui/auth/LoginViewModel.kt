@@ -6,6 +6,8 @@ import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
 import com.nhakhoaquangninh.telesales.domain.common.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class LoginViewModel : BaseViewModel() {
 
@@ -32,7 +34,7 @@ class LoginViewModel : BaseViewModel() {
         _uiState.value = Resource.Loading
 
         launchSafe(onError = { error -> _uiState.value = error }) {
-            val result = requestOtpUseCase(input)
+            val result = withContext(Dispatchers.IO) { requestOtpUseCase(input) }
             if (result is Resource.Error && result.source == ErrorSource.APP_CLIENT) {
                 _userIdError.value = result.message
             }

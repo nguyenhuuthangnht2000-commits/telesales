@@ -48,6 +48,7 @@ fun HistoryScreenContent(
     audioFiles: List<AudioItemState>,
     currentlyPlayingPath: String?,
     onPlayClick: (String) -> Unit,
+    onSyncClick: (AudioItemState) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedFilter by remember { mutableStateOf("ALL") }
@@ -150,7 +151,8 @@ fun HistoryScreenContent(
                     HistoryItemCard(
                         item = item,
                         isPlaying = isPlaying,
-                        onPlayClick = { onPlayClick(item.file.absolutePath) }
+                        onPlayClick = { onPlayClick(item.file.absolutePath) },
+                        onSyncClick = { onSyncClick(item) }
                     )
                 }
             }
@@ -213,9 +215,28 @@ private fun FilterTab(
 private fun HistoryItemCard(
     item: AudioItemState,
     isPlaying: Boolean,
-    onPlayClick: () -> Unit
+    onPlayClick: () -> Unit,
+    onSyncClick: () -> Unit
 ) {
-    val isIncoming = item.file.name.contains("incoming", ignoreCase = true) || item.file.name.contains("nhan", ignoreCase = true)
+    val isIncoming = if (item.metadata?.callType != null) {
+        item.metadata.callType == "incoming"
+    } else {
+        item.file.name.contains("incoming", ignoreCase = true) || item.file.name.contains("nhan", ignoreCase = true)
+    }
+
+    val displayPhone = if (item.metadata != null) {
+        if (isIncoming) item.metadata.phoneNumberFrom else item.metadata.phoneNumberTo
+    } else {
+        item.file.nameWithoutExtension
+    } ?: item.file.nameWithoutExtension
+
+    val durationText = if (item.metadata != null && item.metadata.durationSeconds > 0) {
+        val m = item.metadata.durationSeconds / 60
+        val s = item.metadata.durationSeconds % 60
+        String.format(Locale.US, "%02d:%02d", m, s)
+    } else {
+        ""
+    }
     
     val statusColor = when (item.status) {
         SyncStatus.SYNCED -> Color(0xFF137333)
@@ -271,7 +292,7 @@ private fun HistoryItemCard(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = item.file.nameWithoutExtension,
+                            text = displayPhone,
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = OnSurfaceDark,
                             maxLines = 1
@@ -308,8 +329,18 @@ private fun HistoryItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Schedule, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
+                    if (durationText.isNotEmpty()) {
+                        Icon(Icons.Default.Schedule, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = durationText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OnSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("•", color = OnSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                     Text(
                         text = "${item.file.length() / 1024} KB",
                         style = MaterialTheme.typography.bodySmall,
@@ -320,7 +351,12 @@ private fun HistoryItemCard(
                 Surface(
                     shape = CircleShape,
                     color = statusBgColor,
-                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.2f))
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.2f)),
+                    modifier = if (item.status == SyncStatus.FAILED || item.status == SyncStatus.PENDING) {
+                        Modifier.clickable { onSyncClick() }
+                    } else {
+                        Modifier
+                    }
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
