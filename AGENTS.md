@@ -93,14 +93,17 @@ Tất cả các API gửi lên Server backend đều tuân thủ các quy tắc 
 11. **Bắt buộc sử dụng `launchSafe` trong ViewModel:**
     - Tuyệt đối không dùng `viewModelScope.launch` trần (raw). Luôn luôn sử dụng hàm `launchSafe(onError = { ... }) { ... }` được cung cấp sẵn trong `BaseViewModel` để đảm bảo mọi Exception (Network, IO, Crash) đều được bắt và chuyển thành `Resource.Error` chuẩn hóa.
     - Mọi tác vụ đọc ghi file, truy vấn Database, hoặc MediaStore trong ViewModel BẮT BUỘC phải đặt trong `launchSafe` kết hợp `withContext(Dispatchers.IO)` để tránh treo giao diện (ANR).
+12. **Tự động cập nhật `UPDATE_SUMMARY.md` trước khi Commit/Push:**
+    - Trước khi thực hiện bất kỳ lệnh `git commit` hoặc `git push` nào, AI Assistant BẮT BUỘC phải tổng hợp tóm tắt các thay đổi, tính năng mới hoặc bug fix vừa làm và ghi lại vào tệp `UPDATE_SUMMARY.md`.
+    - Giúp tiết kiệm tối đa token và thời gian khi `git pull` dự án ở một thiết bị hoặc phiên làm việc khác.
 
 ---
 
 ## 5. 🚀 QUY TRÌNH KIỂM TRA NHANH SAU KHI PULL CODE (POST-PULL CHECKLIST)
 
 Mỗi khi `git pull` code mới về, thực hiện các bước sau:
-1. **Kiểm tra Gradle Sync:** Chạy `./gradlew tasks` hoặc sync project để đảm bảo không lỗi dependency.
-2. **Kiểm tra các tệp thay đổi:** Xem tệp `huong-dan-tich-hop-api.md` hoặc các thay đổi trong `app/`, `data/`, `domain/` để biết có API/UI nào mới.
+1. **Đọc `UPDATE_SUMMARY.md`:** Đọc ngay tệp này để nắm bắt toàn bộ cập nhật gần nhất.
+2. **Kiểm tra Gradle Sync:** Chạy `./gradlew tasks` hoặc sync project để đảm bảo không lỗi dependency.
 3. **Build & Verify:**
    - Kiểm tra build thành công: `./gradlew assembleDebug`
    - Đảm bảo app không bị crash ở bước khởi tạo `ServiceLocator`.
