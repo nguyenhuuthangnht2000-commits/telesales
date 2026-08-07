@@ -45,17 +45,21 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.nhakhoaquangninh.telesales.R
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.theme.ActiveEmerald
+import com.nhakhoaquangninh.telesales.theme.DangerDark
+import com.nhakhoaquangninh.telesales.theme.DangerRed
 import com.nhakhoaquangninh.telesales.theme.Dimens
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
+import com.nhakhoaquangninh.telesales.theme.OnSurfaceMuted
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
 import com.nhakhoaquangninh.telesales.theme.OutlineVariant
 import com.nhakhoaquangninh.telesales.theme.PrimaryTeal
+import com.nhakhoaquangninh.telesales.theme.SuccessContainer
+import com.nhakhoaquangninh.telesales.theme.SuccessText
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
+import com.nhakhoaquangninh.telesales.theme.SurfaceMuted
 
 @Composable
 fun SettingsScreenContent(
@@ -70,10 +74,10 @@ fun SettingsScreenContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF9F9F9))
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.PaddingMedium),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(Dimens.Space16)
     ) {
         // Màn hình Cài đặt Header
         Column {
@@ -82,7 +86,7 @@ fun SettingsScreenContent(
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 color = OnSurfaceDark
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimens.Space4))
             Text(
                 text = stringResource(R.string.settings_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
@@ -93,15 +97,15 @@ fun SettingsScreenContent(
         // Thẻ Hồ sơ Nhân viên (Profile Card - Premium Header Layout)
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(Dimens.Space16),
             colors = CardDefaults.cardColors(containerColor = SurfaceLowest),
-            border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            border = BorderStroke(Dimens.BorderThickness, OutlineVariant.copy(alpha = 0.3f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = Dimens.BorderThickness)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(Dimens.Size20)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -111,10 +115,12 @@ fun SettingsScreenContent(
                     Surface(
                         shape = CircleShape,
                         color = PrimaryTeal,
-                        modifier = Modifier.size(56.dp)
+                        modifier = Modifier.size(Dimens.Size56)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            val initial = session?.userName?.take(1)?.uppercase() ?: "N"
+                            val initial = session?.userName?.take(1)?.uppercase() ?: stringResource(
+                                R.string.settings_default_initial
+                            )
                             Text(
                                 text = initial,
                                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
@@ -123,7 +129,7 @@ fun SettingsScreenContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(Dimens.Space16))
 
                     // Tên và Mã nhân viên
                     Column(modifier = Modifier.weight(1f)) {
@@ -132,40 +138,49 @@ fun SettingsScreenContent(
                                 ?: stringResource(R.string.settings_default_name),
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
+                                fontSize = Dimens.FontSize18
                             ),
                             color = OnSurfaceDark,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(Dimens.Space2))
                         Text(
-                            text = "Mã nhân viên: #${session?.userId ?: "N/A"}",
+                            text = stringResource(
+                                R.string.settings_user_id_value,
+                                session?.userId?.toString() ?: stringResource(R.string.settings_na)
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = OnSurfaceVariant,
                             maxLines = 1
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.Space8))
                         Surface(
                             shape = CircleShape,
-                            color = Color(0xFFE6F4EA),
-                            border = BorderStroke(1.dp, ActiveEmerald.copy(alpha = 0.3f))
+                            color = SuccessContainer,
+                            border = BorderStroke(
+                                Dimens.BorderThickness,
+                                ActiveEmerald.copy(alpha = 0.3f)
+                            )
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                modifier = Modifier.padding(
+                                    horizontal = Dimens.Space10,
+                                    vertical = Dimens.Space5
+                                ),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(6.dp)
+                                        .size(Dimens.Space6)
                                         .clip(CircleShape)
                                         .background(ActiveEmerald)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(Dimens.Space6))
                                 Text(
                                     text = stringResource(R.string.settings_shift_active),
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFF137333)
+                                    color = SuccessText
                                 )
                             }
                         }
@@ -177,12 +192,12 @@ fun SettingsScreenContent(
         // Tùy chọn Cài đặt & Hỗ trợ (Settings Options Group)
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(Dimens.Space16),
             colors = CardDefaults.cardColors(containerColor = SurfaceLowest),
-            border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            border = BorderStroke(Dimens.BorderThickness, OutlineVariant.copy(alpha = 0.3f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = Dimens.BorderThickness)
         ) {
-            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+            Column(modifier = Modifier.padding(vertical = Dimens.Space4)) {
                 // Tùy chọn 1: Hướng dẫn khắc phục sự cố
                 SettingOptionRow(
                     icon = Icons.AutoMirrored.Filled.HelpOutline,
@@ -193,21 +208,21 @@ fun SettingsScreenContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Dimens.Space8))
 
         // Nút Đăng xuất (Logout Button)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { showLogoutDialog = true },
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFDC2626)),
-            border = BorderStroke(1.dp, Color(0xFFB91C1C))
+            shape = RoundedCornerShape(Dimens.Space16),
+            colors = CardDefaults.cardColors(containerColor = DangerRed),
+            border = BorderStroke(Dimens.BorderThickness, DangerDark)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                    .padding(horizontal = Dimens.Space16, vertical = Dimens.Space16),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
@@ -215,9 +230,9 @@ fun SettingsScreenContent(
                     imageVector = Icons.AutoMirrored.Filled.Logout,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(Dimens.Size20)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Dimens.Space8))
                 Text(
                     text = stringResource(R.string.settings_logout_btn),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -226,7 +241,7 @@ fun SettingsScreenContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.Space16))
     }
 
     // Dialog Xác nhận Đăng xuất
@@ -254,7 +269,7 @@ fun SettingsScreenContent(
                         showLogoutDialog = false
                         onLogoutClick()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
                 ) {
                     Text(
                         stringResource(R.string.settings_logout_confirm),
@@ -266,11 +281,11 @@ fun SettingsScreenContent(
             dismissButton = {
                 Button(
                     onClick = { showLogoutDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF3F4F6))
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceMuted)
                 ) {
                     Text(
                         stringResource(R.string.settings_logout_cancel),
-                        color = Color(0xFF4B5563),
+                        color = OnSurfaceMuted,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -293,17 +308,17 @@ fun SettingsScreenContent(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Dimens.Space10)) {
                     Text(
-                        "1. Tắt Tối ưu hóa Pin: Vào Cài đặt máy ➔ Ứng dụng ➔ TelesalesApp ➔ Pin ➔ Chọn 'Không tối ưu'.",
+                        stringResource(R.string.settings_faq_step_battery),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        "2. Cấp đủ quyền: Cấp quyền Ghi âm âm thanh và Đọc nhật ký cuộc gọi tại màn hình chính.",
+                        stringResource(R.string.settings_faq_step_permissions),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        "3. Cho phép Tự khởi chạy: Với các dòng máy Xiaomi, Oppo, Vivo, Samsung, hãy mở phần Cài đặt hệ thống ➔ Quản lý ứng dụng ➔ Bật 'Tự khởi chạy'.",
+                        stringResource(R.string.settings_faq_step_autostart),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -313,7 +328,11 @@ fun SettingsScreenContent(
                     onClick = { showFaqDialog = false },
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryTeal)
                 ) {
-                    Text("Đã hiểu", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.common_understood),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         )
@@ -333,24 +352,24 @@ private fun SettingOptionRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = Dimens.Space16, vertical = Dimens.Space14),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
             shape = CircleShape,
             color = PrimaryTeal.copy(alpha = 0.08f),
-            modifier = Modifier.size(40.dp)
+            modifier = Modifier.size(Dimens.Size40)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = PrimaryTeal,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(Dimens.Size20)
                 )
             }
         }
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(Dimens.Space14))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -371,7 +390,7 @@ private fun SettingOptionRow(
             imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
             contentDescription = null,
             tint = OnSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(Dimens.Space14)
         )
     }
 }

@@ -11,6 +11,8 @@ val OnPrimaryContainer = Color(0xFFA3FAEF)
 val SecondaryTurquoise = Color(0xFF0D9488)
 val SecondaryContainer = Color(0xFF86F2E4)
 val OnSecondaryContainer = Color(0xFF006F66)
+val TertiaryContainer = Color(0xFF945D00)
+val TertiaryFixedDim = Color(0xFFFFB95F)
 
 // Status & Semantic Colors
 val ActiveEmerald = Color(0xFF10B981)
@@ -40,3 +42,15 @@ val Purple40 = Color(0xFF6650A4)
 val PurpleGrey40 = Color(0xFF625B71)
 val Pink40 = Color(0xFF7D5260)
 
+
+val SuccessText = Color(0xFF137333)
+val SuccessContainer = Color(0xFFE6F4EA)
+
+val WarningDark = Color(0xFFC2410C)
+val DangerRed = Color(0xFFDC2626)
+val DangerDark = Color(0xFFB91C1C)
+val NotificationBadgeRed = Color(0xFFD32F2F)
+val DialogBorder = Color(0xFFE2E8F0)
+val DialogSurface = Color(0xFF1E293B)
+val SurfaceMuted = Color(0xFFF3F4F6)
+val OnSurfaceMuted = Color(0xFF4B5563)

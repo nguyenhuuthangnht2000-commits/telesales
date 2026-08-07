@@ -4,7 +4,19 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,8 +29,23 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mail
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,8 +59,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nhakhoaquangninh.telesales.R
@@ -44,6 +69,7 @@ import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
 import com.nhakhoaquangninh.telesales.theme.OutlineVariant
 import com.nhakhoaquangninh.telesales.theme.PrimaryTeal
+import com.nhakhoaquangninh.telesales.theme.SecondaryTurquoise
 import com.nhakhoaquangninh.telesales.theme.SurfaceContainer
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
 import com.nhakhoaquangninh.telesales.ui.components.ErrorDialog
@@ -105,11 +131,11 @@ fun OtpVerifyScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 420.dp),
-            shape = RoundedCornerShape(16.dp),
+                .widthIn(max = Dimens.OtpMaxWidth),
+            shape = RoundedCornerShape(Dimens.Space16),
             colors = CardDefaults.cardColors(containerColor = SurfaceLowest),
-            border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            border = BorderStroke(Dimens.BorderThickness, OutlineVariant.copy(alpha = 0.3f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = Dimens.Space2)
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -119,10 +145,10 @@ fun OtpVerifyScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp)
+                        .height(Dimens.Space4)
                         .background(
                             brush = Brush.horizontalGradient(
-                                colors = listOf(PrimaryTeal, Color(0xFF0D9488))
+                                colors = listOf(PrimaryTeal, SecondaryTurquoise)
                             )
                         )
                 )
@@ -130,39 +156,39 @@ fun OtpVerifyScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp),
+                        .padding(Dimens.Space24),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Lock Icon inside Circle
                     Surface(
                         shape = CircleShape,
                         color = SurfaceContainer,
-                        modifier = Modifier.size(64.dp)
+                        modifier = Modifier.size(Dimens.IconSizeAuth)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
                                 tint = PrimaryTeal,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(Dimens.Size32)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Space16))
 
                     // Title
                     Text(
                         text = stringResource(R.string.otp_security_verification),
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp
+                            fontSize = Dimens.FontSize24
                         ),
                         color = OnSurfaceDark,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Space6))
 
                     // Subtitle
                     Text(
@@ -172,34 +198,44 @@ fun OtpVerifyScreen(
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Space12))
 
                     // Email Badge Chip
                     Surface(
                         shape = CircleShape,
                         color = SurfaceContainer.copy(alpha = 0.6f),
-                        border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.4f))
+                        border = BorderStroke(
+                            Dimens.BorderThickness,
+                            OutlineVariant.copy(alpha = 0.4f)
+                        )
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(
+                                horizontal = Dimens.Space14,
+                                vertical = Dimens.Space6
+                            ),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Mail,
                                 contentDescription = null,
                                 tint = PrimaryTeal,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(Dimens.Space16)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(Dimens.Space6))
                             Text(
-                                text = "${stringResource(R.string.otp_sent_to_email)} (#$userId)",
+                                text = stringResource(
+                                    R.string.otp_sent_to_user,
+                                    stringResource(R.string.otp_sent_to_email),
+                                    userId
+                                ),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = OnSurfaceVariant
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Space24))
 
                     // 6-Digit OTP Input
                     OtpSixDigitInput(
@@ -213,7 +249,7 @@ fun OtpVerifyScreen(
                     )
 
                     if (otpError != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.Space8))
                         Text(
                             text = otpError ?: "",
                             style = MaterialTheme.typography.bodySmall,
@@ -222,7 +258,7 @@ fun OtpVerifyScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Space24))
 
                     // Verify & Start Button
                     val isLoading = uiState is Resource.Loading
@@ -235,7 +271,7 @@ fun OtpVerifyScreen(
                         enabled = !isLoading && otpInput.length == 6,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp),
+                            .height(Dimens.PrimaryButtonHeight),
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PrimaryTeal,
@@ -246,8 +282,8 @@ fun OtpVerifyScreen(
                         if (isLoading) {
                             CircularProgressIndicator(
                                 color = Color.White,
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.5.dp
+                                modifier = Modifier.size(Dimens.Space24),
+                                strokeWidth = Dimens.ProgressStrokeWidth
                             )
                         } else {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -256,18 +292,18 @@ fun OtpVerifyScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color.White
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(Dimens.Space8))
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(Dimens.Size20)
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Size20))
 
                     // Timer & Resend
                     Row(
@@ -275,13 +311,14 @@ fun OtpVerifyScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = stringResource(R.string.otp_didnt_receive) + " ",
+                            text = stringResource(R.string.otp_didnt_receive),
                             style = MaterialTheme.typography.bodyMedium,
                             color = OnSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.width(Dimens.Space4))
                         if (timeLeft > 0) {
                             Text(
-                                text = stringResource(R.string.otp_resend_in, String.format("0:%02d", timeLeft)),
+                                text = stringResource(R.string.otp_resend_seconds, timeLeft),
                                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                                 color = OnSurfaceVariant
                             )
@@ -298,16 +335,16 @@ fun OtpVerifyScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Size20))
                     HorizontalDivider(color = OutlineVariant.copy(alpha = 0.3f))
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Space16))
 
                     // Return to Login Link
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(Dimens.Space8))
                             .clickable { onBackToLogin() }
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = Dimens.Space12, vertical = Dimens.Space8),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
@@ -315,9 +352,9 @@ fun OtpVerifyScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null,
                             tint = PrimaryTeal,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(Dimens.Size18)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(Dimens.Space6))
                         Text(
                             text = stringResource(R.string.otp_return_to_login),
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
@@ -367,12 +404,12 @@ private fun OtpSixDigitInput(
             keyboardActions = KeyboardActions(onDone = { onDone() }),
             modifier = Modifier
                 .focusRequester(focusRequester)
-                .size(1.dp)
+                .size(Dimens.BorderThickness)
         )
 
         // Row of 6 Visual Boxes
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.Space8),
             modifier = Modifier.clickable { 
                 focusRequester.requestFocus()
                 keyboardController?.show()
@@ -387,14 +424,17 @@ private fun OtpSixDigitInput(
 
                 Box(
                     modifier = Modifier
-                        .width(44.dp)
-                        .height(54.dp)
-                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                        .width(Dimens.OtpCellWidth)
+                        .height(Dimens.OtpCellHeight)
+                        .clip(RoundedCornerShape(topStart = Dimens.Space6, topEnd = Dimens.Space6))
                         .background(boxBg)
                         .border(
-                            width = if (isFocused) 2.dp else 1.dp,
+                            width = if (isFocused) Dimens.Space2 else Dimens.BorderThickness,
                             color = borderColor,
-                            shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
+                            shape = RoundedCornerShape(
+                                topStart = Dimens.Space6,
+                                topEnd = Dimens.Space6
+                            )
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -402,7 +442,7 @@ private fun OtpSixDigitInput(
                         text = digit,
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp
+                            fontSize = Dimens.FontSize22
                         ),
                         color = OnSurfaceDark
                     )

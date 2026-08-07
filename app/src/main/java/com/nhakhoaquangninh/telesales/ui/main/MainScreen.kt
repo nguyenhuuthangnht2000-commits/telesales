@@ -1,7 +1,6 @@
 package com.nhakhoaquangninh.telesales.ui.main
 
 import android.Manifest
-import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -56,10 +55,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
@@ -72,6 +71,7 @@ import com.nhakhoaquangninh.telesales.data.local.SyncStatus
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.theme.BackgroundLight
 import com.nhakhoaquangninh.telesales.theme.Dimens
+import com.nhakhoaquangninh.telesales.theme.NotificationBadgeRed
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
 import com.nhakhoaquangninh.telesales.theme.OutlineVariant
@@ -86,24 +86,19 @@ import com.nhakhoaquangninh.telesales.ui.main.components.SettingsScreenContent
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    onLogout: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onLogout: () -> Unit = {},
     viewModel: MainScreenViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val audioFiles by viewModel.audioFiles.collectAsStateWithLifecycle()
+    val failedCallEvents by viewModel.failedCallEvents.collectAsStateWithLifecycle()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     val session = remember { TokenManager.getInstance(context).getSession() }
 
-    fun isServiceRunningCheck(): Boolean {
-        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-        @Suppress("DEPRECATION")
-        return manager?.getRunningServices(Int.MAX_VALUE)
-            ?.any { it.service.className == TelesalesForegroundService::class.java.name } == true
-    }
-
-    var isServiceRunning by remember { mutableStateOf(isServiceRunningCheck()) }
+    val isServiceRunning by TelesalesForegroundService.isRunning.collectAsStateWithLifecycle()
 
     var currentlyPlayingPath by remember { mutableStateOf<String?>(null) }
     val mediaPlayerRef = remember { mutableStateOf<MediaPlayer?>(null) }
@@ -150,7 +145,7 @@ fun MainScreen(
                             .setUsage(AudioAttributes.USAGE_MEDIA)
                             .build()
                     )
-                    setDataSource(filePath)
+                    setDataSource(context, filePath.toUri())
                     prepare()
                     start()
                     setOnCompletionListener {
@@ -171,7 +166,7 @@ fun MainScreen(
                 mediaPlayerRef.value = newPlayer
                 currentlyPlayingPath = filePath
             } catch (e: Exception) {
-                android.util.Log.e("MediaPlayer", "Exception khi setDataSource: ${e.message}")
+                android.util.Log.e("MediaPlayer", "Không thể phát file âm thanh")
             }
         }
     }
@@ -181,7 +176,6 @@ fun MainScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.loadFiles(context)
-                isServiceRunning = isServiceRunningCheck()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -189,17 +183,17 @@ fun MainScreen(
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 viewModel.loadFiles(context)
-                isServiceRunning = isServiceRunningCheck()
             }
         }
 
         val filter =
             android.content.IntentFilter(com.nhakhoaquangninh.telesales.CallStateReceiver.ACTION_REFRESH_FILES)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(receiver, filter)
-        }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
@@ -212,6 +206,12 @@ fun MainScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadFiles(context)
+    }
+
+    LaunchedEffect(onLogout) {
+        com.nhakhoaquangninh.telesales.UnauthorizedEventBus.events.collect {
+            onLogout()
+        }
     }
 
     val hasRecordAudioPerm = ContextCompat.checkSelfPermission(
@@ -272,7 +272,7 @@ fun MainScreen(
                         onClick = {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.no_notifications),
+                                resources.getString(R.string.no_notifications),
                                 Toast.LENGTH_SHORT
                             ).show()
                         },
@@ -283,14 +283,14 @@ fun MainScreen(
                                 imageVector = Icons.Default.Notifications,
                                 contentDescription = stringResource(R.string.notifications_desc),
                                 tint = OnSurfaceDark,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(Dimens.Size28)
                             )
                             Box(
                                 modifier = Modifier
-                                    .size(10.dp)
-                                    .background(Color(0xFFD32F2F), shape = CircleShape)
+                                    .size(Dimens.Space10)
+                                    .background(NotificationBadgeRed, shape = CircleShape)
                                     .align(Alignment.TopEnd)
-                                    .offset(x = (-2).dp, y = 2.dp)
+                                    .offset(x = Dimens.OffsetNegativeSmall, y = Dimens.Space2)
                             )
                         }
                     }
@@ -365,7 +365,7 @@ fun MainScreen(
                         if (filesToSync.isEmpty()) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.msg_no_file_to_sync),
+                                resources.getString(R.string.msg_no_file_to_sync),
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
@@ -411,7 +411,6 @@ fun MainScreen(
                             } else {
                                 context.stopService(intent)
                             }
-                            isServiceRunning = enable
                         },
                         onSyncNowClick = {
                             val filesToSync =
@@ -419,7 +418,7 @@ fun MainScreen(
                             if (filesToSync.isEmpty()) {
                                 Toast.makeText(
                                     context,
-                                    context.getString(R.string.msg_no_file_to_sync),
+                                    resources.getString(R.string.msg_no_file_to_sync),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
@@ -450,12 +449,16 @@ fun MainScreen(
                 1 -> {
                     HistoryScreenContent(
                         audioFiles = audioFiles,
+                        failedCallEvents = failedCallEvents,
                         currentlyPlayingPath = currentlyPlayingPath,
                         onPlayClick = { filePath -> playOrStop(filePath) },
                         onSyncClick = { item ->
                             viewModel.syncFiles(context, listOf(item)) { msg, success ->
                                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             }
+                        },
+                        onDeleteFailedCall = { eventId ->
+                            viewModel.deleteFailedCallEvent(context, eventId)
                         }
                     )
                 }

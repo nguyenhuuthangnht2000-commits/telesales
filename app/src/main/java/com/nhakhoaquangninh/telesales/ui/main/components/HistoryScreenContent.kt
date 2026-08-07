@@ -3,22 +3,46 @@ package com.nhakhoaquangninh.telesales.ui.main.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CallMade
-import androidx.compose.material.icons.filled.CallReceived
+import androidx.compose.material.icons.automirrored.filled.CallMade
+import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -26,48 +50,86 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.nhakhoaquangninh.telesales.R
+import com.nhakhoaquangninh.telesales.data.local.FailedCallEvent
 import com.nhakhoaquangninh.telesales.data.local.SyncStatus
-import com.nhakhoaquangninh.telesales.theme.ActiveEmerald
+import com.nhakhoaquangninh.telesales.domain.model.CallType
+import com.nhakhoaquangninh.telesales.domain.model.FailureReason
 import com.nhakhoaquangninh.telesales.theme.Dimens
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
 import com.nhakhoaquangninh.telesales.theme.OutlineVariant
 import com.nhakhoaquangninh.telesales.theme.PrimaryTeal
+import com.nhakhoaquangninh.telesales.theme.SuccessContainer
+import com.nhakhoaquangninh.telesales.theme.SuccessText
 import com.nhakhoaquangninh.telesales.theme.SurfaceContainer
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
-import com.nhakhoaquangninh.telesales.theme.WarningAmber
 import com.nhakhoaquangninh.telesales.ui.main.AudioItemState
+import com.nhakhoaquangninh.telesales.ui.main.HistoryFilter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private sealed interface HistoryEntry {
+    val id: String
+    val timestamp: Long
+
+    data class Recording(val item: AudioItemState) : HistoryEntry {
+        override val id: String = item.recording.uri
+        override val timestamp: Long = item.recording.modifiedAtMillis
+    }
+
+    data class FailedCall(val event: FailedCallEvent) : HistoryEntry {
+        override val id: String = event.id
+        override val timestamp: Long = event.callAtMillis
+    }
+}
+
 @Composable
 fun HistoryScreenContent(
     audioFiles: List<AudioItemState>,
+    failedCallEvents: List<FailedCallEvent>,
     currentlyPlayingPath: String?,
     onPlayClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
     onSyncClick: (AudioItemState) -> Unit = {},
-    modifier: Modifier = Modifier
+    onDeleteFailedCall: (String) -> Unit = {}
 ) {
-    var selectedFilter by remember { mutableStateOf("ALL") }
+    var selectedFilter by remember { mutableStateOf(HistoryFilter.ALL) }
 
-    val filteredList = remember(audioFiles, selectedFilter) {
+    val historyEntries = remember(audioFiles, failedCallEvents) {
+        (audioFiles.map { HistoryEntry.Recording(it) } +
+                failedCallEvents.map { HistoryEntry.FailedCall(it) })
+            .sortedByDescending { it.timestamp }
+    }
+    val filteredList = remember(historyEntries, selectedFilter) {
         when (selectedFilter) {
-            "PENDING" -> audioFiles.filter { it.status == SyncStatus.PENDING || it.status == SyncStatus.UPLOADING }
-            "SYNCED" -> audioFiles.filter { it.status == SyncStatus.SYNCED }
-            "FAILED" -> audioFiles.filter { it.status == SyncStatus.FAILED }
-            else -> audioFiles
+            HistoryFilter.PENDING -> historyEntries.filter {
+                it is HistoryEntry.Recording &&
+                        (it.item.status == SyncStatus.PENDING || it.item.status == SyncStatus.UPLOADING)
+            }
+
+            HistoryFilter.SYNCED -> historyEntries.filter {
+                it is HistoryEntry.Recording && it.item.status == SyncStatus.SYNCED
+            }
+
+            HistoryFilter.FAILED -> historyEntries.filter {
+                it is HistoryEntry.FailedCall ||
+                        (it is HistoryEntry.Recording && (it.item.status == SyncStatus.FAILED || it.item.status == SyncStatus.NEEDS_REVIEW))
+            }
+
+            else -> historyEntries
         }
     }
 
-    val failedCount = audioFiles.count { it.status == SyncStatus.FAILED }
-
+    val failedCount = historyEntries.count {
+        it is HistoryEntry.FailedCall ||
+                (it is HistoryEntry.Recording && (it.item.status == SyncStatus.FAILED || it.item.status == SyncStatus.NEEDS_REVIEW))
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF9F9F9))
+            .background(MaterialTheme.colorScheme.background)
             .padding(top = Dimens.PaddingMedium)
     ) {
         // Header
@@ -77,7 +139,7 @@ fun HistoryScreenContent(
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 color = OnSurfaceDark
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimens.Space4))
             Text(
                 text = stringResource(R.string.history_desc),
                 style = MaterialTheme.typography.bodyMedium,
@@ -91,50 +153,56 @@ fun HistoryScreenContent(
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = Dimens.PaddingMedium),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
         ) {
             item {
                 FilterTab(
                     title = stringResource(R.string.tab_all_calls),
-                    isSelected = selectedFilter == "ALL",
-                    onClick = { selectedFilter = "ALL" }
+                    isSelected = selectedFilter == HistoryFilter.ALL,
+                    onClick = { selectedFilter = HistoryFilter.ALL }
                 )
             }
             item {
                 FilterTab(
                     title = stringResource(R.string.sync_status_pending),
-                    isSelected = selectedFilter == "PENDING",
-                    onClick = { selectedFilter = "PENDING" }
+                    isSelected = selectedFilter == HistoryFilter.PENDING,
+                    onClick = { selectedFilter = HistoryFilter.PENDING }
                 )
             }
             item {
                 FilterTab(
                     title = stringResource(R.string.sync_status_synced),
-                    isSelected = selectedFilter == "SYNCED",
-                    onClick = { selectedFilter = "SYNCED" }
+                    isSelected = selectedFilter == HistoryFilter.SYNCED,
+                    onClick = { selectedFilter = HistoryFilter.SYNCED }
                 )
             }
             item {
                 FilterTab(
                     title = stringResource(R.string.sync_status_failed),
-                    isSelected = selectedFilter == "FAILED",
+                    isSelected = selectedFilter == HistoryFilter.FAILED,
                     badgeCount = failedCount,
                     isError = true,
-                    onClick = { selectedFilter = "FAILED" }
+                    onClick = { selectedFilter = HistoryFilter.FAILED }
                 )
             }
         }
-        
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = OutlineVariant.copy(alpha = 0.3f))
+
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = Dimens.Space8),
+            color = OutlineVariant.copy(alpha = 0.3f)
+        )
 
         // List
         if (filteredList.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("📦", style = MaterialTheme.typography.displayMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Không có cuộc gọi nào",
+                        stringResource(R.string.history_empty_icon),
+                        style = MaterialTheme.typography.displayMedium
+                    )
+                    Spacer(modifier = Modifier.height(Dimens.Space8))
+                    Text(
+                        text = stringResource(R.string.history_empty),
                         style = MaterialTheme.typography.titleMedium,
                         color = OnSurfaceVariant
                     )
@@ -143,16 +211,132 @@ fun HistoryScreenContent(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = Dimens.PaddingMedium, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(
+                    horizontal = Dimens.PaddingMedium,
+                    vertical = Dimens.Space8
+                ),
+                verticalArrangement = Arrangement.spacedBy(Dimens.Space12)
             ) {
-                items(filteredList, key = { it.file.absolutePath }) { item ->
-                    val isPlaying = currentlyPlayingPath == item.file.absolutePath
-                    HistoryItemCard(
-                        item = item,
-                        isPlaying = isPlaying,
-                        onPlayClick = { onPlayClick(item.file.absolutePath) },
-                        onSyncClick = { onSyncClick(item) }
+                items(filteredList, key = { it.id }) { entry ->
+                    when (entry) {
+                        is HistoryEntry.Recording -> {
+                            val item = entry.item
+                            val isPlaying = currentlyPlayingPath == item.recording.uri
+                            HistoryItemCard(
+                                item = item,
+                                isPlaying = isPlaying,
+                                onPlayClick = { onPlayClick(item.recording.uri) },
+                                onSyncClick = { onSyncClick(item) }
+                            )
+                        }
+
+                        is HistoryEntry.FailedCall -> FailedCallCard(
+                            event = entry.event,
+                            onDeleteClick = { onDeleteFailedCall(entry.event.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FailedCallCard(
+    event: FailedCallEvent,
+    onDeleteClick: () -> Unit
+) {
+    val isIncoming = event.callType == CallType.INCOMING
+    val displayPhone = (if (isIncoming) event.phoneNumberFrom else event.phoneNumberTo)
+        ?: stringResource(R.string.history_unknown_phone)
+    val statusText = if (event.failureReason == FailureReason.MISSED) {
+        stringResource(R.string.history_missed_call)
+    } else {
+        stringResource(R.string.history_call_not_connected)
+    }
+    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(Dimens.CornerRadiusMedium),
+        colors = CardDefaults.cardColors(containerColor = SurfaceLowest),
+        border = BorderStroke(
+            Dimens.BorderThickness,
+            MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = Dimens.ElevationSmall)
+    ) {
+        Column(modifier = Modifier.padding(Dimens.PaddingMedium)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.size(Dimens.IconSizeExtraLarge)
+                    ) {
+                        Icon(
+                            imageVector = if (isIncoming) Icons.AutoMirrored.Filled.CallReceived else Icons.AutoMirrored.Filled.CallMade,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(Dimens.PaddingSmall)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
+                    Column {
+                        Text(
+                            text = displayPhone,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = OnSurfaceDark
+                        )
+                        Text(
+                            text = dateFormatter.format(Date(event.callAtMillis)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OnSurfaceVariant
+                        )
+                    }
+                }
+                IconButton(onClick = onDeleteClick) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.history_delete_failed_call),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.errorContainer,
+                border = BorderStroke(
+                    Dimens.BorderThickness,
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.2f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(
+                        horizontal = Dimens.PaddingSmall,
+                        vertical = Dimens.PaddingExtraSmall
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ErrorOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(Dimens.IconSizeSmall)
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.PaddingExtraSmall))
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
@@ -176,7 +360,7 @@ private fun FilterTab(
             .clickable { onClick() }
             .drawBehind {
                 if (isSelected) {
-                    val strokeWidth = 2.dp.toPx()
+                    val strokeWidth = Dimens.Space2.toPx()
                     val y = size.height - strokeWidth / 2
                     drawLine(
                         color = borderColor,
@@ -186,7 +370,7 @@ private fun FilterTab(
                     )
                 }
             }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = Dimens.Space16, vertical = Dimens.Space12),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -195,16 +379,21 @@ private fun FilterTab(
             color = textColor
         )
         if (badgeCount > 0) {
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(Dimens.Space6))
             Surface(
                 shape = CircleShape,
-                color = if (isError) MaterialTheme.colorScheme.errorContainer else PrimaryTeal.copy(alpha = 0.2f)
+                color = if (isError) MaterialTheme.colorScheme.errorContainer else PrimaryTeal.copy(
+                    alpha = 0.2f
+                )
             ) {
                 Text(
                     text = badgeCount.toString(),
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                     color = if (isError) MaterialTheme.colorScheme.error else PrimaryTeal,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    modifier = Modifier.padding(
+                        horizontal = Dimens.Space6,
+                        vertical = Dimens.Space2
+                    )
                 )
             }
         }
@@ -218,17 +407,13 @@ private fun HistoryItemCard(
     onPlayClick: () -> Unit,
     onSyncClick: () -> Unit
 ) {
-    val isIncoming = if (item.metadata?.callType != null) {
-        item.metadata.callType == "incoming"
-    } else {
-        item.file.name.contains("incoming", ignoreCase = true) || item.file.name.contains("nhan", ignoreCase = true)
-    }
+    val isIncoming = item.metadata?.callType == CallType.INCOMING
 
     val displayPhone = if (item.metadata != null) {
         if (isIncoming) item.metadata.phoneNumberFrom else item.metadata.phoneNumberTo
     } else {
-        item.file.nameWithoutExtension
-    } ?: item.file.nameWithoutExtension
+        item.recording.displayName.substringBeforeLast('.')
+    } ?: item.recording.displayName.substringBeforeLast('.')
 
     val durationText = if (item.metadata != null && item.metadata.durationSeconds > 0) {
         val m = item.metadata.durationSeconds / 60
@@ -237,39 +422,48 @@ private fun HistoryItemCard(
     } else {
         ""
     }
-    
+
     val statusColor = when (item.status) {
-        SyncStatus.SYNCED -> Color(0xFF137333)
+        SyncStatus.SYNCED -> SuccessText
         SyncStatus.FAILED -> MaterialTheme.colorScheme.error
         SyncStatus.PENDING, SyncStatus.UPLOADING -> OnSurfaceVariant
+        SyncStatus.NEEDS_REVIEW -> MaterialTheme.colorScheme.tertiary
     }
     val statusBgColor = when (item.status) {
-        SyncStatus.SYNCED -> Color(0xFFE6F4EA)
+        SyncStatus.SYNCED -> SuccessContainer
         SyncStatus.FAILED -> MaterialTheme.colorScheme.errorContainer
         SyncStatus.PENDING, SyncStatus.UPLOADING -> SurfaceContainer
+        SyncStatus.NEEDS_REVIEW -> MaterialTheme.colorScheme.tertiaryContainer
     }
     val statusIcon = when (item.status) {
         SyncStatus.SYNCED -> Icons.Default.CloudDone
         SyncStatus.FAILED -> Icons.Default.CloudOff
         SyncStatus.PENDING, SyncStatus.UPLOADING -> Icons.Default.Schedule
+        SyncStatus.NEEDS_REVIEW -> Icons.Default.ErrorOutline
     }
     val statusText = when (item.status) {
-        SyncStatus.SYNCED -> "Synced"
-        SyncStatus.FAILED -> "Failed"
-        SyncStatus.PENDING -> "Pending"
-        SyncStatus.UPLOADING -> "Uploading..."
+        SyncStatus.SYNCED -> stringResource(R.string.sync_status_synced)
+        SyncStatus.FAILED -> stringResource(R.string.sync_status_failed)
+        SyncStatus.PENDING -> stringResource(R.string.sync_status_pending)
+        SyncStatus.UPLOADING -> stringResource(R.string.sync_status_uploading)
+        SyncStatus.NEEDS_REVIEW -> stringResource(R.string.sync_status_needs_review)
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dimens.Space12),
         colors = CardDefaults.cardColors(
             containerColor = if (isPlaying) PrimaryTeal.copy(alpha = 0.05f) else SurfaceLowest
         ),
-        border = BorderStroke(1.dp, if (item.status == SyncStatus.FAILED) MaterialTheme.colorScheme.error.copy(alpha = 0.3f) else OutlineVariant.copy(alpha = 0.3f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = BorderStroke(
+            Dimens.BorderThickness,
+            if (item.status == SyncStatus.FAILED) MaterialTheme.colorScheme.error.copy(alpha = 0.3f) else OutlineVariant.copy(
+                alpha = 0.3f
+            )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = Dimens.ElevationExtraSmall)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Dimens.Space16)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -279,17 +473,19 @@ private fun HistoryItemCard(
                 Row(modifier = Modifier.weight(1f)) {
                     Surface(
                         shape = CircleShape,
-                        color = if (item.status == SyncStatus.FAILED) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f) else SurfaceContainer,
-                        modifier = Modifier.size(40.dp)
+                        color = if (item.status == SyncStatus.FAILED) MaterialTheme.colorScheme.errorContainer.copy(
+                            alpha = 0.3f
+                        ) else SurfaceContainer,
+                        modifier = Modifier.size(Dimens.Size40)
                     ) {
                         Icon(
-                            imageVector = if (isIncoming) Icons.Default.CallReceived else Icons.Default.CallMade,
+                            imageVector = if (isIncoming) Icons.AutoMirrored.Filled.CallReceived else Icons.AutoMirrored.Filled.CallMade,
                             contentDescription = null,
                             tint = if (item.status == SyncStatus.FAILED) MaterialTheme.colorScheme.error else OnSurfaceVariant,
-                            modifier = Modifier.padding(8.dp)
+                            modifier = Modifier.padding(Dimens.Space8)
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(Dimens.Space12))
                     Column {
                         Text(
                             text = displayPhone,
@@ -297,30 +493,31 @@ private fun HistoryItemCard(
                             color = OnSurfaceDark,
                             maxLines = 1
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        val sdf = remember { SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()) }
+                        Spacer(modifier = Modifier.height(Dimens.Space2))
+                        val sdf =
+                            remember { SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()) }
                         Text(
-                            text = sdf.format(Date(item.file.lastModified())),
+                            text = sdf.format(Date(item.recording.modifiedAtMillis)),
                             style = MaterialTheme.typography.bodySmall,
                             color = OnSurfaceVariant
                         )
                     }
                 }
-                
+
                 // Play Button
                 IconButton(
                     onClick = onPlayClick,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(Dimens.Size36)
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                        contentDescription = "Play/Stop",
+                        contentDescription = stringResource(R.string.history_play_stop),
                         tint = PrimaryTeal
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.Space12))
 
             // Bottom tags
             Row(
@@ -330,19 +527,31 @@ private fun HistoryItemCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (durationText.isNotEmpty()) {
-                        Icon(Icons.Default.Schedule, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = OnSurfaceVariant,
+                            modifier = Modifier.size(Dimens.Space16)
+                        )
+                        Spacer(modifier = Modifier.width(Dimens.Space4))
                         Text(
                             text = durationText,
                             style = MaterialTheme.typography.bodySmall,
                             color = OnSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("•", color = OnSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Dimens.Space8))
+                        Text(
+                            stringResource(R.string.history_separator),
+                            color = OnSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(modifier = Modifier.width(Dimens.Space8))
                     }
                     Text(
-                        text = "${item.file.length() / 1024} KB",
+                        text = stringResource(
+                            R.string.history_file_size_kb,
+                            item.recording.sizeBytes / 1024
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = OnSurfaceVariant
                     )
@@ -351,7 +560,7 @@ private fun HistoryItemCard(
                 Surface(
                     shape = CircleShape,
                     color = statusBgColor,
-                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.2f)),
+                    border = BorderStroke(Dimens.BorderThickness, statusColor.copy(alpha = 0.2f)),
                     modifier = if (item.status == SyncStatus.FAILED || item.status == SyncStatus.PENDING) {
                         Modifier.clickable { onSyncClick() }
                     } else {
@@ -359,11 +568,19 @@ private fun HistoryItemCard(
                     }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(
+                            horizontal = Dimens.Space10,
+                            vertical = Dimens.Space4
+                        ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(statusIcon, contentDescription = null, tint = statusColor, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            statusIcon,
+                            contentDescription = null,
+                            tint = statusColor,
+                            modifier = Modifier.size(Dimens.Size14)
+                        )
+                        Spacer(modifier = Modifier.width(Dimens.Space4))
                         Text(
                             text = statusText,
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),

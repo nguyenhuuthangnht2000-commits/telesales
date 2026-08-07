@@ -2,9 +2,6 @@ package com.nhakhoaquangninh.telesales
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
@@ -14,28 +11,63 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.Settings
 import android.util.Log
-import android.view.Gravity
-import android.view.View
-import android.view.WindowInsets
-import android.view.WindowInsetsController
 import android.view.WindowManager
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.nhakhoaquangninh.telesales.theme.BackgroundLight
+import com.nhakhoaquangninh.telesales.theme.Dimens
+import com.nhakhoaquangninh.telesales.theme.ErrorCrimson
+import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
+import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
+import com.nhakhoaquangninh.telesales.theme.OutlineVariant
+import com.nhakhoaquangninh.telesales.theme.PrimaryTeal
+import com.nhakhoaquangninh.telesales.theme.SurfaceContainer
+import com.nhakhoaquangninh.telesales.theme.SurfaceContainerHighest
+import com.nhakhoaquangninh.telesales.theme.TertiaryContainer
+import com.nhakhoaquangninh.telesales.theme.TertiaryFixedDim
 
 /**
  * WarningActivity — Màn hình cảnh báo vi phạm toàn màn hình với tính răn đe cao.
  *
  * Kích hoạt KHI VÀ CHỈ KHI nhân viên tắt tính năng ghi âm cuộc gọi.
- * 
- * Tính năng tăng cường răn đe:
- *  1. Phát chuông cảnh báo + rung khẩn cấp.
- *  2. Đếm và hiển thị số lần vi phạm trong ngày.
- *  3. Chặn nút Back hoàn toàn.
- *  4. Có nút bấm "⚙️ Mở Cài Đặt Điện Thoại" đưa thẳng nhân viên tới nơi bật lại ghi âm.
- *  5. Không làm gián đoạn luồng làm việc nếu nhân viên ĐÃ BẬT ghi âm tuân thủ.
  */
 class WarningActivity : ComponentActivity() {
 
@@ -52,16 +84,8 @@ class WarningActivity : ComponentActivity() {
         }
 
         // ── Hiển thị đè lên màn hình khoá + giữ màn hình sáng ──────────
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            )
-        }
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // ── Đếm số lần vi phạm trong ngày ─────────────────────────────
@@ -72,7 +96,19 @@ class WarningActivity : ComponentActivity() {
         // ── Phát âm thanh cảnh báo & Rung khẩn cấp ────────────────────
         triggerAlarmEffects()
 
-        setContentView(buildUI(violationCount))
+        setContent {
+            MaterialTheme {
+                WarningScreen(
+                    violationCount = violationCount,
+                    onOpenSettings = { openPhoneCallSettings() },
+                    onConfirm = {
+                        Log.d(TAG, "✅ Nhân viên xác nhận đã sửa xong vi phạm.")
+                        finish()
+                    }
+                )
+            }
+        }
+
         makeFullscreen()
 
         Log.w(TAG, "🚨 WarningActivity đã kích hoạt! Số lần vi phạm: $violationCount")
@@ -80,189 +116,37 @@ class WarningActivity : ComponentActivity() {
 
     private fun triggerAlarmEffects() {
         try {
-            // Chuông báo động
             val toneG = ToneGenerator(AudioManager.STREAM_ALARM, 100)
             toneG.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 1200)
 
-            // Rung khẩn cấp
+            val effect = VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val vibratorManager =
                     getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-                vibratorManager?.defaultVibrator?.vibrate(
-                    VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE)
-                )
+                vibratorManager?.defaultVibrator?.vibrate(effect)
             } else {
                 @Suppress("DEPRECATION")
                 val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(1000)
+                vibrator?.vibrate(effect)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Lỗi hiệu ứng âm thanh/rung cảnh báo: ${e.message}")
+            Log.e(TAG, "Lỗi hiệu ứng cảnh báo")
         }
-    }
-
-    private fun buildUI(violationCount: Int): View {
-        // ── Root container ────────────────────────────────────────────────
-        val root = LinearLayout(this)
-        root.orientation = LinearLayout.VERTICAL
-        root.gravity = Gravity.CENTER_HORIZONTAL
-        root.setBackgroundColor(Color.parseColor("#880E4F")) // Deep Red / Crimson 900
-        root.setPadding(dp(24), dp(50), dp(24), dp(40))
-
-        // ── Icon cảnh báo vi phạm ──────────────────────────────────────────
-        val iconView = TextView(this)
-        iconView.text = "🚨"
-        iconView.textSize = 72f
-        iconView.gravity = Gravity.CENTER
-        val iconLp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        iconLp.bottomMargin = dp(12)
-        root.addView(iconView, iconLp)
-
-        // ── Tiêu đề RĂN ĐE ────────────────────────────────────────────────
-        val titleView = TextView(this)
-        titleView.text = getString(R.string.warning_title)
-        titleView.textSize = 30f
-        titleView.setTextColor(Color.WHITE)
-        titleView.gravity = Gravity.CENTER
-        titleView.typeface = Typeface.DEFAULT_BOLD
-        val titleLp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        titleLp.bottomMargin = dp(8)
-        root.addView(titleView, titleLp)
-
-        // ── Đếm số lần vi phạm ────────────────────────────────────────────
-        val badgeBg = GradientDrawable()
-        badgeBg.setColor(Color.parseColor("#D50000")) // Bright Red
-        badgeBg.cornerRadius = dp(20).toFloat()
-
-        val violationBadge = TextView(this)
-        violationBadge.text = getString(R.string.warning_violation_count, violationCount)
-        violationBadge.textSize = 14f
-        violationBadge.setTextColor(Color.WHITE)
-        violationBadge.typeface = Typeface.DEFAULT_BOLD
-        violationBadge.gravity = Gravity.CENTER
-        violationBadge.background = badgeBg
-        violationBadge.setPadding(dp(16), dp(8), dp(16), dp(8))
-        val badgeLp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        badgeLp.bottomMargin = dp(24)
-        root.addView(violationBadge, badgeLp)
-
-        // ── Nội dung thông báo vi phạm ─────────────────────────────────────
-        val messageView = TextView(this)
-        messageView.text = getString(R.string.warning_message)
-        messageView.textSize = 18f
-        messageView.setTextColor(Color.WHITE)
-        messageView.gravity = Gravity.CENTER
-        messageView.setLineSpacing(0f, 1.3f)
-        val messageLp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        messageLp.bottomMargin = dp(28)
-        root.addView(messageView, messageLp)
-
-        // ── Hộp hướng dẫn xử lý ──────────────────────────────────────────
-        val instructionBg = GradientDrawable()
-        instructionBg.setColor(Color.parseColor("#4A148C")) // Deep Purple Accent
-        instructionBg.cornerRadius = dp(12).toFloat()
-
-        val instructionBox = LinearLayout(this)
-        instructionBox.orientation = LinearLayout.VERTICAL
-        instructionBox.setPadding(dp(20), dp(16), dp(20), dp(16))
-        instructionBox.background = instructionBg
-
-        val instructionText = TextView(this)
-        instructionText.text = "${getString(R.string.warning_instruction_title)}\n\n${getString(R.string.warning_instruction_body)}"
-        instructionText.textSize = 14f
-        instructionText.setTextColor(Color.parseColor("#E1BEE7"))
-        instructionText.setLineSpacing(0f, 1.3f)
-        instructionBox.addView(instructionText)
-
-        val boxLp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        boxLp.bottomMargin = dp(32)
-        root.addView(instructionBox, boxLp)
-
-        // ── Spacer đẩy nút xuống cuối ─────────────────────────────────────
-        val spacer = View(this)
-        root.addView(spacer, LinearLayout.LayoutParams(0, 0, 1f))
-
-        // ── Nút 1: Mở Cài Đặt Điện Thoại Trực Tiếp ─────────────────────────
-        val openSettingsBg = GradientDrawable()
-        openSettingsBg.setColor(Color.parseColor("#FFD600")) // Yellow Accent
-        openSettingsBg.cornerRadius = dp(30).toFloat()
-
-        val openSettingsBtn = Button(this)
-        openSettingsBtn.text = getString(R.string.warning_btn_open_settings)
-        openSettingsBtn.textSize = 16f
-        openSettingsBtn.typeface = Typeface.DEFAULT_BOLD
-        openSettingsBtn.setTextColor(Color.BLACK)
-        openSettingsBtn.background = openSettingsBg
-        openSettingsBtn.setPadding(dp(24), dp(14), dp(24), dp(14))
-        openSettingsBtn.setOnClickListener {
-            openPhoneCallSettings()
-        }
-
-        val settingsBtnLp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        settingsBtnLp.bottomMargin = dp(12)
-        root.addView(openSettingsBtn, settingsBtnLp)
-
-        // ── Nút 2: Tôi đã sửa xong ─────────────────────────────────────────
-        val confirmBtn = Button(this)
-        confirmBtn.text = getString(R.string.warning_btn_confirm)
-        confirmBtn.textSize = 14f
-        confirmBtn.typeface = Typeface.DEFAULT_BOLD
-        confirmBtn.setTextColor(Color.WHITE)
-        confirmBtn.background = GradientDrawable().apply {
-            setColor(Color.parseColor("#B71C1C"))
-            cornerRadius = dp(30).toFloat()
-            setStroke(dp(2), Color.WHITE)
-        }
-        confirmBtn.setPadding(dp(20), dp(12), dp(20), dp(12))
-        confirmBtn.setOnClickListener {
-            Log.d(TAG, "✅ Nhân viên xác nhận đã sửa xong vi phạm.")
-            finish()
-        }
-
-        val confirmBtnLp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        root.addView(confirmBtn, confirmBtnLp)
-
-        return root
     }
 
     private fun openPhoneCallSettings() {
         try {
-            // Mở thẳng cài đặt ứng dụng Điện thoại / Cuộc gọi
             val intent = Intent("android.telecom.action.SHOW_CALL_SETTINGS").apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             startActivity(intent)
         } catch (e: Exception) {
             try {
-                // Fallback: Mở giao diện quay số Điện thoại
                 val intent = Intent(Intent.ACTION_DIAL).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 startActivity(intent)
             } catch (e2: Exception) {
-                // Fallback: Mở Cài đặt hệ thống chung
                 val intent = Intent(Settings.ACTION_SETTINGS).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
@@ -273,26 +157,13 @@ class WarningActivity : ComponentActivity() {
 
     private fun makeFullscreen() {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val controller = window.decorView.windowInsetsController ?: window.insetsController
-                controller?.let { ctrl ->
-                    ctrl.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
-                    ctrl.systemBarsBehavior =
-                        WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                window.decorView.systemUiVisibility = (
-                        View.SYSTEM_UI_FLAG_FULLSCREEN
-                                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        )
-            }
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            val controller = WindowInsetsControllerCompat(window, window.decorView)
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         } catch (e: Exception) {
-            Log.e(TAG, "Lỗi makeFullscreen: ${e.message}")
+            Log.e(TAG, "Lỗi chuyển sang toàn màn hình")
         }
     }
 
@@ -300,7 +171,150 @@ class WarningActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) makeFullscreen()
     }
+}
 
-    private fun dp(value: Int): Int =
-        (value * resources.displayMetrics.density).toInt()
+@Composable
+fun WarningScreen(
+    violationCount: Int,
+    onOpenSettings: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundLight)
+            .padding(Dimens.PaddingMedium),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = Dimens.WarningMaxWidth),
+            shape = RoundedCornerShape(Dimens.CornerRadiusMedium),
+            colors = CardDefaults.cardColors(containerColor = SurfaceContainer),
+            border = BorderStroke(Dimens.BorderThickness, OutlineVariant),
+            elevation = CardDefaults.cardElevation(defaultElevation = Dimens.ElevationMedium)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Dimens.PaddingLarge),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(TertiaryContainer.copy(alpha = 0.2f), shape = CircleShape)
+                        .padding(Dimens.PaddingMedium),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = TertiaryFixedDim,
+                        modifier = Modifier.size(Dimens.IconSizeWarning)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
+
+                Text(
+                    text = stringResource(R.string.warning_title),
+                    color = ErrorCrimson,
+                    fontSize = Dimens.FontSize28,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    lineHeight = Dimens.FontSize36
+                )
+
+                Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
+
+                Text(
+                    text = stringResource(R.string.warning_message),
+                    color = OnSurfaceVariant,
+                    fontSize = Dimens.FontSize16,
+                    textAlign = TextAlign.Center,
+                    lineHeight = Dimens.FontSize24
+                )
+
+                if (violationCount > 0) {
+                    Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
+                    Text(
+                        text = stringResource(R.string.warning_violation_count, violationCount),
+                        color = ErrorCrimson,
+                        fontSize = Dimens.FontSize14,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(Dimens.CornerRadiusSmall))
+                        .background(BackgroundLight)
+                        .padding(Dimens.PaddingMedium)
+                ) {
+                    Text(
+                        text = stringResource(R.string.warning_instruction_title),
+                        fontWeight = FontWeight.Medium,
+                        fontSize = Dimens.FontSize18,
+                        color = OnSurfaceDark,
+                        modifier = Modifier.padding(bottom = Dimens.Space12)
+                    )
+                    HorizontalDivider(
+                        color = SurfaceContainerHighest,
+                        thickness = Dimens.DividerThickness
+                    )
+
+                    Spacer(modifier = Modifier.height(Dimens.Space12))
+
+                    Text(
+                        text = stringResource(R.string.warning_instruction_body),
+                        color = OnSurfaceVariant,
+                        fontSize = Dimens.FontSize14,
+                        lineHeight = Dimens.FontSize20
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(Dimens.PaddingLarge))
+
+                Button(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTeal),
+                    shape = RoundedCornerShape(50)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.Size20),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.Space8))
+                    Text(
+                        text = stringResource(R.string.warning_btn_open_settings),
+                        fontSize = Dimens.FontSize14,
+                        color = Color.White
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
+
+                OutlinedButton(
+                    onClick = onConfirm,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryTeal),
+                    border = BorderStroke(Dimens.BorderThickness, PrimaryTeal),
+                    shape = RoundedCornerShape(50)
+                ) {
+                    Text(
+                        text = stringResource(R.string.warning_btn_confirm),
+                        fontSize = Dimens.FontSize14
+                    )
+                }
+            }
+        }
+    }
 }

@@ -43,16 +43,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nhakhoaquangninh.telesales.R
 import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.theme.BackgroundLight
+import com.nhakhoaquangninh.telesales.theme.Dimens
 import com.nhakhoaquangninh.telesales.theme.OnPrimaryContainer
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
@@ -97,13 +98,13 @@ fun LoginScreen(
             .background(BackgroundLight)
             .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(Dimens.Space16),
         contentAlignment = Alignment.Center
     ) {
         // Subtle Teal Background Orbs (Decorative)
         Box(
             modifier = Modifier
-                .size(240.dp)
+                .size(Dimens.AuthDecorSmall)
                 .align(Alignment.TopStart)
                 .background(
                     color = PrimaryTeal.copy(alpha = 0.05f),
@@ -112,7 +113,7 @@ fun LoginScreen(
         )
         Box(
             modifier = Modifier
-                .size(280.dp)
+                .size(Dimens.AuthDecorLarge)
                 .align(Alignment.BottomEnd)
                 .background(
                     color = PrimaryContainer.copy(alpha = 0.05f),
@@ -124,13 +125,13 @@ fun LoginScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 440.dp),
-            shape = RoundedCornerShape(16.dp),
+                .widthIn(max = Dimens.LoginMaxWidth),
+            shape = RoundedCornerShape(Dimens.Space16),
             colors = CardDefaults.cardColors(
                 containerColor = SurfaceLowest
             ),
-            border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.4f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            border = BorderStroke(Dimens.BorderThickness, OutlineVariant.copy(alpha = 0.4f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = Dimens.Space6)
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -140,39 +141,44 @@ fun LoginScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(SurfaceLowest)
-                        .padding(top = 28.dp, bottom = 20.dp, start = 24.dp, end = 24.dp),
+                        .padding(
+                            top = Dimens.Size28,
+                            bottom = Dimens.Size20,
+                            start = Dimens.Space24,
+                            end = Dimens.Space24
+                        ),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(64.dp)
+                            .size(Dimens.IconSizeAuth)
                             .background(PrimaryContainer, shape = CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.MedicalServices,
-                            contentDescription = "Dental Icon",
+                            contentDescription = stringResource(R.string.login_dental_icon_desc),
                             tint = OnPrimaryContainer,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(Dimens.Size36)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Space16))
 
                     Text(
-                        text = "Nha Khoa Quảng Ninh",
+                        text = stringResource(R.string.login_brand),
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp
+                            fontSize = Dimens.FontSize24
                         ),
                         color = PrimaryTeal,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Space4))
 
                     Text(
-                        text = "Cổng truy cập nhân viên",
+                        text = stringResource(R.string.login_portal_title),
                         style = MaterialTheme.typography.bodyMedium,
                         color = OnSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -185,14 +191,14 @@ fun LoginScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp)
+                        .padding(Dimens.Space24)
                 ) {
                     // Input Field: Employee ID / User ID
                     OutlinedTextField(
                         value = userIdInput,
                         onValueChange = { viewModel.onUserIdChanged(it) },
-                        label = { Text("Mã nhân viên / User ID") },
-                        placeholder = { Text("Nhập ID nhân viên") },
+                        label = { Text(stringResource(R.string.login_employee_id_label)) },
+                        placeholder = { Text(stringResource(R.string.login_employee_id_placeholder)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Badge,
@@ -226,21 +232,21 @@ fun LoginScreen(
                             focusedContainerColor = BackgroundLight,
                             unfocusedContainerColor = BackgroundLight
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(Dimens.Space12),
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Space16))
 
                     Text(
-                        text = "Mã OTP xác thực sẽ được gửi tới thiết bị đã đăng ký.",
+                        text = stringResource(R.string.login_otp_delivery_note),
                         style = MaterialTheme.typography.bodyMedium,
                         color = OnSurfaceVariant,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Size20))
 
                     // Primary Action Button: Request OTP
                     val isLoading = uiState is Resource.Loading
@@ -253,24 +259,24 @@ fun LoginScreen(
                         enabled = !isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(26.dp), // Pill Shape per DESIGN.md
+                            .height(Dimens.PrimaryButtonHeight),
+                        shape = RoundedCornerShape(Dimens.CornerRadiusPill), // Pill Shape per DESIGN.md
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PrimaryTeal,
                             contentColor = Color.White,
                             disabledContainerColor = OutlineVariant
                         ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = Dimens.Space2)
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
                                 color = Color.White,
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.5.dp
+                                modifier = Modifier.size(Dimens.Space24),
+                                strokeWidth = Dimens.ProgressStrokeWidth
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(Dimens.Space10))
                             Text(
-                                text = "Đang kết nối Server...",
+                                text = stringResource(R.string.login_connecting),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                                 color = Color.White
                             )
@@ -279,19 +285,19 @@ fun LoginScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Gửi yêu cầu OTP",
+                                    text = stringResource(R.string.login_request_otp),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 16.sp
+                                        fontSize = Dimens.FontSize16
                                     ),
                                     color = Color.White
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(Dimens.Space8))
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(Dimens.Size20)
                                 )
                             }
                         }
@@ -303,28 +309,29 @@ fun LoginScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(SurfaceLow)
-                        .padding(16.dp),
+                        .padding(Dimens.Space16),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Cần hỗ trợ truy cập? ",
+                            text = stringResource(R.string.login_support_prompt),
                             style = MaterialTheme.typography.bodyMedium,
                             color = OnSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.width(Dimens.Space4))
                         Text(
-                            text = "Liên hệ IT Support",
+                            text = stringResource(R.string.login_support_contact),
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                             color = PrimaryTeal
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(Dimens.Space4))
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                             contentDescription = null,
                             tint = PrimaryTeal,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(Dimens.Space16)
                         )
                     }
                 }

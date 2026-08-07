@@ -52,7 +52,8 @@ class MainActivity : BaseActivity() {
 
         val permissionsToRequest = mutableListOf(
             Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_CALL_LOG
+            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.READ_PHONE_NUMBERS
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

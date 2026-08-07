@@ -1,7 +1,10 @@
 package com.nhakhoaquangninh.telesales.data.repository
 
-import android.util.Log
-import android.webkit.MimeTypeMap
+import android.content.ContentResolver
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.core.net.toUri
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.data.remote.ApiService
 import com.nhakhoaquangninh.telesales.data.remote.RetrofitClient
@@ -10,17 +13,24 @@ import com.nhakhoaquangninh.telesales.domain.common.MessageProvider
 import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
 import com.nhakhoaquangninh.telesales.domain.repository.CallRecordRepository
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.File
+import okio.BufferedSink
+import okio.source
+import java.io.FileNotFoundException
+import java.io.IOException
 
 class CallRecordRepositoryImpl(
+    context: Context,
     private val apiService: ApiService = RetrofitClient.apiService,
     private val tokenManager: TokenManager,
     private val messageProvider: MessageProvider
 ) : CallRecordRepository {
+    private val resolver = context.applicationContext.contentResolver
 
     override suspend fun uploadCallRecord(metadata: CallRecordMetadata): Resource<Boolean> {
         val token = tokenManager.getToken()
@@ -32,52 +42,139 @@ class CallRecordRepositoryImpl(
             )
         }
 
-        val file = File(metadata.filePath)
-        val extension = file.extension.lowercase()
-        val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "application/octet-stream"
-        Log.d("UploadAudio", "Preparing upload - File: ${file.name} | Extension: $extension | MimeType: $mimeType")
-        val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
-        val bodyPart = MultipartBody.Part.createFormData("recording", file.name, requestFile)
+        val payload = resolvePayload(metadata.recordingUri)
+            ?: return Resource.Error(
+                message = "Không thể đọc tệp ghi âm hợp lệ",
+                source = ErrorSource.APP_CLIENT
+            )
+        val recordingBody = ContentUriRequestBody(
+            resolver = resolver,
+            uri = payload.uri,
+            mediaType = payload.mimeType.toMediaType(),
+            contentLength = payload.sizeBytes
+        )
+        val bodyPart = MultipartBody.Part.createFormData(
+            "recording",
+            payload.displayName,
+            recordingBody
+        )
         val textMediaType = "text/plain".toMediaTypeOrNull()
 
-        val response = apiService.uploadCallRecord(
-            apiKey = RetrofitClient.DEFAULT_API_KEY,
-            authorization = "Bearer $token",
-            recording = bodyPart,
-            phoneNumberFrom = metadata.phoneNumberFrom?.toRequestBody(textMediaType),
-            phoneNumberTo = metadata.phoneNumberTo?.toRequestBody(textMediaType),
-            callType = metadata.callType?.toRequestBody(textMediaType),
-            duration = metadata.durationSeconds.toString().toRequestBody(textMediaType),
-            callAt = metadata.callAtFormatted?.toRequestBody(textMediaType)
-        )
+        val response = try {
+            apiService.uploadCallRecord(
+                apiKey = RetrofitClient.DEFAULT_API_KEY,
+                authorization = "Bearer $token",
+                recording = bodyPart,
+                phoneNumberFrom = metadata.phoneNumberFrom?.toRequestBody(textMediaType),
+                phoneNumberTo = metadata.phoneNumberTo?.toRequestBody(textMediaType),
+                callType = metadata.callType.wireValue.toRequestBody(textMediaType),
+                duration = metadata.durationSeconds.toString().toRequestBody(textMediaType),
+                callAt = metadata.callAtFormatted?.toRequestBody(textMediaType)
+            )
+        } catch (_: IOException) {
+            return Resource.Error(
+                message = "Không thể kết nối máy chủ",
+                source = ErrorSource.NETWORK
+            )
+        }
 
         val code = response.code()
-        return if (response.isSuccessful && (code == 200 || code == 201)) {
+        return if (response.isSuccessful && code in setOf(200, 201)) {
             Resource.Success(data = true, message = messageProvider.getUploadSuccessMessage())
         } else {
-            val errBody = response.errorBody()?.string()
+            val errorBody = response.errorBody()?.string()
             if (code == 401) {
                 tokenManager.clearSession()
-                val message = ApiErrorParser.getServerMessageOrDefault(
-                    errBody,
-                    messageProvider.getTokenExpiredMessage()
-                )
                 Resource.Error(
-                    message = message,
-                    source = ErrorSource.SERVER,
-                    code = 401,
-                    rawDetails = errBody
-                )
-            } else {
-                val message =
-                    ApiErrorParser.getServerMessageOrDefault(errBody, messageProvider.getUploadFailedMessage())
-                Resource.Error(
-                    message = message,
+                    message = ApiErrorParser.getServerMessageOrDefault(
+                        errorBody,
+                        messageProvider.getTokenExpiredMessage()
+                    ),
                     source = ErrorSource.SERVER,
                     code = code,
-                    rawDetails = errBody
+                    rawDetails = errorBody
+                )
+            } else {
+                Resource.Error(
+                    message = ApiErrorParser.getServerMessageOrDefault(
+                        errorBody,
+                        messageProvider.getUploadFailedMessage()
+                    ),
+                    source = ErrorSource.SERVER,
+                    code = code,
+                    rawDetails = errorBody
                 )
             }
         }
+    }
+
+    private fun resolvePayload(uriValue: String): RecordingPayload? {
+        val uri = runCatching { uriValue.toUri() }.getOrNull() ?: return null
+        if (uri.scheme != ContentResolver.SCHEME_CONTENT) return null
+        return try {
+            val mimeType = resolver.getType(uri)
+                ?.takeIf { it.startsWith("audio/", ignoreCase = true) }
+                ?: return null
+            var displayName = "recording"
+            var sizeBytes = -1L
+            resolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                    if (nameIndex >= 0) {
+                        displayName = cursor.getString(nameIndex)
+                            ?.substringAfterLast('/')
+                            ?.takeIf(String::isNotBlank)
+                            ?: displayName
+                    }
+                    if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) {
+                        sizeBytes = cursor.getLong(sizeIndex)
+                    }
+                }
+            }
+            if (sizeBytes !in 1..MAX_SIZE_BYTES) return null
+            resolver.openAssetFileDescriptor(uri, "r")?.use { } ?: return null
+            RecordingPayload(uri, displayName, mimeType, sizeBytes)
+        } catch (_: SecurityException) {
+            null
+        } catch (_: FileNotFoundException) {
+            null
+        } catch (_: RuntimeException) {
+            null
+        }
+    }
+
+    private data class RecordingPayload(
+        val uri: Uri,
+        val displayName: String,
+        val mimeType: String,
+        val sizeBytes: Long
+    )
+
+    private class ContentUriRequestBody(
+        private val resolver: ContentResolver,
+        private val uri: Uri,
+        private val mediaType: MediaType,
+        private val contentLength: Long
+    ) : RequestBody() {
+        override fun contentType(): MediaType = mediaType
+
+        override fun contentLength(): Long = contentLength
+
+        override fun writeTo(sink: BufferedSink) {
+            val input = resolver.openInputStream(uri)
+                ?: throw FileNotFoundException("Recording URI is not readable")
+            input.source().use(sink::writeAll)
+        }
+    }
+
+    private companion object {
+        const val MAX_SIZE_BYTES = 50L * 1024L * 1024L
     }
 }

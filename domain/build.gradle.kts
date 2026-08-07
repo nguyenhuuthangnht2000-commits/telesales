@@ -10,3 +10,6 @@ java {
 kotlin {
     jvmToolchain(17)
 }
+
+dependencies {
+}

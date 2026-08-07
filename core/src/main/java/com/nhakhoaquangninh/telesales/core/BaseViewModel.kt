@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
 import com.nhakhoaquangninh.telesales.domain.common.Resource
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -16,7 +17,7 @@ import java.net.UnknownHostException
 
 abstract class BaseViewModel : ViewModel() {
 
-    private val _unauthorizedEvent = MutableSharedFlow<Unit>()
+    private val _unauthorizedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val unauthorizedEvent: SharedFlow<Unit> = _unauthorizedEvent.asSharedFlow()
 
     /**
@@ -31,8 +32,10 @@ abstract class BaseViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 block()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: UnknownHostException) {
-                Log.e(TAG, "❌ Network Error (Unknown Host): ${e.message}")
+                Log.e(TAG, "Lỗi mạng: không tìm thấy máy chủ")
                 onError(
                     Resource.Error(
                         message = "Không tìm thấy địa chỉ máy chủ. Vui lòng kiểm tra Wifi/4G!",
@@ -41,7 +44,7 @@ abstract class BaseViewModel : ViewModel() {
                     )
                 )
             } catch (e: SocketTimeoutException) {
-                Log.e(TAG, "❌ Network Error (Timeout): ${e.message}")
+                Log.e(TAG, "Lỗi mạng: quá thời gian phản hồi")
                 onError(
                     Resource.Error(
                         message = "Quá thời gian phản hồi từ máy chủ (Timeout). Vui lòng thử lại!",
@@ -50,7 +53,7 @@ abstract class BaseViewModel : ViewModel() {
                     )
                 )
             } catch (e: IOException) {
-                Log.e(TAG, "❌ Network Error (IO): ${e.message}")
+                Log.e(TAG, "Lỗi mạng: kết nối bị gián đoạn")
                 onError(
                     Resource.Error(
                         message = "Đường truyền internet bị gián đoạn.",
@@ -59,7 +62,7 @@ abstract class BaseViewModel : ViewModel() {
                     )
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "❌ App Client Error: ${e.message}")
+                Log.e(TAG, "Lỗi xử lý phía ứng dụng")
                 onError(
                     Resource.Error(
                         message = "Lỗi hệ thống: ${e.localizedMessage ?: "Lỗi ngoại lệ"}",
@@ -72,9 +75,7 @@ abstract class BaseViewModel : ViewModel() {
     }
 
     protected fun triggerUnauthorized() {
-        viewModelScope.launch {
-            _unauthorizedEvent.emit(Unit)
-        }
+        _unauthorizedEvent.tryEmit(Unit)
     }
 
     companion object {

@@ -3,24 +3,42 @@ package com.nhakhoaquangninh.telesales.ui.main.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PhoneInTalk
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.FormatListBulleted
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,11 +47,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.nhakhoaquangninh.telesales.R
-import com.nhakhoaquangninh.telesales.theme.Dimens
 import com.nhakhoaquangninh.telesales.theme.ActiveEmerald
-import com.nhakhoaquangninh.telesales.theme.BackgroundLight
+import com.nhakhoaquangninh.telesales.theme.Dimens
 import com.nhakhoaquangninh.telesales.theme.OnPrimaryContainer
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
@@ -41,7 +57,6 @@ import com.nhakhoaquangninh.telesales.theme.OutlineVariant
 import com.nhakhoaquangninh.telesales.theme.PrimaryContainer
 import com.nhakhoaquangninh.telesales.theme.PrimaryTeal
 import com.nhakhoaquangninh.telesales.theme.SurfaceContainer
-import com.nhakhoaquangninh.telesales.theme.SurfaceContainerLow
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
 import com.nhakhoaquangninh.telesales.theme.WarningAmber
 
@@ -62,7 +77,7 @@ fun HomeScreenContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF9F9F9))
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(Dimens.PaddingMedium),
         verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium)
@@ -86,7 +101,9 @@ fun HomeScreenContent(
                 ) {
                     Text(
                         text = stringResource(R.string.service_title),
-                        modifier = Modifier.weight(1f).padding(end = Dimens.PaddingMedium),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = Dimens.PaddingMedium),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = OnSurfaceDark
                     )
@@ -101,8 +118,11 @@ fun HomeScreenContent(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(6.dp)
-                                    .background(if (isServiceRunning) ActiveEmerald else Color.Gray, shape = CircleShape)
+                                    .size(Dimens.Space6)
+                                    .background(
+                                        if (isServiceRunning) ActiveEmerald else Color.Gray,
+                                        shape = CircleShape
+                                    )
                             )
                             Spacer(modifier = Modifier.width(Dimens.PaddingExtraSmall))
                             Text(
@@ -167,13 +187,23 @@ fun HomeScreenContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(stringResource(R.string.total_calls), style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Icon(Icons.Default.PhoneInTalk, contentDescription = null, tint = PrimaryTeal, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Default.PhoneInTalk,
+                            contentDescription = null,
+                            tint = PrimaryTeal,
+                            modifier = Modifier.size(Dimens.Size18)
+                        )
                     }
                     Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(text = "$totalCallsToday", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold), color = OnSurfaceDark)
                         Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-                        Text(text = "↗ +12%", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = ActiveEmerald, modifier = Modifier.padding(bottom = 4.dp))
+                        Text(
+                            text = stringResource(R.string.home_growth_placeholder),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = ActiveEmerald,
+                            modifier = Modifier.padding(bottom = Dimens.Space4)
+                        )
                     }
                 }
             }
@@ -192,7 +222,12 @@ fun HomeScreenContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(stringResource(R.string.synced_calls), style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Icon(Icons.Default.CloudDone, contentDescription = null, tint = PrimaryContainer, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Default.CloudDone,
+                            contentDescription = null,
+                            tint = PrimaryContainer,
+                            modifier = Modifier.size(Dimens.Size18)
+                        )
                     }
                     Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
                     Text(text = "$syncedCalls", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold), color = OnSurfaceDark)
@@ -213,7 +248,12 @@ fun HomeScreenContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(stringResource(R.string.pending_calls), style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Icon(Icons.Default.PendingActions, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Default.PendingActions,
+                            contentDescription = null,
+                            tint = WarningAmber,
+                            modifier = Modifier.size(Dimens.Size18)
+                        )
                     }
                     Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
                     Row(
@@ -226,7 +266,9 @@ fun HomeScreenContent(
                             text = stringResource(R.string.sync_now),
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                             color = PrimaryTeal,
-                            modifier = Modifier.clickable { onSyncNowClick() }.padding(vertical = 4.dp, horizontal = 8.dp)
+                            modifier = Modifier
+                                .clickable { onSyncNowClick() }
+                                .padding(vertical = Dimens.Space4, horizontal = Dimens.Space8)
                         )
                     }
                 }
@@ -255,7 +297,7 @@ fun HomeScreenContent(
                     )
                     Icon(
                         imageVector = Icons.Default.FilterList,
-                        contentDescription = "Filter",
+                        contentDescription = stringResource(R.string.home_filter_desc),
                         tint = OnSurfaceVariant
                     )
                 }
@@ -268,7 +310,7 @@ fun HomeScreenContent(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.FormatListBulleted,
+                        imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
                         contentDescription = null,
                         modifier = Modifier.size(Dimens.IconSizeExtraLarge),
                         tint = OnSurfaceVariant.copy(alpha = 0.5f)
@@ -324,7 +366,7 @@ fun HomeScreenContent(
                             imageVector = if (!isBatteryOptimized) Icons.Default.CheckCircle else Icons.Default.Warning,
                             contentDescription = null,
                             tint = if (!isBatteryOptimized) ActiveEmerald else WarningAmber,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(Dimens.Size18)
                         )
                         Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
                         Column(modifier = Modifier.weight(1f)) {
@@ -353,18 +395,18 @@ fun HomeScreenContent(
             elevation = CardDefaults.cardElevation(defaultElevation = Dimens.ElevationSmall)
         ) {
             Row(
-                modifier = Modifier.padding(14.dp),
+                modifier = Modifier.padding(Dimens.Space14),
                 verticalAlignment = Alignment.Top
             ) {
                 Icon(Icons.Default.Info, contentDescription = null, tint = OnPrimaryContainer, modifier = Modifier.size(Dimens.IconSizeMedium))
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(Dimens.Space10))
                 Column {
                     Text(
                         text = stringResource(R.string.compliance_note_title),
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = OnPrimaryContainer
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Space2))
                     Text(
                         text = stringResource(R.string.compliance_note_desc),
                         style = MaterialTheme.typography.bodySmall,
@@ -388,7 +430,7 @@ private fun PermissionRow(title: String, isGranted: Boolean) {
                 imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
                 contentDescription = null,
                 tint = if (isGranted) ActiveEmerald else WarningAmber,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(Dimens.Size18)
             )
             Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
             Text(title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = OnSurfaceDark, modifier = Modifier.weight(1f))

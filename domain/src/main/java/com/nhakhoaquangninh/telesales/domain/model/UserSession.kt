@@ -4,5 +4,6 @@ data class UserSession(
     val userId: Int,
     val token: String,
     val userName: String? = null,
-    val email: String? = null
+    val email: String? = null,
+    val phoneNumber: String? = null
 )

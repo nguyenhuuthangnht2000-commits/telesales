@@ -96,8 +96,10 @@ Tất cả các API gửi lên Server backend đều tuân thủ các quy tắc 
 12. **Tự động cập nhật `UPDATE_SUMMARY.md` trước khi Commit/Push:**
     - Trước khi thực hiện bất kỳ lệnh `git commit` hoặc `git push` nào, AI Assistant BẮT BUỘC phải tổng hợp tóm tắt các thay đổi, tính năng mới hoặc bug fix vừa làm và ghi lại vào tệp `UPDATE_SUMMARY.md`.
     - Giúp tiết kiệm tối đa token và thời gian khi `git pull` dự án ở một thiết bị hoặc phiên làm việc khác.
-
----
+13. **Quy tắc kiểm thử:**
+    - Không tự động chạy unit test, integration test, lint, build hoặc assemble.
+    - Chỉ chạy kiểm thử khi người dùng yêu cầu rõ ràng.
+    - Sau khi sửa code, phải thông báo rõ các bước kiểm thử chưa được chạy.
 
 ## 5. 🚀 QUY TRÌNH KIỂM TRA NHANH SAU KHI PULL CODE (POST-PULL CHECKLIST)
 

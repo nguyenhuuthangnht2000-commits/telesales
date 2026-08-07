@@ -1,7 +1,34 @@
+val releaseStoreFile = providers.gradleProperty("TELESALES_RELEASE_STORE_FILE").orNull
+val releaseStorePassword = providers.gradleProperty("TELESALES_RELEASE_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.gradleProperty("TELESALES_RELEASE_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.gradleProperty("TELESALES_RELEASE_KEY_PASSWORD").orNull
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
+}
+val configuredApiKey = providers.gradleProperty("TELESALES_API_KEY")
+    .orElse(providers.environmentVariable("TELESALES_API_KEY"))
+    .getOrElse("")
+
+val verifyReleaseApiKey by tasks.registering {
+    inputs.property("apiKeyConfigured", configuredApiKey.isNotBlank())
+    doLast {
+        val apiKeyConfigured = inputs.properties["apiKeyConfigured"] as Boolean
+        check(apiKeyConfigured) {
+            "TELESALES_API_KEY bắt buộc phải được cấu hình cho release build"
+        }
+    }
+}
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(verifyReleaseApiKey)
 }
 
 android {
@@ -15,10 +42,21 @@ android {
         versionName = "1.0"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(requireNotNull(releaseStoreFile))
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -40,9 +78,7 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
-        // Fix: libjingle_peerconnection_so.so (WebRTC trong Stringee SDK) chưa hỗ trợ 16KB page alignment.
-        // useLegacyPackaging = true → Android extract .so ra filesystem khi cài đặt,
-        // OS tự xử lý alignment → app chạy bình thường trên mọi thiết bị kể cả 16KB page size.
+        // Giữ legacy JNI packaging để tương thích các native library trên thiết bị dùng page size 16 KB.
         jniLibs {
             useLegacyPackaging = true
         }
@@ -56,7 +92,6 @@ kotlin {
 dependencies {
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
-    androidTestImplementation(composeBom)
 
     implementation(project(":core"))
     implementation(project(":domain"))
@@ -77,19 +112,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     // Tooling
     debugImplementation(libs.androidx.compose.ui.tooling)
-    // Instrumented tests
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
-
-    // Local tests: jUnit, coroutines, Android runner
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
-
-    // Instrumented tests: jUnit rules and runners
-    androidTestImplementation(libs.androidx.test.core)
-    androidTestImplementation(libs.androidx.test.ext.junit)
-    androidTestImplementation(libs.androidx.test.runner)
-    androidTestImplementation(libs.androidx.test.espresso.core)
 
     // Navigation
     implementation(libs.androidx.navigation3.ui)
@@ -97,30 +119,15 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
     // Material Icons Extended
-    implementation("androidx.compose.material:material-icons-extended:1.6.8")
+    implementation(libs.androidx.compose.material.icons.extended)
 
     // Google Fonts
-    implementation("androidx.compose.ui:ui-text-google-fonts:1.6.8")
+    implementation(libs.androidx.compose.ui.text.google.fonts)
 
     // WorkManager
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation(libs.androidx.work.runtime.ktx)
 
-    // Retrofit & OkHttp
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-
-    // Stringee VoIP SDK (latest stable on Maven Central)
-    implementation(libs.stringee.android.sdk)
-
-    // JWT generation (dùng để sign token Stringee)
-    implementation("io.jsonwebtoken:jjwt-api:0.12.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-orgjson:0.12.5") {
-        exclude(group = "org.json", module = "json")
-    }
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation(libs.kotlinx.coroutines.android)
 }

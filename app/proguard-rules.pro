@@ -1,0 +1,3 @@
+-keepattributes Signature,*Annotation*
+-keep interface com.nhakhoaquangninh.telesales.data.remote.ApiService { *; }
+-keep class com.nhakhoaquangninh.telesales.data.remote.dto.** { *; }

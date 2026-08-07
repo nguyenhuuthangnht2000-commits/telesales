@@ -62,7 +62,8 @@ class AuthRepositoryImpl(
                     userId = userId,
                     token = token,
                     userName = user?.name,
-                    email = user?.email
+                    email = user?.email,
+                    phoneNumber = user?.phone?.trim()?.takeIf { it.isNotEmpty() }
                 )
                 tokenManager.saveSession(session)
                 Resource.Success(data = session, message = baseResp.message)

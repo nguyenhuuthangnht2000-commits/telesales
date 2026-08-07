@@ -1,3 +1,8 @@
+val telesalesApiKey = providers.gradleProperty("TELESALES_API_KEY")
+    .orElse(providers.environmentVariable("TELESALES_API_KEY"))
+    .getOrElse("")
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
 plugins {
     alias(libs.plugins.android.library)
 }
@@ -8,6 +13,11 @@ android {
 
     defaultConfig {
         minSdk = 28
+        buildConfigField("String", "TELESALES_API_KEY", "\"$telesalesApiKey\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {
@@ -25,8 +35,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
 
     // Retrofit & OkHttp
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.core)
+    implementation(libs.okhttp.logging.interceptor)
 }

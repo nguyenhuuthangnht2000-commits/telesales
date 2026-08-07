@@ -4,20 +4,96 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.nhakhoaquangninh.telesales.call.RecordingUriValidation
+import com.nhakhoaquangninh.telesales.call.RecordingUriValidator
 import com.nhakhoaquangninh.telesales.data.local.SyncStatus
 import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
-import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
-import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
-import java.io.File
+import com.nhakhoaquangninh.telesales.domain.model.CallType
+import kotlinx.coroutines.CancellationException
 
 class UploadAudioWorker(
     context: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(context, workerParams) {
 
+    override suspend fun doWork(): Result {
+        val recordingUri = inputData.getString(KEY_RECORDING_URI)
+        val recordingId = inputData.getString(KEY_RECORDING_ID)
+            ?: recordingUri
+            ?: return Result.failure()
+        val syncStatusManager = SyncStatusManager.getInstance(applicationContext)
+        var terminalStatus = SyncStatus.FAILED
+        var failureReason: String? = null
+        syncStatusManager.setStatus(recordingId, SyncStatus.UPLOADING)
+
+        return try {
+            when (val validation =
+                RecordingUriValidator.validate(applicationContext, recordingUri)) {
+                is RecordingUriValidation.Invalid -> {
+                    failureReason = validation.reason
+                    Result.failure()
+                }
+
+                is RecordingUriValidation.Valid -> {
+                    val callType = CallType.fromWire(inputData.getString(KEY_CALL_TYPE))
+                    val duration = inputData.getInt(KEY_DURATION, 0)
+                    if (callType == null || duration <= 0) {
+                        failureReason = "invalid_call_metadata"
+                        Result.failure()
+                    } else {
+                        ServiceLocator.init(applicationContext)
+                        val metadata = CallRecordMetadata(
+                            recordingUri = requireNotNull(recordingUri),
+                            phoneNumberFrom = inputData.getString(KEY_PHONE_FROM),
+                            phoneNumberTo = inputData.getString(KEY_PHONE_TO),
+                            callType = callType,
+                            durationSeconds = duration,
+                            callAtFormatted = inputData.getString(KEY_CALL_AT)
+                        )
+                        val decision = UploadWorkPolicy.decide(
+                            ServiceLocator.uploadCallRecordUseCase(metadata)
+                        )
+                        terminalStatus = decision.terminalStatus
+                        when (decision.result) {
+                            UploadWorkResult.SUCCESS -> Result.success()
+                            UploadWorkResult.RETRY -> Result.retry()
+                            UploadWorkResult.UNAUTHORIZED -> {
+                                UnauthorizedEventBus.notifyUnauthorized()
+                                failureReason = "unauthorized"
+                                Result.failure()
+                            }
+
+                            UploadWorkResult.FAILURE -> {
+                                failureReason = "upload_rejected"
+                                Result.failure()
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            terminalStatus = SyncStatus.PENDING
+            throw cancelled
+        } catch (_: SecurityException) {
+            failureReason = "recording_permission_denied"
+            Result.failure()
+        } catch (_: RuntimeException) {
+            terminalStatus = SyncStatus.PENDING
+            Log.e(TAG, "Tác vụ đồng bộ gặp lỗi tạm thời")
+            Result.retry()
+        } finally {
+            if (failureReason != null) {
+                syncStatusManager.setFailure(recordingId, requireNotNull(failureReason))
+            } else {
+                syncStatusManager.setStatus(recordingId, terminalStatus)
+            }
+        }
+    }
+
     companion object {
-        const val KEY_FILE_PATH = "file_path"
+        const val KEY_RECORDING_URI = "recording_uri"
+        const val KEY_RECORDING_ID = "recording_id"
         const val KEY_PHONE_FROM = "phone_from"
         const val KEY_PHONE_TO = "phone_to"
         const val KEY_CALL_TYPE = "call_type"
@@ -25,56 +101,5 @@ class UploadAudioWorker(
         const val KEY_CALL_AT = "call_at"
 
         private const val TAG = "UploadAudioWorker"
-    }
-
-    override suspend fun doWork(): Result {
-        val filePath = inputData.getString(KEY_FILE_PATH)
-
-        if (filePath.isNullOrEmpty()) {
-            Log.e(TAG, "File path is empty")
-            return Result.failure()
-        }
-
-        // Ensure ServiceLocator is initialized (Worker may run without Application)
-        ServiceLocator.init(applicationContext)
-
-        val uploadUseCase = ServiceLocator.uploadCallRecordUseCase
-
-        val metadata = CallRecordMetadata(
-            filePath = filePath,
-            phoneNumberFrom = inputData.getString(KEY_PHONE_FROM),
-            phoneNumberTo = inputData.getString(KEY_PHONE_TO),
-            callType = inputData.getString(KEY_CALL_TYPE) ?: "outgoing",
-            durationSeconds = inputData.getInt(KEY_DURATION, 0),
-            callAtFormatted = inputData.getString(KEY_CALL_AT)
-        )
-
-        Log.d(TAG, "🚀 Bắt đầu upload file: $filePath")
-        val fileName = File(filePath).name
-        val syncStatusManager = SyncStatusManager.getInstance(applicationContext)
-        syncStatusManager.setStatus(fileName, SyncStatus.UPLOADING)
-
-        return when (val result = uploadUseCase(metadata)) {
-            is Resource.Success -> {
-                Log.d(TAG, "✅ Upload thành công: ${result.message}")
-                syncStatusManager.setStatus(fileName, SyncStatus.SYNCED)
-                Result.success()
-            }
-
-            is Resource.Error -> {
-                Log.e(TAG, "❌ Upload thất bại: ${result.message}")
-                syncStatusManager.setStatus(fileName, SyncStatus.FAILED)
-                if (result.code in 500..599 || result.source == ErrorSource.NETWORK) {
-                    Result.retry()
-                } else {
-                    Result.failure()
-                }
-            }
-
-            else -> {
-                syncStatusManager.setStatus(fileName, SyncStatus.FAILED)
-                Result.failure()
-            }
-        }
     }
 }
