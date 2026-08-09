@@ -74,6 +74,65 @@ class CallLogDataSource(context: Context) {
         }
     }
 
+    fun recoverFromTime(endedAtMillis: Long, durationSeconds: Int): CallLogEntry? {
+        if (durationSeconds <= 0) return null
+        val durationMillis = durationSeconds * 1_000L
+        val estimatedStartedAt = (endedAtMillis - durationMillis).coerceAtLeast(0L)
+        val windowStart = (estimatedStartedAt - CALL_LOG_TOLERANCE_MILLIS).coerceAtLeast(0L)
+        val windowEnd = endedAtMillis + CALL_LOG_TOLERANCE_MILLIS
+        val expectedTypes = intArrayOf(CallLog.Calls.INCOMING_TYPE, CallLog.Calls.OUTGOING_TYPE)
+        val placeholders = expectedTypes.joinToString(",") { "?" }
+        val selection = "${CallLog.Calls.TYPE} IN ($placeholders) AND " +
+            "${CallLog.Calls.DATE} BETWEEN ? AND ?"
+        val selectionArgs = expectedTypes.map(Int::toString).toMutableList().apply {
+            add(windowStart.toString())
+            add(windowEnd.toString())
+        }.toTypedArray()
+        return try {
+            resolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(
+                    CallLog.Calls.NUMBER,
+                    CallLog.Calls.TYPE,
+                    CallLog.Calls.DURATION,
+                    CallLog.Calls.DATE
+                ),
+                selection,
+                selectionArgs,
+                "${CallLog.Calls.DATE} DESC"
+            )?.use { cursor ->
+                val numberIndex = cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER)
+                val typeIndex = cursor.getColumnIndexOrThrow(CallLog.Calls.TYPE)
+                val durationIndex = cursor.getColumnIndexOrThrow(CallLog.Calls.DURATION)
+                val dateIndex = cursor.getColumnIndexOrThrow(CallLog.Calls.DATE)
+                var best: CallLogEntry? = null
+                var bestDifference = Long.MAX_VALUE
+                while (cursor.moveToNext()) {
+                    val logDuration = cursor.getInt(durationIndex).coerceAtLeast(0)
+                    if (logDuration <= 0) continue
+                    val durationDiff = abs(logDuration - durationSeconds)
+                    val tolerance = maxOf(10.0, durationSeconds * 0.25)
+                    if (durationDiff > tolerance) continue
+                    val startedAt = cursor.getLong(dateIndex)
+                    val difference = abs(startedAt - estimatedStartedAt)
+                    if (difference < bestDifference) {
+                        bestDifference = difference
+                        val androidType = cursor.getInt(typeIndex)
+                        best = CallLogEntry(
+                            phoneNumber = PhoneNumberNormalizer.normalize(cursor.getString(numberIndex)),
+                            callType = if (androidType == CallLog.Calls.OUTGOING_TYPE) CallType.OUTGOING else CallType.INCOMING,
+                            startedAtMillis = startedAt,
+                            durationSeconds = logDuration
+                        )
+                    }
+                }
+                best
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private companion object {
         const val TAG = "CallLogDataSource"
         const val CALL_LOG_TOLERANCE_MILLIS = 60_000L

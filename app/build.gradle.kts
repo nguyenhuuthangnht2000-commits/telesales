@@ -13,6 +13,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
 }
+
 val configuredApiKey = providers.gradleProperty("TELESALES_API_KEY")
     .orElse(providers.environmentVariable("TELESALES_API_KEY"))
     .getOrElse("")
@@ -56,6 +57,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

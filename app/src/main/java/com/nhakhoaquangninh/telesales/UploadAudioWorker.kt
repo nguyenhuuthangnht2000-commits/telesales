@@ -51,6 +51,7 @@ class UploadAudioWorker(
                             durationSeconds = duration,
                             callAtFormatted = inputData.getString(KEY_CALL_AT)
                         )
+                        Log.d("API_LOG", "Bắt đầu Upload File - Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted}")
                         val decision = UploadWorkPolicy.decide(
                             ServiceLocator.uploadCallRecordUseCase(metadata)
                         )
@@ -88,6 +89,9 @@ class UploadAudioWorker(
             } else {
                 syncStatusManager.setStatus(recordingId, terminalStatus)
             }
+            val intent = android.content.Intent("com.nhakhoaquangninh.telesales.REFRESH_RECORDINGS")
+            intent.setPackage(applicationContext.packageName)
+            applicationContext.sendBroadcast(intent)
         }
     }
 

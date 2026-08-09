@@ -35,10 +35,10 @@ object OwnPhoneNumberResolver {
                 }
                 number.normalize()
             }
-        } catch (error: SecurityException) {
+        } catch (_: SecurityException) {
             Log.w(TAG, "Không thể đọc số điện thoại của SIM")
             null
-        } catch (error: RuntimeException) {
+        } catch (_: RuntimeException) {
             Log.w(TAG, "Thiết bị không cung cấp số điện thoại của SIM")
             null
         }

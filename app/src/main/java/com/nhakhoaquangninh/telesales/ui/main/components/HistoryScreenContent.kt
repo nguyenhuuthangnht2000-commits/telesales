@@ -409,11 +409,7 @@ private fun HistoryItemCard(
 ) {
     val isIncoming = item.metadata?.callType == CallType.INCOMING
 
-    val displayPhone = if (item.metadata != null) {
-        if (isIncoming) item.metadata.phoneNumberFrom else item.metadata.phoneNumberTo
-    } else {
-        item.recording.displayName.substringBeforeLast('.')
-    } ?: item.recording.displayName.substringBeforeLast('.')
+    val displayPhone = item.recording.displayName.substringBeforeLast('.')
 
     val durationText = if (item.metadata != null && item.metadata.durationSeconds > 0) {
         val m = item.metadata.durationSeconds / 60

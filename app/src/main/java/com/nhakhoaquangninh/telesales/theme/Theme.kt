@@ -1,7 +1,6 @@
 package com.nhakhoaquangninh.telesales.theme
 
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -32,9 +31,9 @@ private val LightColorScheme =
 
 @Composable
 fun TelesalesAppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // Ép dùng Light Theme
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Tắt Dynamic Color (lấy màu từ hình nền)
     content: @Composable () -> Unit,
 ) {
     val colorScheme =

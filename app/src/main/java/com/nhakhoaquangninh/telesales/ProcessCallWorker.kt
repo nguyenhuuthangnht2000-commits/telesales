@@ -27,6 +27,9 @@ class ProcessCallWorker(
                 snapshot,
                 inputData.getBoolean(KEY_MISSED_INCOMING, false)
             )
+            val intent = android.content.Intent("com.nhakhoaquangninh.telesales.REFRESH_RECORDINGS")
+            intent.setPackage(applicationContext.packageName)
+            applicationContext.sendBroadcast(intent)
             Result.success()
         }.getOrElse { Result.retry() }
     }

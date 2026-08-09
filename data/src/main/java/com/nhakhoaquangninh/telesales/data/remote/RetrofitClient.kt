@@ -13,18 +13,31 @@ object RetrofitClient {
         get() = BuildConfig.TELESALES_API_KEY.trim()
 
     internal fun createOkHttpClient(
-        isDebug: Boolean,
-        logger: HttpLoggingInterceptor.Logger = HttpLoggingInterceptor.Logger.DEFAULT
+        isDebug: Boolean
     ): OkHttpClient {
+        val customLogger = HttpLoggingInterceptor.Logger { message ->
+            android.util.Log.d("API_LOG", message)
+        }
+        val bodyLogger = HttpLoggingInterceptor(customLogger).apply {
+            redactHeader("Authorization")
+            redactHeader("X-Api-Key")
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+        val headerLogger = HttpLoggingInterceptor(customLogger).apply {
+            redactHeader("Authorization")
+            redactHeader("X-Api-Key")
+            level = HttpLoggingInterceptor.Level.HEADERS
+        }
         return OkHttpClient.Builder().apply {
             if (isDebug) {
-                addInterceptor(
-                    HttpLoggingInterceptor(logger).apply {
-                        redactHeader("Authorization")
-                        redactHeader("X-Api-Key")
-                        level = HttpLoggingInterceptor.Level.BASIC
+                addInterceptor { chain ->
+                    val request = chain.request()
+                    if (request.url.encodedPath.contains("call-records")) {
+                        headerLogger.intercept(chain)
+                    } else {
+                        bodyLogger.intercept(chain)
                     }
-                )
+                }
             }
         }
             .connectTimeout(15, TimeUnit.SECONDS)

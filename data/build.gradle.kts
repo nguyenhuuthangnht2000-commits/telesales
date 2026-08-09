@@ -3,6 +3,7 @@ val telesalesApiKey = providers.gradleProperty("TELESALES_API_KEY")
     .getOrElse("")
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
+
 plugins {
     alias(libs.plugins.android.library)
 }

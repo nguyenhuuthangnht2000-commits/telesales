@@ -80,9 +80,12 @@ class CallRecordRepositoryImpl(
 
         val code = response.code()
         return if (response.isSuccessful && code in setOf(200, 201)) {
+            val responseBody = response.body()?.string()
+            android.util.Log.d("API_LOG", "Upload File Success - Code: $code, Body: $responseBody")
             Resource.Success(data = true, message = messageProvider.getUploadSuccessMessage())
         } else {
             val errorBody = response.errorBody()?.string()
+            android.util.Log.d("API_LOG", "Upload File Failed - Code: $code, Body: $errorBody")
             if (code == 401) {
                 tokenManager.clearSession()
                 Resource.Error(
