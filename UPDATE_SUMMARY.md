@@ -84,5 +84,6 @@
 - **Giao diện không hiển thị tên file:** Ứng dụng đã được sửa lại để luôn hiển thị tên gốc của file ghi âm thay vì tự động chuyển thành số điện thoại trong danh sách lịch sử.
 - **Log API:** Cải thiện việc ghi log cho tính năng upload. Thay vì log toàn bộ nội dung file (gây quá tải Logcat), hệ thống hiện chỉ log siêu dữ liệu (metadata) trước khi upload và kết quả trả về (thành công/lỗi) từ Server.
 - **Tự động làm mới UI:** Sửa lỗi giao diện không tự động tải lại sau khi upload file thành công. `UploadAudioWorker` và `ProcessCallWorker` hiện đã gửi broadcast `com.nhakhoaquangninh.telesales.REFRESH_RECORDINGS` kèm theo `setPackage(applicationContext.packageName)` để tương thích với quy định bảo mật `RECEIVER_NOT_EXPORTED` của Android 14+.
+- **Sửa lỗi Crash màn hình khởi động ở bản Release:** Bổ sung các rule Proguard (R8) cho các class Navigation Compose (`@Serializable` Login, OtpVerify, Main) và các class Model trong Domain để tránh bị obfuscator xóa mất serializer, gây crash `SerializationException` khi khởi chạy ứng dụng. Đồng thời sinh và sử dụng keystore cục bộ để ký APK tự động.
 
-*Cập nhật lần cuối: 09/08/2026 23:45 bởi Antigravity AI Pair Programmer.*
+*Cập nhật lần cuối: 10/08/2026 00:25 bởi Antigravity AI Pair Programmer.*
