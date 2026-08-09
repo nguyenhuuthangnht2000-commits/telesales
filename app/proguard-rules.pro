@@ -3,9 +3,9 @@
 -keep class com.nhakhoaquangninh.telesales.data.remote.dto.** { *; }
 
 # Giữ lại các data class / object phục vụ cho Navigation
--keep class com.nhakhoaquangninh.telesales.Login { *; }
--keep class com.nhakhoaquangninh.telesales.OtpVerify { *; }
--keep class com.nhakhoaquangninh.telesales.Main { *; }
+-keep class com.nhakhoaquangninh.telesales.Login** { *; }
+-keep class com.nhakhoaquangninh.telesales.OtpVerify** { *; }
+-keep class com.nhakhoaquangninh.telesales.Main** { *; }
 -keep class com.nhakhoaquangninh.telesales.NavigationKeysKt** { *; }
 -keep,allowobfuscation,allowshrinking @kotlinx.serialization.Serializable class *
 -keepclassmembers class * {
