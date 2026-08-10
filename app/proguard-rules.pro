@@ -14,3 +14,4 @@
 
 # Giữ lại các model trong domain tránh lỗi JSON Parser khi bị rút gọn
 -keep class com.nhakhoaquangninh.telesales.domain.model.** { *; }
+-keep class * extends androidx.room.RoomDatabase { void <init>(); }
