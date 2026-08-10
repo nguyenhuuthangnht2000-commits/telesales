@@ -91,3 +91,10 @@
 ## 12. Sửa crash Release và footer đăng nhập responsive
 - **Sửa crash WorkManager/Room ở bản Release:** Giữ constructor của các lớp kế thừa `RoomDatabase` để R8 không xóa `WorkDatabase_Impl` được khởi tạo bằng reflection.
 - **Sửa footer hỗ trợ màn hình đăng nhập:** Chuyển nội dung hỗ trợ thành hai dòng căn giữa, giữ nền và padding footer để không tràn hoặc sát mép trên thiết bị nhỏ.
+
+## 13. Tích hợp xác thực OTP Đăng xuất & Cập nhật Icon App
+- **Xác thực OTP trước khi Đăng xuất:** Ràng buộc nhân viên phải nhập mã OTP (được gửi về email quản lý) mỗi khi muốn thoát ca làm việc. Trích xuất thành phần `OtpSixDigitInput` từ màn hình Đăng nhập để tái sử dụng ở màn hình Cài đặt, kết hợp với `SettingsViewModel` để tái sử dụng `RequestOtpUseCase` và `VerifyOtpUseCase`.
+- **Chuẩn hoá Strings (Localization):** Loại bỏ toàn bộ text hardcode trên giao diện màn hình Cài đặt và Dialog, chuyển 100% vào `strings.xml`. Đã thêm quy định chống hardcode giao diện vào `AGENTS.md`.
+- **Cập nhật Icon App:** Generate lại bộ app icon launcher mọi kích thước (`mipmap-mdpi` -> `xxxhdpi`) từ file ảnh thiết kế mới, vô hiệu hoá `ic_launcher.xml` mặc định (Adaptive Icon) để đảm bảo hình ảnh hiển thị đồng bộ trên mọi nền tảng Android.
+
+*Cập nhật lần cuối: 10/08/2026 23:51 bởi Antigravity AI Pair Programmer.*
