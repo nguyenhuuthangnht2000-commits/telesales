@@ -255,9 +255,9 @@ fun MainScreen(
                     Column(verticalArrangement = Arrangement.Center) {
                         Text(
                             text = session?.userName ?: stringResource(R.string.app_title),
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = PrimaryTeal,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(

@@ -73,6 +73,7 @@ import com.nhakhoaquangninh.telesales.theme.SecondaryTurquoise
 import com.nhakhoaquangninh.telesales.theme.SurfaceContainer
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
 import com.nhakhoaquangninh.telesales.ui.components.ErrorDialog
+import com.nhakhoaquangninh.telesales.ui.components.OtpSixDigitInput
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -367,87 +368,4 @@ fun OtpVerifyScreen(
     }
 }
 
-@Composable
-private fun OtpSixDigitInput(
-    value: String,
-    onValueChange: (String) -> Unit,
-    focusRequester: FocusRequester,
-    onDone: () -> Unit
-) {
-    val keyboardController = LocalSoftwareKeyboardController.current
-    var textFieldValue by remember(value) {
-        mutableStateOf(
-            androidx.compose.ui.text.input.TextFieldValue(
-                text = value,
-                selection = androidx.compose.ui.text.TextRange(value.length)
-            )
-        )
-    }
 
-    Box(contentAlignment = Alignment.Center) {
-        // Hidden BasicTextField to capture actual keyboard inputs
-        BasicTextField(
-            value = textFieldValue,
-            onValueChange = { newValue ->
-                val newText = newValue.text
-                if (newText.length <= 6 && newText.all { it.isDigit() }) {
-                    textFieldValue = newValue
-                    if (newText != value) {
-                        onValueChange(newText)
-                    }
-                }
-            },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(onDone = { onDone() }),
-            modifier = Modifier
-                .focusRequester(focusRequester)
-                .size(Dimens.BorderThickness)
-        )
-
-        // Row of 6 Visual Boxes
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Dimens.Space8),
-            modifier = Modifier.clickable { 
-                focusRequester.requestFocus()
-                keyboardController?.show()
-            }
-        ) {
-            for (i in 0 until 6) {
-                val digit = value.getOrNull(i)?.toString() ?: ""
-                val isFocused = value.length == i || (value.length == 6 && i == 5)
-
-                val boxBg = if (isFocused) SurfaceContainer else SurfaceContainer.copy(alpha = 0.6f)
-                val borderColor = if (isFocused) PrimaryTeal else OutlineVariant.copy(alpha = 0.5f)
-
-                Box(
-                    modifier = Modifier
-                        .width(Dimens.OtpCellWidth)
-                        .height(Dimens.OtpCellHeight)
-                        .clip(RoundedCornerShape(topStart = Dimens.Space6, topEnd = Dimens.Space6))
-                        .background(boxBg)
-                        .border(
-                            width = if (isFocused) Dimens.Space2 else Dimens.BorderThickness,
-                            color = borderColor,
-                            shape = RoundedCornerShape(
-                                topStart = Dimens.Space6,
-                                topEnd = Dimens.Space6
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = digit,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = Dimens.FontSize22
-                        ),
-                        color = OnSurfaceDark
-                    )
-                }
-            }
-        }
-    }
-}

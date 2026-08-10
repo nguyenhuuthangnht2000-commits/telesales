@@ -60,16 +60,65 @@ import com.nhakhoaquangninh.telesales.theme.SuccessContainer
 import com.nhakhoaquangninh.telesales.theme.SuccessText
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
 import com.nhakhoaquangninh.telesales.theme.SurfaceMuted
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nhakhoaquangninh.telesales.ui.main.SettingsViewModel
+import com.nhakhoaquangninh.telesales.domain.common.Resource
+import com.nhakhoaquangninh.telesales.ui.components.OtpSixDigitInput
+import com.nhakhoaquangninh.telesales.ui.components.ErrorDialog
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 
 @Composable
 fun SettingsScreenContent(
     context: Context,
     onLogoutClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = viewModel()
 ) {
     val session = remember { TokenManager.getInstance(context).getSession() }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showFaqDialog by remember { mutableStateOf(false) }
+    var showOtpDialog by remember { mutableStateOf(false) }
+    
+    val requestOtpState by viewModel.requestOtpState.collectAsStateWithLifecycle()
+    val verifyOtpState by viewModel.verifyOtpState.collectAsStateWithLifecycle()
+    val otpInput by viewModel.otpInput.collectAsStateWithLifecycle()
+    val otpError by viewModel.otpError.collectAsStateWithLifecycle()
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(requestOtpState) {
+        if (requestOtpState is Resource.Success) {
+            showLogoutDialog = false
+            showOtpDialog = true
+            viewModel.resetRequestOtpState()
+        }
+    }
+
+    LaunchedEffect(verifyOtpState) {
+        if (verifyOtpState is Resource.Success) {
+            showOtpDialog = false
+            viewModel.resetVerifyOtpState()
+            onLogoutClick()
+        }
+    }
+
+    if (requestOtpState is Resource.Error) {
+        ErrorDialog(
+            error = requestOtpState as Resource.Error,
+            onDismiss = { viewModel.resetRequestOtpState() }
+        )
+    }
+
+    if (verifyOtpState is Resource.Error && (verifyOtpState as Resource.Error).source != com.nhakhoaquangninh.telesales.domain.common.ErrorSource.APP_CLIENT) {
+        ErrorDialog(
+            error = verifyOtpState as Resource.Error,
+            onDismiss = { viewModel.resetVerifyOtpState() }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -264,18 +313,29 @@ fun SettingsScreenContent(
                 )
             },
             confirmButton = {
+                val isLoading = requestOtpState is Resource.Loading
                 Button(
                     onClick = {
-                        showLogoutDialog = false
-                        onLogoutClick()
+                        session?.userId?.let { userId ->
+                            viewModel.requestOtp(userId)
+                        }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed),
+                    enabled = !isLoading
                 ) {
-                    Text(
-                        stringResource(R.string.settings_logout_confirm),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(Dimens.Size20),
+                            strokeWidth = Dimens.Space2
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.settings_logout_confirm),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             },
             dismissButton = {
@@ -338,6 +398,97 @@ fun SettingsScreenContent(
         )
     }
 
+    // Dialog Xác thực OTP Đăng xuất
+    if (showOtpDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showOtpDialog = false 
+                viewModel.resetVerifyOtpState()
+            },
+            containerColor = SurfaceLowest,
+            titleContentColor = OnSurfaceDark,
+            textContentColor = OnSurfaceVariant,
+            title = {
+                Text(
+                    text = stringResource(R.string.otp_security_verification),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Dimens.Space16)
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_logout_otp_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    
+                    OtpSixDigitInput(
+                        value = otpInput,
+                        onValueChange = { viewModel.onOtpChanged(it) },
+                        focusRequester = focusRequester,
+                        onDone = {
+                            keyboardController?.hide()
+                            session?.userId?.let { userId -> viewModel.verifyOtp(userId) }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    if (otpError != null) {
+                        Text(
+                            text = otpError ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                val isLoading = verifyOtpState is Resource.Loading
+                Button(
+                    onClick = {
+                        keyboardController?.hide()
+                        session?.userId?.let { userId -> viewModel.verifyOtp(userId) }
+                    },
+                    enabled = !isLoading && otpInput.length == 6,
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTeal)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(Dimens.Size20),
+                            strokeWidth = Dimens.Space2
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.settings_logout_otp_confirm),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { 
+                        showOtpDialog = false
+                        viewModel.resetVerifyOtpState()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceMuted)
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_logout_cancel),
+                        color = OnSurfaceMuted,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        )
+    }
 
 }
 

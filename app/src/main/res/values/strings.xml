@@ -61,6 +61,8 @@
     <string name="settings_logout_dialog_msg">Bạn có chắc chắn muốn đăng xuất khỏi ca làm việc hiện tại?</string>
     <string name="settings_logout_cancel">Hủy</string>
     <string name="settings_logout_confirm">Đăng xuất</string>
+    <string name="settings_logout_otp_desc">Vui lòng nhập mã OTP đã được gửi đến email quản lý để hoàn tất đăng xuất.</string>
+    <string name="settings_logout_otp_confirm">Xác nhận</string>
 
     <!-- OTP Verification Strings -->
     <string name="otp_security_verification">Xác thực bảo mật</string>
