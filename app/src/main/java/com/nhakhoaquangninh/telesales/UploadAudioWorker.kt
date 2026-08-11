@@ -79,9 +79,9 @@ class UploadAudioWorker(
         } catch (_: SecurityException) {
             failureReason = "recording_permission_denied"
             Result.failure()
-        } catch (_: RuntimeException) {
+        } catch (e: RuntimeException) {
             terminalStatus = SyncStatus.PENDING
-            Log.e(TAG, "Tác vụ đồng bộ gặp lỗi tạm thời")
+            Log.e(TAG, "Tác vụ đồng bộ gặp lỗi tạm thời: ${e.message}", e)
             Result.retry()
         } finally {
             if (failureReason != null) {
