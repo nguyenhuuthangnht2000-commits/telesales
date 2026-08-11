@@ -17,17 +17,9 @@ enum class SyncStatus {
 }
 
 class SyncStatusManager private constructor(context: Context) {
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+    private val dao = com.nhakhoaquangninh.telesales.data.local.room.TelesalesDatabase.getDatabase(context).callRecordDao()
 
     companion object {
-        private const val PREF_NAME = "sync_status_prefs"
-        private const val KEY_UPDATED_AT_MILLIS = "updatedAtMillis"
-        private const val KEY_RECORDING_URI = "recordingUri"
-        private const val KEY_LEGACY_FILE_PATH = "filePath"
-        private const val KEY_FAILURE_REASON = "failureReason"
-        private val RETENTION_MILLIS = TimeUnit.DAYS.toMillis(30)
-
         @Volatile
         private var instance: SyncStatusManager? = null
 
@@ -37,107 +29,93 @@ class SyncStatusManager private constructor(context: Context) {
             }
     }
 
+    @Synchronized
     fun setStatus(recordingId: String, status: SyncStatus) {
-        setMetadata(recordingId, status, getMetadata(recordingId))
+        val existing = dao.getById(recordingId)
+        val entity = existing?.copy(
+            status = status.name,
+            updatedAtMillis = System.currentTimeMillis()
+        ) ?: com.nhakhoaquangninh.telesales.data.local.room.CallRecordEntity(
+            id = recordingId,
+            status = status.name,
+            updatedAtMillis = System.currentTimeMillis()
+        )
+        dao.insert(entity)
     }
 
+    @Synchronized
     fun setFailure(recordingId: String, reason: String) {
-        val metadata = getMetadata(recordingId)
-        val json = createJson(SyncStatus.FAILED, metadata)
-            .put(KEY_FAILURE_REASON, reason)
-        prefs.edit { putString(recordingId, json.toString()) }
+        val existing = dao.getById(recordingId)
+        val entity = existing?.copy(
+            status = SyncStatus.FAILED.name,
+            failureReason = reason,
+            updatedAtMillis = System.currentTimeMillis()
+        ) ?: com.nhakhoaquangninh.telesales.data.local.room.CallRecordEntity(
+            id = recordingId,
+            status = SyncStatus.FAILED.name,
+            failureReason = reason,
+            updatedAtMillis = System.currentTimeMillis()
+        )
+        dao.insert(entity)
     }
 
+    @Synchronized
     fun setMetadata(
         recordingId: String,
         status: SyncStatus,
         metadata: CallRecordMetadata?
     ) {
-        prefs.edit {
-            putString(recordingId, createJson(status, metadata).toString())
-        }
+        val existing = dao.getById(recordingId)
+        val entity = com.nhakhoaquangninh.telesales.data.local.room.CallRecordEntity(
+            id = recordingId,
+            status = status.name,
+            updatedAtMillis = System.currentTimeMillis(),
+            recordingUri = metadata?.recordingUri ?: existing?.recordingUri,
+            phoneNumberFrom = metadata?.phoneNumberFrom ?: existing?.phoneNumberFrom,
+            phoneNumberTo = metadata?.phoneNumberTo ?: existing?.phoneNumberTo,
+            callType = metadata?.callType?.wireValue ?: existing?.callType,
+            durationSeconds = metadata?.durationSeconds ?: existing?.durationSeconds ?: 0,
+            callAtFormatted = metadata?.callAtFormatted ?: existing?.callAtFormatted,
+            failureReason = existing?.failureReason
+        )
+        dao.insert(entity)
     }
 
+    @Synchronized
     fun getStatus(recordingId: String): SyncStatus {
-        val value = getUnexpiredValue(recordingId) ?: return SyncStatus.PENDING
-        if (value.startsWith("{")) {
-            return runCatching {
-                SyncStatus.valueOf(
-                    JSONObject(value).optString("status", SyncStatus.PENDING.name)
-                )
-            }.getOrDefault(SyncStatus.PENDING)
-        }
-        return runCatching { SyncStatus.valueOf(value) }.getOrDefault(SyncStatus.PENDING)
+        val entity = dao.getById(recordingId) ?: return SyncStatus.PENDING
+        return runCatching { SyncStatus.valueOf(entity.status) }.getOrDefault(SyncStatus.PENDING)
     }
 
+    @Synchronized
     fun getMetadata(recordingId: String): CallRecordMetadata? {
-        val value = getUnexpiredValue(recordingId) ?: return null
-        if (!value.startsWith("{")) return null
-        return runCatching {
-            val json = JSONObject(value)
-            val callType = CallType.fromWire(json.optString("callType"))
-                ?: return@runCatching null
-            val recordingUri = json.optString(KEY_RECORDING_URI)
-                .takeIf(String::isNotBlank)
-                ?: json.optString(KEY_LEGACY_FILE_PATH).takeIf(String::isNotBlank)
-                ?: return@runCatching null
-            CallRecordMetadata(
-                recordingUri = recordingUri,
-                phoneNumberFrom = json.optString("phoneNumberFrom").takeIf(String::isNotBlank),
-                phoneNumberTo = json.optString("phoneNumberTo").takeIf(String::isNotBlank),
-                callType = callType,
-                durationSeconds = json.optInt("durationSeconds", 0),
-                callAtFormatted = json.optString("callAtFormatted").takeIf(String::isNotBlank)
-            )
-        }.getOrNull()
+        val entity = dao.getById(recordingId) ?: return null
+        val callTypeStr = entity.callType ?: return null
+        val callType = CallType.fromWire(callTypeStr) ?: return null
+        val recordingUri = entity.recordingUri.takeIf { !it.isNullOrBlank() } ?: return null
+        
+        return CallRecordMetadata(
+            recordingUri = recordingUri,
+            phoneNumberFrom = entity.phoneNumberFrom,
+            phoneNumberTo = entity.phoneNumberTo,
+            callType = callType,
+            durationSeconds = entity.durationSeconds,
+            callAtFormatted = entity.callAtFormatted
+        )
     }
 
+    @Synchronized
     fun getFailureReason(recordingId: String): String? {
-        val value = getUnexpiredValue(recordingId) ?: return null
-        return runCatching {
-            JSONObject(value).optString(KEY_FAILURE_REASON).takeIf(String::isNotBlank)
-        }.getOrNull()
+        return dao.getById(recordingId)?.failureReason
     }
 
+    @Synchronized
     fun removeStatus(recordingId: String) {
-        prefs.edit { remove(recordingId) }
+        dao.delete(recordingId)
     }
 
-    private fun createJson(
-        status: SyncStatus,
-        metadata: CallRecordMetadata?
-    ): JSONObject = JSONObject()
-        .put("status", status.name)
-        .put(KEY_UPDATED_AT_MILLIS, System.currentTimeMillis())
-        .apply {
-            if (metadata != null) {
-                put(KEY_RECORDING_URI, metadata.recordingUri)
-                metadata.phoneNumberFrom?.let { put("phoneNumberFrom", it) }
-                metadata.phoneNumberTo?.let { put("phoneNumberTo", it) }
-                put("callType", metadata.callType.wireValue)
-                put("durationSeconds", metadata.durationSeconds)
-                metadata.callAtFormatted?.let { put("callAtFormatted", it) }
-            }
-        }
-
-    private fun getUnexpiredValue(recordingId: String): String? {
-        val value = prefs.getString(recordingId, null) ?: return null
-        if (!value.startsWith("{")) return value
-        val json = runCatching { JSONObject(value) }.getOrNull()
-        if (json == null) {
-            prefs.edit { remove(recordingId) }
-            return null
-        }
-        val updatedAt = json.optLong(KEY_UPDATED_AT_MILLIS, 0L)
-        if (updatedAt <= 0L) {
-            val migrated = json.put(KEY_UPDATED_AT_MILLIS, System.currentTimeMillis()).toString()
-            prefs.edit { putString(recordingId, migrated) }
-            return migrated
-        }
-        if (updatedAt < System.currentTimeMillis() - RETENTION_MILLIS) {
-            prefs.edit { remove(recordingId) }
-            return null
-        }
-        return value
+    @Synchronized
+    fun clearAll() {
+        dao.clearAll()
     }
 }

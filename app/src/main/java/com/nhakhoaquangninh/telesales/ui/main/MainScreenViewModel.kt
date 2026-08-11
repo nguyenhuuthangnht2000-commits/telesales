@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import com.nhakhoaquangninh.telesales.R
 import com.nhakhoaquangninh.telesales.ServiceLocator
-import com.nhakhoaquangninh.telesales.call.CallLogDataSource
 import com.nhakhoaquangninh.telesales.core.BaseViewModel
 import com.nhakhoaquangninh.telesales.data.local.FailedCallEvent
 import com.nhakhoaquangninh.telesales.data.local.FailedCallEventManager
@@ -43,7 +42,7 @@ class MainScreenViewModel : BaseViewModel() {
             val result = withContext(Dispatchers.IO) {
                 val syncManager = SyncStatusManager.getInstance(appContext)
                 val recordings = ServiceLocator.recordingRepository.getApprovedRecordings()
-                val states = recordings.map { recording ->
+                val states = recordings.mapNotNull { recording ->
                     var metadata = syncManager.getMetadata(recording.uri)
                     var status = syncManager.getStatus(recording.uri)
                     if (metadata == null) {
@@ -55,32 +54,11 @@ class MainScreenViewModel : BaseViewModel() {
                             syncManager.removeStatus(recording.displayName)
                         }
                     }
-                    if (metadata == null && status == SyncStatus.PENDING) {
-                        val duration = recording.durationMillis
-                        if (duration != null) {
-                            val callLogDataSource = CallLogDataSource(appContext)
-                            val recovered = callLogDataSource.recoverFromTime(recording.modifiedAtMillis, (duration / 1000).toInt())
-                            if (recovered != null) {
-                                val ownPhone = com.nhakhoaquangninh.telesales.OwnPhoneNumberResolver.resolve(appContext)
-                                val callAt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).apply {
-                                    timeZone = java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh")
-                                }.format(java.util.Date(recovered.startedAtMillis))
-                                metadata = com.nhakhoaquangninh.telesales.domain.model.CallMetadataMapper.create(
-                                    recordingUri = recording.uri,
-                                    callType = recovered.callType,
-                                    otherPhoneNumber = recovered.phoneNumber,
-                                    ownPhoneNumber = ownPhone,
-                                    durationSeconds = recovered.durationSeconds,
-                                    callAtFormatted = callAt
-                                )
-                                syncManager.setMetadata(recording.uri, SyncStatus.PENDING, metadata)
-                            }
-                        }
-                        if (metadata == null) {
-                            status = SyncStatus.NEEDS_REVIEW
-                        }
+                    if (metadata != null) {
+                        AudioItemState(recording, status, metadata)
+                    } else {
+                        null
                     }
-                    AudioItemState(recording, status, metadata)
                 }
                 states to FailedCallEventManager.getInstance(appContext).getAll()
             }

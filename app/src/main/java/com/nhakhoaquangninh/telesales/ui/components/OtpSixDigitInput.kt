@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -45,13 +46,23 @@ fun OtpSixDigitInput(
     modifier: Modifier = Modifier
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
-    var textFieldValue by remember(value) {
+    var textFieldValue by remember {
         mutableStateOf(
             TextFieldValue(
                 text = value,
                 selection = TextRange(value.length)
             )
         )
+    }
+
+    androidx.compose.runtime.LaunchedEffect(value) {
+        if (value != textFieldValue.text) {
+            val newSelection = minOf(textFieldValue.selection.start, value.length)
+            textFieldValue = textFieldValue.copy(
+                text = value,
+                selection = TextRange(newSelection)
+            )
+        }
     }
 
     Box(contentAlignment = Alignment.Center, modifier = modifier) {
@@ -80,23 +91,39 @@ fun OtpSixDigitInput(
         // Row of 6 Visual Boxes
         Row(
             horizontalArrangement = Arrangement.spacedBy(Dimens.Space8),
-            modifier = Modifier.clickable {
+            modifier = Modifier.fillMaxWidth().clickable {
                 focusRequester.requestFocus()
                 keyboardController?.show()
             }
         ) {
             for (i in 0 until 6) {
                 val digit = value.getOrNull(i)?.toString() ?: ""
-                val isFocused = value.length == i || (value.length == 6 && i == 5)
+                val isFocused = if (textFieldValue.selection.collapsed) {
+                    if (textFieldValue.selection.start == 0) {
+                        i == 0
+                    } else {
+                        i == textFieldValue.selection.start - 1
+                    }
+                } else {
+                    textFieldValue.selection.min == i
+                }
 
                 val boxBg = if (isFocused) SurfaceContainer else SurfaceContainer.copy(alpha = 0.6f)
                 val borderColor = if (isFocused) PrimaryTeal else OutlineVariant.copy(alpha = 0.5f)
 
                 Box(
                     modifier = Modifier
-                        .width(Dimens.OtpCellWidth)
+                        .weight(1f)
                         .height(Dimens.OtpCellHeight)
                         .clip(RoundedCornerShape(topStart = Dimens.Space6, topEnd = Dimens.Space6))
+                        .clickable {
+                            val start = minOf(i, value.length)
+                            val end = minOf(i + 1, value.length)
+                            // Use reversed selection (end, start) to workaround Android keyboard backspace bug on BasicTextField
+                            textFieldValue = textFieldValue.copy(selection = TextRange(end, start))
+                            focusRequester.requestFocus()
+                            keyboardController?.show()
+                        }
                         .background(boxBg)
                         .border(
                             width = if (isFocused) Dimens.Space2 else Dimens.BorderThickness,

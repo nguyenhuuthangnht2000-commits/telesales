@@ -7,6 +7,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.nhakhoaquangninh.telesales.data.local.FailedCallEventManager
+import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.ui.auth.LoginScreen
 import com.nhakhoaquangninh.telesales.ui.auth.OtpVerifyScreen
@@ -51,6 +53,8 @@ fun MainNavigation() {
                     MainScreen(
                         onLogout = {
                             tokenManager.clearSession()
+                            SyncStatusManager.getInstance(context).clearAll()
+                            FailedCallEventManager.getInstance(context).clearAll()
                             backStack.clear()
                             backStack.add(Login)
                         },

@@ -21,11 +21,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -81,6 +83,7 @@ fun LoginScreen(
         if (uiState is Resource.Success) {
             val userIdInt = userIdInput.trim().toIntOrNull() ?: 0
             viewModel.resetState()
+            viewModel.onUserIdChanged("")
             onRequestOtpSuccess(userIdInt)
         }
     }
@@ -150,19 +153,13 @@ fun LoginScreen(
                         ),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(
+                    Image(
+                        painter = painterResource(id = R.mipmap.ic_launcher_round),
+                        contentDescription = stringResource(R.string.login_dental_icon_desc),
                         modifier = Modifier
-                            .size(Dimens.IconSizeAuth)
-                            .background(PrimaryContainer, shape = CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MedicalServices,
-                            contentDescription = stringResource(R.string.login_dental_icon_desc),
-                            tint = OnPrimaryContainer,
-                            modifier = Modifier.size(Dimens.Size36)
-                        )
-                    }
+                            .size(Dimens.Size72)
+                            .clip(CircleShape)
+                    )
 
                     Spacer(modifier = Modifier.height(Dimens.Space16))
 

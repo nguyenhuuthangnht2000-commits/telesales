@@ -48,6 +48,7 @@ object Dimens {
     val Size36 = 36.dp
     val Size40 = 40.dp
     val Size56 = 56.dp
+    val Size72 = 72.dp
     val AuthDecorSmall = 240.dp
     val AuthDecorLarge = 280.dp
     val LoginMaxWidth = 440.dp

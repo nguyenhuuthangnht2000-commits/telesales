@@ -22,13 +22,9 @@ data class FailedCallEvent(
 )
 
 class FailedCallEventManager private constructor(context: Context) {
-    private val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+    private val dao = com.nhakhoaquangninh.telesales.data.local.room.TelesalesDatabase.getDatabase(context).failedCallDao()
 
     companion object {
-        private const val PREF_NAME = "failed_call_events"
-        private const val KEY_EVENTS = "events"
-        private val RETENTION_MILLIS = TimeUnit.DAYS.toMillis(30)
-
         @Volatile
         private var instance: FailedCallEventManager? = null
 
@@ -40,69 +36,49 @@ class FailedCallEventManager private constructor(context: Context) {
 
     @Synchronized
     fun save(event: FailedCallEvent) {
-        val root = readRoot()
-        root.put(event.id, event.toJson())
-        removeExpired(root, System.currentTimeMillis())
-        prefs.edit { putString(KEY_EVENTS, root.toString()) }
+        dao.insert(event.toEntity())
     }
 
     @Synchronized
     fun getAll(): List<FailedCallEvent> {
-        val root = readRoot()
-        if (removeExpired(root, System.currentTimeMillis())) {
-            prefs.edit { putString(KEY_EVENTS, root.toString()) }
-        }
-        return root.keys().asSequence().mapNotNull { key ->
-            runCatching { root.getJSONObject(key).toEvent() }.getOrNull()
-        }.sortedByDescending { it.callAtMillis }.toList()
+        return dao.getAll().map { it.toEvent() }
     }
 
     @Synchronized
     fun remove(id: String) {
-        val root = readRoot()
-        root.remove(id)
-        prefs.edit { putString(KEY_EVENTS, root.toString()) }
+        dao.delete(id)
     }
 
-    private fun removeExpired(root: JSONObject, nowMillis: Long): Boolean {
-        val cutoff = nowMillis - RETENTION_MILLIS
-        val expiredIds = root.keys().asSequence().filter { key ->
-            runCatching { root.getJSONObject(key).optLong("callAtMillis", 0L) }
-                .getOrDefault(0L) in 1 until cutoff
-        }.toList()
-        expiredIds.forEach(root::remove)
-        return expiredIds.isNotEmpty()
+    @Synchronized
+    fun clearAll() {
+        dao.clearAll()
     }
 
-    private fun readRoot(): JSONObject = runCatching {
-        JSONObject(prefs.getString(KEY_EVENTS, null) ?: "{}")
-    }.getOrDefault(JSONObject())
+    private fun FailedCallEvent.toEntity() = com.nhakhoaquangninh.telesales.data.local.room.FailedCallEntity(
+        id = id,
+        filePath = filePath,
+        phoneNumberFrom = phoneNumberFrom,
+        phoneNumberTo = phoneNumberTo,
+        callAtMillis = callAtMillis,
+        callAtFormatted = callAtFormatted,
+        callType = callType.wireValue,
+        durationSeconds = durationSeconds,
+        callStatus = callStatus,
+        failureReason = failureReason.wireValue,
+        syncStatus = syncStatus
+    )
 
-    private fun FailedCallEvent.toJson() = JSONObject().apply {
-        put("id", id)
-        put("filePath", filePath ?: JSONObject.NULL)
-        phoneNumberFrom?.let { put("phoneNumberFrom", it) }
-        phoneNumberTo?.let { put("phoneNumberTo", it) }
-        put("callAtMillis", callAtMillis)
-        put("callAtFormatted", callAtFormatted)
-        put("callType", callType.wireValue)
-        put("durationSeconds", durationSeconds)
-        put("callStatus", callStatus)
-        put("failureReason", failureReason.wireValue)
-        put("syncStatus", syncStatus)
-    }
-
-    private fun JSONObject.toEvent() = FailedCallEvent(
-        id = getString("id"),
-        filePath = optString("filePath").takeIf { it.isNotBlank() && it != "null" },
-        phoneNumberFrom = optString("phoneNumberFrom").takeIf { it.isNotBlank() },
-        phoneNumberTo = optString("phoneNumberTo").takeIf { it.isNotBlank() },
-        callAtMillis = getLong("callAtMillis"),
-        callAtFormatted = getString("callAtFormatted"),
-        callType = CallType.fromWire(optString("callType")) ?: CallType.OUTGOING,
-        durationSeconds = optInt("durationSeconds", 0),
-        callStatus = optString("callStatus", "failed"),
-        failureReason = FailureReason.fromWire(optString("failureReason")) ?: FailureReason.NOT_CONNECTED,
-        syncStatus = optString("syncStatus", "PENDING_SERVER_SUPPORT")
+    private fun com.nhakhoaquangninh.telesales.data.local.room.FailedCallEntity.toEvent() = FailedCallEvent(
+        id = id,
+        filePath = filePath,
+        phoneNumberFrom = phoneNumberFrom,
+        phoneNumberTo = phoneNumberTo,
+        callAtMillis = callAtMillis,
+        callAtFormatted = callAtFormatted,
+        callType = CallType.fromWire(callType) ?: CallType.OUTGOING,
+        durationSeconds = durationSeconds,
+        callStatus = callStatus,
+        failureReason = FailureReason.fromWire(failureReason) ?: FailureReason.NOT_CONNECTED,
+        syncStatus = syncStatus
     )
 }
