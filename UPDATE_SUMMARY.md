@@ -213,3 +213,16 @@
   - Cập nhật logic hiển thị viền focus linh hoạt: Khi chuỗi tự động dồn lại sau khi xóa ở giữa, viền sáng sẽ lùi về đúng ô mà phím Backspace sẽ tác động tiếp theo, loại bỏ hoàn toàn sự lệch pha giữa giao diện (visual) và hành vi xóa thực tế.
 
 *Cập nhật lần cuối: 11/08/2026 15:05 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 16. Cơ Chế Database Migration & Ghi Log Lỗi Cục Bộ
+- **Database Migration (`TelesalesDatabase.kt`):**
+  - Bổ sung `fallbackToDestructiveMigration()` để tránh crash ứng dụng khi nâng cấp version database mà không có migration.
+  - Tạo sẵn template `MIGRATION_1_2` giúp DEV dễ dàng cấu hình cập nhật Schema (thêm/sửa cột) cho các bản release tương lai mà không làm mất dữ liệu cục bộ.
+- **Local File Logger (`UploadAudioWorker.kt`):**
+  - Sửa lỗi nuốt Exception (swallowed exception) khi bắt `RuntimeException` trong quá trình đồng bộ, giúp Logcat hiển thị chính xác nguyên nhân lỗi mạng hoặc parse JSON.
+  - Tích hợp hàm `writeErrorLogToFile` tự động ghi toàn bộ stack trace của lỗi vào file `telesales_upload_error_log.txt` lưu tại thư mục Documents nội bộ của ứng dụng.
+  - Giúp quản lý và nhân viên dễ dàng trích xuất log lỗi trên bản Release bằng cách truy cập `Android/data/com.nhakhoaquangninh.telesales/files/Documents` mà không cần cắm cáp ADB.
+
+*Cập nhật lần cuối: 11/08/2026 22:01 bởi Antigravity AI Pair Programmer.*

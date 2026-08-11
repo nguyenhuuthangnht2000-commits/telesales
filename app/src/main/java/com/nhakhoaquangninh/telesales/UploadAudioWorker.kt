@@ -82,6 +82,7 @@ class UploadAudioWorker(
         } catch (e: RuntimeException) {
             terminalStatus = SyncStatus.PENDING
             Log.e(TAG, "Tác vụ đồng bộ gặp lỗi tạm thời: ${e.message}", e)
+            writeErrorLogToFile(applicationContext, e)
             Result.retry()
         } finally {
             if (failureReason != null) {
@@ -92,6 +93,22 @@ class UploadAudioWorker(
             val intent = android.content.Intent("com.nhakhoaquangninh.telesales.REFRESH_RECORDINGS")
             intent.setPackage(applicationContext.packageName)
             applicationContext.sendBroadcast(intent)
+        }
+    }
+
+    private fun writeErrorLogToFile(context: Context, e: Exception) {
+        try {
+            val dir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+            if (dir != null) {
+                if (!dir.exists()) dir.mkdirs()
+                val file = java.io.File(dir, "telesales_upload_error_log.txt")
+                val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                val logMessage = "[$timestamp] ERROR:\n${Log.getStackTraceString(e)}\n---------------------------\n"
+                file.appendText(logMessage)
+                Log.d(TAG, "Đã ghi log ra file: ${file.absolutePath}")
+            }
+        } catch (ex: Exception) {
+            Log.e(TAG, "Lỗi khi ghi file log: ${ex.message}")
         }
     }
 
