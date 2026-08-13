@@ -115,9 +115,7 @@ class CallRecordRepositoryImpl(
         val uri = runCatching { uriValue.toUri() }.getOrNull() ?: return null
         if (uri.scheme != ContentResolver.SCHEME_CONTENT) return null
         return try {
-            val mimeType = resolver.getType(uri)
-                ?.takeIf { it.startsWith("audio/", ignoreCase = true) }
-                ?: return null
+            val rawMimeType = resolver.getType(uri)
             var displayName = "recording"
             var sizeBytes = -1L
             resolver.query(
@@ -141,6 +139,7 @@ class CallRecordRepositoryImpl(
                     }
                 }
             }
+            val mimeType = resolveAudioMimeType(rawMimeType, displayName) ?: return null
             if (sizeBytes !in 1..MAX_SIZE_BYTES) return null
             resolver.openAssetFileDescriptor(uri, "r")?.use { } ?: return null
             RecordingPayload(uri, displayName, mimeType, sizeBytes)
@@ -150,6 +149,25 @@ class CallRecordRepositoryImpl(
             null
         } catch (_: RuntimeException) {
             null
+        }
+    }
+
+    private fun resolveAudioMimeType(rawMimeType: String?, displayName: String): String? {
+        if (rawMimeType != null && rawMimeType.startsWith("audio/", ignoreCase = true)) {
+            return rawMimeType
+        }
+        val ext = displayName.substringAfterLast('.', "").lowercase()
+        return when (ext) {
+            "m4a" -> "audio/mp4"
+            "mp3" -> "audio/mpeg"
+            "amr" -> "audio/amr"
+            "3gp", "3gpp" -> "audio/3gpp"
+            "wav" -> "audio/wav"
+            "aac" -> "audio/aac"
+            "ogg" -> "audio/ogg"
+            "flac" -> "audio/flac"
+            "opus" -> "audio/opus"
+            else -> if (rawMimeType == "application/octet-stream" || rawMimeType == null) "audio/mp4" else null
         }
     }
 

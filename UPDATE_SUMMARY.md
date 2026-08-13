@@ -4,6 +4,17 @@
 
 ---
 
+## 4. 🛠️ Khắc Phục Lỗi Upload File Trên Bản Release (Release Build Upload Fixes)
+- **Bổ sung ProGuard Keep Rules ([app/proguard-rules.pro](file:///d:/telesales/app/proguard-rules.pro)):**
+  - Khai báo keep `ListenableWorker`, `InputMerger` (`OverwritingInputMerger`, `ArrayCreatingInputMerger`) và các Worker cụ thể (`UploadAudioWorker`, `ProcessCallWorker`) kèm constructor để WorkManager không bị lỗi `ClassNotFoundException` / `NoSuchMethodException` do R8 obfuscation.
+  - Bảo toàn Retrofit annotations (`@POST`, `@Multipart`, `@Part`, `@Header`), Gson `@SerializedName`, `ApiService`, DTOs và `CallRecordRepositoryImpl`.
+- **Tăng Timeout OkHttpClient ([RetrofitClient.kt](file:///d:/telesales/data/src/main/java/com/nhakhoaquangninh/telesales/data/remote/RetrofitClient.kt)):**
+  - Tăng `connectTimeout` (30s), `readTimeout` (60s), và `writeTimeout` (90s) nhằm tránh lỗi `SocketTimeoutException` khi tải file ghi âm dung lượng lớn qua kết nối di động 3G/4G yếu.
+- **Tối Ưu Hoá Xác Thực MIME Type ([RecordingUriValidator.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/call/RecordingUriValidator.kt) & [CallRecordRepositoryImpl.kt](file:///d:/telesales/data/src/main/java/com/nhakhoaquangninh/telesales/data/repository/CallRecordRepositoryImpl.kt)):**
+  - Bổ sung fallback xác định MIME type dựa trên extension của tệp (`.m4a`, `.mp3`, `.amr`, `.3gp`, v.v.) trong trường hợp `contentResolver.getType(uri)` trả về `application/octet-stream` hoặc `null` trên một số giao diện tùy biến (Samsung, Xiaomi, Oppo).
+
+---
+
 ## 1. 📞 Trích Xuất Dữ Liệu Cuộc Gọi GSM (Call Log Metadata)
 - **Cơ chế:** Khi cuộc gọi kết thúc, `CallStateReceiver.kt` tự động đọc `CallLog.Calls` từ Android để lấy thông tin thực tế:
   - `phoneNumberFrom` / `phoneNumberTo`: Số điện thoại gọi đến hoặc gọi đi.
