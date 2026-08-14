@@ -237,3 +237,13 @@
   - Giúp quản lý và nhân viên dễ dàng trích xuất log lỗi trên bản Release bằng cách truy cập `Android/data/com.nhakhoaquangninh.telesales/files/Documents` mà không cần cắm cáp ADB.
 
 *Cập nhật lần cuối: 11/08/2026 22:01 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 17. Hỗ trợ Upload Trạng thái Cuộc gọi (is_answered) - Domain Layer
+- Cập nhật Domain layer để hỗ trợ cuộc gọi không bắt máy (`isAnswered = false`), cho phép upload không kèm file ghi âm.
+- `CallRecordMetadata`: Bổ sung thuộc tính `isAnswered` (mặc định `true`), chuyển `recordingUri` thành nullable.
+- `CallMetadataMapper`: Thêm tham số `isAnswered` vào hàm `create`.
+- `UploadCallRecordUseCase`: Chỉnh sửa logic, chỉ yêu cầu validate nguồn tệp ghi âm nếu cuộc gọi đã được trả lời.
+
+*Cập nhật lần cuối: 14/08/2026 11:20 bởi Antigravity AI Pair Programmer.*

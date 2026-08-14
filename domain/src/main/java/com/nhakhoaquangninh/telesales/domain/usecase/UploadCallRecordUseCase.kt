@@ -7,11 +7,14 @@ import com.nhakhoaquangninh.telesales.domain.repository.CallRecordRepository
 
 class UploadCallRecordUseCase(private val repository: CallRecordRepository) {
     suspend operator fun invoke(metadata: CallRecordMetadata): Resource<Boolean> {
-        if (!metadata.recordingUri.startsWith("content://")) {
-            return Resource.Error(
-                message = "Nguồn tệp ghi âm không hợp lệ",
-                source = ErrorSource.APP_CLIENT
-            )
+        if (metadata.isAnswered) {
+            val uri = metadata.recordingUri
+            if (uri == null || !uri.startsWith("content://")) {
+                return Resource.Error(
+                    message = "Nguồn tệp ghi âm không hợp lệ",
+                    source = ErrorSource.APP_CLIENT
+                )
+            }
         }
         return repository.uploadCallRecord(metadata)
     }

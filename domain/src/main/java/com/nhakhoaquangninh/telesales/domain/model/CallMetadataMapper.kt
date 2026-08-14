@@ -2,12 +2,13 @@ package com.nhakhoaquangninh.telesales.domain.model
 
 object CallMetadataMapper {
     fun create(
-        recordingUri: String,
+        recordingUri: String?,
         callType: CallType,
         otherPhoneNumber: String?,
         ownPhoneNumber: String?,
         durationSeconds: Int,
-        callAtFormatted: String?
+        callAtFormatted: String?,
+        isAnswered: Boolean = true
     ): CallRecordMetadata {
         val otherNumber = otherPhoneNumber.normalizePhoneNumber()
         val ownNumber = ownPhoneNumber.normalizePhoneNumber()
@@ -17,7 +18,8 @@ object CallMetadataMapper {
             phoneNumberTo = if (callType == CallType.INCOMING) ownNumber else otherNumber,
             callType = callType,
             durationSeconds = durationSeconds.coerceAtLeast(0),
-            callAtFormatted = callAtFormatted
+            callAtFormatted = callAtFormatted,
+            isAnswered = isAnswered
         )
     }
 
