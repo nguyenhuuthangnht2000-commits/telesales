@@ -264,3 +264,15 @@
 - Viết kịch bản Migration (`MIGRATION_1_2`) cho Room Database trong `TelesalesDatabase.kt` để thực thi lệnh `ALTER TABLE call_records ADD COLUMN isAnswered INTEGER NOT NULL DEFAULT 1`. Điều này giúp giữ nguyên dữ liệu lịch sử cuộc gọi cũ khi cài đè phiên bản ứng dụng mới.
 
 *Cập nhật lần cuối: 14/08/2026 13:30 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 20. Nâng cấp Bộ Ghi Log Lỗi Chi Tiết (FileLogger Diagnostic Engine)
+- **Tập trung hóa FileLogger (`FileLogger.kt`):** Tạo singleton `FileLogger` trong `:core` quản lý việc ghi log chẩn đoán ra tệp `Android/data/com.nhakhoaquangninh.telesales/files/Documents/telesales_upload_error_log.txt`.
+- **Ghi nhận đầy đủ vòng đời Upload & Chi tiết lỗi Server (`CallRecordRepositoryImpl.kt` & `UploadAudioWorker.kt`):**
+  - Ghi lại toàn bộ metadata trước khi gửi request (`is_answered`, số gọi, số nhận, thời lượng, loại cuộc gọi, file đính kèm).
+  - Tự động ghi lại mã phản hồi HTTP (`401`, `422`, `500`) kèm toàn bộ nội dung `errorBody` (JSON chi tiết lỗi từ Server) khi upload bị từ chối.
+  - Tự động ghi lại ngoại lệ mạng `IOException` khi mất kết nối mạng.
+  - Giúp quản lý và DEV mở trực tiếp file log trên điện thoại để xem chính xác lý do Server từ chối request mà không cần máy tính hay cắm cáp ADB.
+
+*Cập nhật lần cuối: 14/08/2026 15:45 bởi Antigravity AI Pair Programmer.*

@@ -6,8 +6,10 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.nhakhoaquangninh.telesales.call.RecordingUriValidation
 import com.nhakhoaquangninh.telesales.call.RecordingUriValidator
+import com.nhakhoaquangninh.telesales.core.FileLogger
 import com.nhakhoaquangninh.telesales.data.local.SyncStatus
 import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
+import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
 import com.nhakhoaquangninh.telesales.domain.model.CallType
 import kotlinx.coroutines.CancellationException
@@ -22,7 +24,10 @@ class UploadAudioWorker(
         val recordingUri = inputData.getString(KEY_RECORDING_URI)
         val recordingId = inputData.getString(KEY_RECORDING_ID)
             ?: recordingUri
-            ?: (if (!isAnswered) "missed_${System.currentTimeMillis()}" else return Result.failure())
+            ?: (if (!isAnswered) "missed_${System.currentTimeMillis()}" else {
+                FileLogger.log(applicationContext, "WORKER_ERROR", "Thiếu ID hoặc URI ghi âm khi bắt đầu worker.")
+                return Result.failure()
+            })
         val syncStatusManager = SyncStatusManager.getInstance(applicationContext)
         var terminalStatus = SyncStatus.FAILED
         var failureReason: String? = null
@@ -36,15 +41,18 @@ class UploadAudioWorker(
                 val validation = RecordingUriValidator.validate(applicationContext, recordingUri)
                 if (validation is RecordingUriValidation.Invalid) {
                     failureReason = validation.reason
+                    FileLogger.log(applicationContext, "VALIDATION_ERROR", "Tệp ghi âm không hợp lệ ($failureReason) - URI: $recordingUri")
                     return Result.failure()
                 }
                 if (callType == null || duration <= 0) {
                     failureReason = "invalid_call_metadata"
+                    FileLogger.log(applicationContext, "METADATA_ERROR", "Metadata không hợp lệ (callType=$callType, duration=$duration) - URI: $recordingUri")
                     return Result.failure()
                 }
             } else {
                 if (callType == null) {
                     failureReason = "invalid_call_metadata"
+                    FileLogger.log(applicationContext, "METADATA_ERROR", "Metadata cuộc gọi không hợp lệ (callType=null) - ID: $recordingId")
                     return Result.failure()
                 }
             }
@@ -60,34 +68,47 @@ class UploadAudioWorker(
                 isAnswered = isAnswered
             )
             Log.d("API_LOG", "Bắt đầu Upload File (isAnswered=$isAnswered) - Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted}")
-            val decision = UploadWorkPolicy.decide(
-                ServiceLocator.uploadCallRecordUseCase(metadata)
-            )
+            
+            val uploadResource = ServiceLocator.uploadCallRecordUseCase(metadata)
+            val decision = UploadWorkPolicy.decide(uploadResource)
             terminalStatus = decision.terminalStatus
             when (decision.result) {
                 UploadWorkResult.SUCCESS -> Result.success()
-                UploadWorkResult.RETRY -> Result.retry()
+                UploadWorkResult.RETRY -> {
+                    if (uploadResource is Resource.Error) {
+                        FileLogger.log(applicationContext, "WORKER_RETRY", "Upload cần retry (HTTP ${uploadResource.code}): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}")
+                    }
+                    Result.retry()
+                }
                 UploadWorkResult.UNAUTHORIZED -> {
+                    if (uploadResource is Resource.Error) {
+                        FileLogger.log(applicationContext, "WORKER_UNAUTHORIZED", "Upload bị từ chối xác thực (HTTP 401): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}")
+                    }
                     UnauthorizedEventBus.notifyUnauthorized()
                     failureReason = "unauthorized"
                     Result.failure()
                 }
 
                 UploadWorkResult.FAILURE -> {
+                    if (uploadResource is Resource.Error) {
+                        FileLogger.log(applicationContext, "WORKER_REJECTED", "Upload bị Server từ chối (HTTP ${uploadResource.code}): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}")
+                    }
                     failureReason = "upload_rejected"
                     Result.failure()
                 }
             }
         } catch (cancelled: CancellationException) {
             terminalStatus = SyncStatus.PENDING
+            FileLogger.log(applicationContext, "WORKER_CANCELLED", "Worker bị huỷ bỏ (CancellationException)")
             throw cancelled
-        } catch (_: SecurityException) {
+        } catch (se: SecurityException) {
             failureReason = "recording_permission_denied"
+            FileLogger.logException(applicationContext, "PERMISSION_DENIED", "Thiếu quyền truy cập file/gọi", se)
             Result.failure()
         } catch (e: RuntimeException) {
             terminalStatus = SyncStatus.PENDING
             Log.e(TAG, "Tác vụ đồng bộ gặp lỗi tạm thời: ${e.message}", e)
-            writeErrorLogToFile(applicationContext, e)
+            FileLogger.logException(applicationContext, "RUNTIME_EXCEPTION", "Tác vụ đồng bộ gặp lỗi RuntimeException: ${e.message}", e)
             Result.retry()
         } finally {
             if (failureReason != null) {
@@ -98,22 +119,6 @@ class UploadAudioWorker(
             val intent = android.content.Intent("com.nhakhoaquangninh.telesales.REFRESH_RECORDINGS")
             intent.setPackage(applicationContext.packageName)
             applicationContext.sendBroadcast(intent)
-        }
-    }
-
-    private fun writeErrorLogToFile(context: Context, e: Exception) {
-        try {
-            val dir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-            if (dir != null) {
-                if (!dir.exists()) dir.mkdirs()
-                val file = java.io.File(dir, "telesales_upload_error_log.txt")
-                val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
-                val logMessage = "[$timestamp] ERROR:\n${Log.getStackTraceString(e)}\n---------------------------\n"
-                file.appendText(logMessage)
-                Log.d(TAG, "Đã ghi log ra file: ${file.absolutePath}")
-            }
-        } catch (ex: Exception) {
-            Log.e(TAG, "Lỗi khi ghi file log: ${ex.message}")
         }
     }
 

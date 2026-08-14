@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.core.net.toUri
+import com.nhakhoaquangninh.telesales.core.FileLogger
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.data.remote.ApiService
 import com.nhakhoaquangninh.telesales.data.remote.RetrofitClient
@@ -30,11 +31,13 @@ class CallRecordRepositoryImpl(
     private val tokenManager: TokenManager,
     private val messageProvider: MessageProvider
 ) : CallRecordRepository {
-    private val resolver = context.applicationContext.contentResolver
+    private val appContext = context.applicationContext
+    private val resolver = appContext.contentResolver
 
     override suspend fun uploadCallRecord(metadata: CallRecordMetadata): Resource<Boolean> {
         val token = tokenManager.getToken()
         if (token.isNullOrEmpty()) {
+            FileLogger.log(appContext, "AUTH_ERROR", "Token không tồn tại hoặc chưa đăng nhập. Không thể upload cuộc gọi.")
             return Resource.Error(
                 message = messageProvider.getTokenMissingMessage(),
                 source = ErrorSource.SERVER,
@@ -48,10 +51,13 @@ class CallRecordRepositoryImpl(
         var bodyPart: MultipartBody.Part? = null
         if (metadata.isAnswered) {
             val payload = metadata.recordingUri?.let { resolvePayload(it) }
-                ?: return Resource.Error(
-                    message = "Không thể đọc tệp ghi âm hợp lệ",
-                    source = ErrorSource.APP_CLIENT
-                )
+                ?: run {
+                    FileLogger.log(appContext, "FILE_ERROR", "Không thể đọc tệp ghi âm hợp lệ từ URI: ${metadata.recordingUri}")
+                    return Resource.Error(
+                        message = "Không thể đọc tệp ghi âm hợp lệ",
+                        source = ErrorSource.APP_CLIENT
+                    )
+                }
             val recordingBody = ContentUriRequestBody(
                 resolver = resolver,
                 uri = payload.uri,
@@ -60,6 +66,12 @@ class CallRecordRepositoryImpl(
             )
             bodyPart = MultipartBody.Part.createFormData("recording", payload.displayName, recordingBody)
         }
+
+        FileLogger.log(
+            appContext,
+            "UPLOAD_START",
+            "Bắt đầu gửi request POST /call-records | isAnswered=$isAnsweredString | Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType.wireValue} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted} | File đính kèm: ${if (bodyPart != null) "Có" else "Không (null)"}"
+        )
 
         val response = try {
             apiService.uploadCallRecord(
@@ -73,7 +85,8 @@ class CallRecordRepositoryImpl(
                 callAt = metadata.callAtFormatted?.toRequestBody(textMediaType),
                 isAnswered = isAnsweredString.toRequestBody(textMediaType)
             )
-        } catch (_: IOException) {
+        } catch (ioe: IOException) {
+            FileLogger.logException(appContext, "NETWORK_ERROR", "Mất kết nối máy chủ khi upload (IOException): ${ioe.message}", ioe)
             return Resource.Error(
                 message = "Không thể kết nối máy chủ",
                 source = ErrorSource.NETWORK
@@ -84,10 +97,12 @@ class CallRecordRepositoryImpl(
         return if (response.isSuccessful && code in setOf(200, 201)) {
             val responseBody = response.body()?.string()
             android.util.Log.d("API_LOG", "Upload File Success - Code: $code, Body: $responseBody")
+            FileLogger.log(appContext, "API_SUCCESS", "Upload thành công (HTTP $code) | Server phản hồi: $responseBody")
             Resource.Success(data = true, message = messageProvider.getUploadSuccessMessage())
         } else {
             val errorBody = response.errorBody()?.string()
             android.util.Log.d("API_LOG", "Upload File Failed - Code: $code, Body: $errorBody")
+            FileLogger.log(appContext, "API_FAILURE", "Upload bị từ chối (HTTP $code) | Chi tiết lỗi Server: $errorBody")
             if (code == 401) {
                 tokenManager.clearSession()
                 Resource.Error(
