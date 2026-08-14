@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [CallRecordEntity::class, FailedCallEntity::class], version = 1, exportSchema = false)
+@Database(entities = [CallRecordEntity::class, FailedCallEntity::class], version = 2, exportSchema = false)
 abstract class TelesalesDatabase : RoomDatabase() {
     abstract fun callRecordDao(): CallRecordDao
     abstract fun failedCallDao(): FailedCallDao
@@ -16,12 +16,9 @@ abstract class TelesalesDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: TelesalesDatabase? = null
 
-        // Mẫu cơ chế Migration từ version 1 lên 2
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Renamed param to 'database' to match standard or 'db'
-                // Thêm các câu lệnh SQL ở đây khi thay đổi schema. 
-                // Ví dụ: database.execSQL("ALTER TABLE CallRecordEntity ADD COLUMN new_column TEXT DEFAULT '' NOT NULL")
+                db.execSQL("ALTER TABLE call_records ADD COLUMN isAnswered INTEGER NOT NULL DEFAULT 1")
             }
         }
 

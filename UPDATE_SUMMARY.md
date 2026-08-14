@@ -256,3 +256,11 @@
 - `CallEventCoordinator`: Chỉnh sửa logic ở `saveFailedCall` và `CallEventDecision.ScheduleUpload` để đẩy `isAnswered` flag. Gọi `uploadScheduler.enqueue(metadata)` cho các cuộc gọi thất bại tự động.
 
 *Cập nhật lần cuối: 14/08/2026 13:25 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 19. Nâng Version Ứng dụng & Room Database Migration (v1 -> v2)
+- Cập nhật `versionCode = 2` và `versionName = "1.1"` trong `app/build.gradle.kts`.
+- Viết kịch bản Migration (`MIGRATION_1_2`) cho Room Database trong `TelesalesDatabase.kt` để thực thi lệnh `ALTER TABLE call_records ADD COLUMN isAnswered INTEGER NOT NULL DEFAULT 1`. Điều này giúp giữ nguyên dữ liệu lịch sử cuộc gọi cũ khi cài đè phiên bản ứng dụng mới.
+
+*Cập nhật lần cuối: 14/08/2026 13:30 bởi Antigravity AI Pair Programmer.*
