@@ -76,7 +76,8 @@ class SyncStatusManager private constructor(context: Context) {
             callType = metadata?.callType?.wireValue ?: existing?.callType,
             durationSeconds = metadata?.durationSeconds ?: existing?.durationSeconds ?: 0,
             callAtFormatted = metadata?.callAtFormatted ?: existing?.callAtFormatted,
-            failureReason = existing?.failureReason
+            failureReason = existing?.failureReason,
+            isAnswered = metadata?.isAnswered ?: existing?.isAnswered ?: true
         )
         dao.insert(entity)
     }
@@ -92,7 +93,8 @@ class SyncStatusManager private constructor(context: Context) {
         val entity = dao.getById(recordingId) ?: return null
         val callTypeStr = entity.callType ?: return null
         val callType = CallType.fromWire(callTypeStr) ?: return null
-        val recordingUri = entity.recordingUri.takeIf { !it.isNullOrBlank() } ?: return null
+        val recordingUri = entity.recordingUri.takeIf { !it.isNullOrBlank() }
+        if (entity.isAnswered && recordingUri == null) return null
         
         return CallRecordMetadata(
             recordingUri = recordingUri,
@@ -100,7 +102,8 @@ class SyncStatusManager private constructor(context: Context) {
             phoneNumberTo = entity.phoneNumberTo,
             callType = callType,
             durationSeconds = entity.durationSeconds,
-            callAtFormatted = entity.callAtFormatted
+            callAtFormatted = entity.callAtFormatted,
+            isAnswered = entity.isAnswered
         )
     }
 
