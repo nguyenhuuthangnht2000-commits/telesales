@@ -36,16 +36,16 @@ class UploadAudioWorker(
                 val validation = RecordingUriValidator.validate(applicationContext, recordingUri)
                 if (validation is RecordingUriValidation.Invalid) {
                     failureReason = validation.reason
-                    return@try Result.failure()
+                    return Result.failure()
                 }
                 if (callType == null || duration <= 0) {
                     failureReason = "invalid_call_metadata"
-                    return@try Result.failure()
+                    return Result.failure()
                 }
             } else {
                 if (callType == null) {
                     failureReason = "invalid_call_metadata"
-                    return@try Result.failure()
+                    return Result.failure()
                 }
             }
 

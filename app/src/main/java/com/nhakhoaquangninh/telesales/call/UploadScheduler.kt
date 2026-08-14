@@ -18,7 +18,7 @@ class UploadScheduler(context: Context) {
     private val syncStatusManager = SyncStatusManager.getInstance(appContext)
 
     fun enqueue(metadata: CallRecordMetadata) {
-        val recordingId = metadata.recordingUri
+        val recordingId = metadata.recordingUri ?: "missed_${System.currentTimeMillis()}"
         syncStatusManager.setMetadata(recordingId, SyncStatus.PENDING, metadata)
         val input = Data.Builder()
             .putString(UploadAudioWorker.KEY_RECORDING_URI, metadata.recordingUri)
