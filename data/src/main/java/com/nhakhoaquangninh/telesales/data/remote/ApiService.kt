@@ -33,11 +33,12 @@ interface ApiService {
     suspend fun uploadCallRecord(
         @Header("X-Api-Key") apiKey: String,
         @Header("Authorization") authorization: String,
-        @Part recording: MultipartBody.Part,
+        @Part recording: MultipartBody.Part? = null,
         @Part("phone_number_from") phoneNumberFrom: RequestBody? = null,
         @Part("phone_number_to") phoneNumberTo: RequestBody? = null,
         @Part("call_type") callType: RequestBody? = null,
         @Part("duration") duration: RequestBody? = null,
-        @Part("call_at") callAt: RequestBody? = null
+        @Part("call_at") callAt: RequestBody? = null,
+        @Part("is_answered") isAnswered: RequestBody? = null
     ): Response<ResponseBody>
 }

@@ -42,23 +42,24 @@ class CallRecordRepositoryImpl(
             )
         }
 
-        val payload = resolvePayload(metadata.recordingUri)
-            ?: return Resource.Error(
-                message = "Không thể đọc tệp ghi âm hợp lệ",
-                source = ErrorSource.APP_CLIENT
-            )
-        val recordingBody = ContentUriRequestBody(
-            resolver = resolver,
-            uri = payload.uri,
-            mediaType = payload.mimeType.toMediaType(),
-            contentLength = payload.sizeBytes
-        )
-        val bodyPart = MultipartBody.Part.createFormData(
-            "recording",
-            payload.displayName,
-            recordingBody
-        )
         val textMediaType = "text/plain".toMediaTypeOrNull()
+        val isAnsweredString = if (metadata.isAnswered) "true" else "false"
+
+        var bodyPart: MultipartBody.Part? = null
+        if (metadata.isAnswered) {
+            val payload = metadata.recordingUri?.let { resolvePayload(it) }
+                ?: return Resource.Error(
+                    message = "Không thể đọc tệp ghi âm hợp lệ",
+                    source = ErrorSource.APP_CLIENT
+                )
+            val recordingBody = ContentUriRequestBody(
+                resolver = resolver,
+                uri = payload.uri,
+                mediaType = payload.mimeType.toMediaType(),
+                contentLength = payload.sizeBytes
+            )
+            bodyPart = MultipartBody.Part.createFormData("recording", payload.displayName, recordingBody)
+        }
 
         val response = try {
             apiService.uploadCallRecord(
@@ -69,7 +70,8 @@ class CallRecordRepositoryImpl(
                 phoneNumberTo = metadata.phoneNumberTo?.toRequestBody(textMediaType),
                 callType = metadata.callType.wireValue.toRequestBody(textMediaType),
                 duration = metadata.durationSeconds.toString().toRequestBody(textMediaType),
-                callAt = metadata.callAtFormatted?.toRequestBody(textMediaType)
+                callAt = metadata.callAtFormatted?.toRequestBody(textMediaType),
+                isAnswered = isAnsweredString.toRequestBody(textMediaType)
             )
         } catch (_: IOException) {
             return Resource.Error(
