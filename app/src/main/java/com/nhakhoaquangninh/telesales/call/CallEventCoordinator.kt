@@ -93,7 +93,8 @@ class CallEventCoordinator(
                     otherPhoneNumber = decision.call.phoneNumber ?: snapshot.otherPhoneNumber,
                     ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
                     durationSeconds = decision.call.durationSeconds,
-                    callAtFormatted = formatCallTime(decision.call.startedAtMillis)
+                    callAtFormatted = formatCallTime(decision.call.startedAtMillis),
+                    isAnswered = true
                 )
                 uploadScheduler.enqueue(metadata)
                 notifier.notifyRecordingQueued()
@@ -130,12 +131,13 @@ class CallEventCoordinator(
             ?: snapshot.startedAtMillis.takeIf { it > 0L }
             ?: System.currentTimeMillis()
         val metadata = CallMetadataMapper.create(
-            recordingUri = "",
+            recordingUri = null,
             callType = callType,
             otherPhoneNumber = callLog?.phoneNumber ?: snapshot.otherPhoneNumber,
             ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
             durationSeconds = 0,
-            callAtFormatted = formatCallTime(eventTime)
+            callAtFormatted = formatCallTime(eventTime),
+            isAnswered = false
         )
         val otherPhone = if (callType == CallType.INCOMING) {
             metadata.phoneNumberFrom
@@ -154,6 +156,9 @@ class CallEventCoordinator(
             )
         )
         notifier.notifyHistoryChanged()
+        
+        // Mới: Gửi tự động lên server
+        uploadScheduler.enqueue(metadata)
     }
 
     private fun formatCallTime(timestamp: Long): String =

@@ -247,3 +247,12 @@
 - `UploadCallRecordUseCase`: Chỉnh sửa logic, chỉ yêu cầu validate nguồn tệp ghi âm nếu cuộc gọi đã được trả lời.
 
 *Cập nhật lần cuối: 14/08/2026 11:20 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 18. Hỗ trợ Upload Trạng thái Cuộc gọi (is_answered) - App Layer
+- Cập nhật App layer để tự động enqueue và đẩy lịch sử các cuộc gọi không kết nối (is_answered = false) lên server.
+- `UploadAudioWorker`: Nhận thêm `KEY_IS_ANSWERED`. Nếu cuộc gọi không bắt máy, bỏ qua bước validate file và khởi tạo Upload mà không cần ID file ghi âm.
+- `CallEventCoordinator`: Chỉnh sửa logic ở `saveFailedCall` và `CallEventDecision.ScheduleUpload` để đẩy `isAnswered` flag. Gọi `uploadScheduler.enqueue(metadata)` cho các cuộc gọi thất bại tự động.
+
+*Cập nhật lần cuối: 14/08/2026 13:25 bởi Antigravity AI Pair Programmer.*

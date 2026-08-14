@@ -28,6 +28,7 @@ class UploadScheduler(context: Context) {
             .putString(UploadAudioWorker.KEY_CALL_TYPE, metadata.callType.wireValue)
             .putInt(UploadAudioWorker.KEY_DURATION, metadata.durationSeconds)
             .putString(UploadAudioWorker.KEY_CALL_AT, metadata.callAtFormatted)
+            .putBoolean(UploadAudioWorker.KEY_IS_ANSWERED, metadata.isAnswered)
             .build()
         val request = OneTimeWorkRequestBuilder<UploadAudioWorker>()
             .setInputData(input)
