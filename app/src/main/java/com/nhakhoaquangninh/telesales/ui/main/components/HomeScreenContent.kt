@@ -20,15 +20,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PhoneInTalk
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -38,7 +35,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,12 +62,8 @@ fun HomeScreenContent(
     totalCallsToday: Int,
     syncedCalls: Int,
     pendingCalls: Int,
-    hasRecordAudioPerm: Boolean,
-    hasCallLogPerm: Boolean,
-    isBatteryOptimized: Boolean,
     onToggleService: (Boolean) -> Unit,
     onSyncNowClick: () -> Unit,
-    onFixBatteryOptClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -326,67 +318,6 @@ fun HomeScreenContent(
             }
         }
 
-        // ── 3. System Permissions Checklist ──────────────────────────────
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(Dimens.CornerRadiusLarge),
-            colors = CardDefaults.cardColors(containerColor = SurfaceLowest),
-            border = BorderStroke(Dimens.BorderThickness, OutlineVariant.copy(alpha = 0.3f))
-        ) {
-            Column(modifier = Modifier.padding(Dimens.PaddingMedium)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Security, contentDescription = null, tint = PrimaryTeal, modifier = Modifier.size(Dimens.IconSizeMedium))
-                    Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-                    Text(
-                        text = stringResource(R.string.sys_permissions_status),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = OnSurfaceDark
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(Dimens.CornerRadiusMedium))
-
-                PermissionRow(
-                    title = stringResource(R.string.perm_record_audio),
-                    isGranted = hasRecordAudioPerm
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.PaddingSmall), color = OutlineVariant.copy(alpha = 0.2f))
-                PermissionRow(
-                    title = stringResource(R.string.perm_read_call_log),
-                    isGranted = hasCallLogPerm
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.PaddingSmall), color = OutlineVariant.copy(alpha = 0.2f))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (!isBatteryOptimized) Icons.Default.CheckCircle else Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = if (!isBatteryOptimized) ActiveEmerald else WarningAmber,
-                            modifier = Modifier.size(Dimens.Size18)
-                        )
-                        Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.battery_opt), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = OnSurfaceDark, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                text = if (!isBatteryOptimized) stringResource(R.string.battery_opt_ignored) else stringResource(R.string.battery_opt_needed),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = OnSurfaceVariant
-                            )
-                        }
-                    }
-                    if (isBatteryOptimized) {
-                        TextButton(onClick = onFixBatteryOptClick) {
-                            Text(stringResource(R.string.fix_issue), color = PrimaryTeal, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
-
         // ── 4. Compliance Note Card ──────────────────────────────────────
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -415,30 +346,5 @@ fun HomeScreenContent(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun PermissionRow(title: String, isGranted: Boolean) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
-                contentDescription = null,
-                tint = if (isGranted) ActiveEmerald else WarningAmber,
-                modifier = Modifier.size(Dimens.Size18)
-            )
-            Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-            Text(title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = OnSurfaceDark, modifier = Modifier.weight(1f))
-        }
-        Text(
-            text = if (isGranted) stringResource(R.string.perm_granted) else stringResource(R.string.perm_denied),
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-            color = if (isGranted) ActiveEmerald else WarningAmber
-        )
     }
 }

@@ -1,16 +1,12 @@
 package com.nhakhoaquangninh.telesales.ui.main
 
-import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
-import android.os.PowerManager
-import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -19,6 +15,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,6 +27,10 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -50,12 +51,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,16 +73,21 @@ import com.nhakhoaquangninh.telesales.R
 import com.nhakhoaquangninh.telesales.TelesalesForegroundService
 import com.nhakhoaquangninh.telesales.data.local.SyncStatus
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
+import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.theme.BackgroundLight
+import com.nhakhoaquangninh.telesales.theme.DangerRed
 import com.nhakhoaquangninh.telesales.theme.Dimens
 import com.nhakhoaquangninh.telesales.theme.NotificationBadgeRed
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
+import com.nhakhoaquangninh.telesales.theme.OnSurfaceMuted
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
 import com.nhakhoaquangninh.telesales.theme.OutlineVariant
 import com.nhakhoaquangninh.telesales.theme.PrimaryTeal
 import com.nhakhoaquangninh.telesales.theme.SecondaryContainer
 import com.nhakhoaquangninh.telesales.theme.SurfaceContainer
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
+import com.nhakhoaquangninh.telesales.theme.SurfaceMuted
+import com.nhakhoaquangninh.telesales.ui.components.OtpSixDigitInput
 import com.nhakhoaquangninh.telesales.ui.main.components.HistoryScreenContent
 import com.nhakhoaquangninh.telesales.ui.main.components.HomeScreenContent
 import com.nhakhoaquangninh.telesales.ui.main.components.SettingsScreenContent
@@ -95,10 +104,35 @@ fun MainScreen(
     val audioFiles by viewModel.audioFiles.collectAsStateWithLifecycle()
     val failedCallEvents by viewModel.failedCallEvents.collectAsStateWithLifecycle()
 
+    val requestStopServiceOtpState by viewModel.requestStopServiceOtpState.collectAsStateWithLifecycle()
+    val verifyStopServiceOtpState by viewModel.verifyStopServiceOtpState.collectAsStateWithLifecycle()
+    val stopServiceOtpInput by viewModel.stopServiceOtpInput.collectAsStateWithLifecycle()
+    val stopServiceOtpError by viewModel.stopServiceOtpError.collectAsStateWithLifecycle()
+
+    var showConfirmStopServiceDialog by rememberSaveable { mutableStateOf(false) }
+    var showStopServiceOtpDialog by rememberSaveable { mutableStateOf(false) }
+    val stopServiceFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     var selectedTab by remember { mutableIntStateOf(0) }
     val session = remember { TokenManager.getInstance(context).getSession() }
 
     val isServiceRunning by TelesalesForegroundService.isRunning.collectAsStateWithLifecycle()
+
+    LaunchedEffect(requestStopServiceOtpState) {
+        when (val state = requestStopServiceOtpState) {
+            is Resource.Success -> {
+                showConfirmStopServiceDialog = false
+                showStopServiceOtpDialog = true
+                viewModel.resetRequestStopServiceOtpState()
+            }
+            is Resource.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                viewModel.resetRequestStopServiceOtpState()
+            }
+            else -> Unit
+        }
+    }
 
     var currentlyPlayingPath by remember { mutableStateOf<String?>(null) }
     val mediaPlayerRef = remember { mutableStateOf<MediaPlayer?>(null) }
@@ -165,7 +199,7 @@ fun MainScreen(
                 }
                 mediaPlayerRef.value = newPlayer
                 currentlyPlayingPath = filePath
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 android.util.Log.e("MediaPlayer", "Không thể phát file âm thanh")
             }
         }
@@ -213,19 +247,6 @@ fun MainScreen(
             onLogout()
         }
     }
-
-    val hasRecordAudioPerm = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.RECORD_AUDIO
-    ) == PackageManager.PERMISSION_GRANTED
-
-    val hasCallLogPerm = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.READ_CALL_LOG
-    ) == PackageManager.PERMISSION_GRANTED
-
-    val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-    val isBatteryOptimized = !powerManager.isIgnoringBatteryOptimizations(context.packageName)
 
     Scaffold(
         modifier = modifier,
@@ -369,7 +390,7 @@ fun MainScreen(
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
-                            viewModel.syncFiles(context, filesToSync) { msg, success ->
+                            viewModel.syncFiles(context, filesToSync) { msg, _ ->
                                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             }
                         }
@@ -397,19 +418,13 @@ fun MainScreen(
                         totalCallsToday = audioFiles.size,
                         syncedCalls = 0,
                         pendingCalls = audioFiles.size,
-                        hasRecordAudioPerm = hasRecordAudioPerm,
-                        hasCallLogPerm = hasCallLogPerm,
-                        isBatteryOptimized = isBatteryOptimized,
                         onToggleService = { enable ->
-                            val intent = Intent(context, TelesalesForegroundService::class.java)
                             if (enable) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    context.startForegroundService(intent)
-                                } else {
-                                    context.startService(intent)
-                                }
+                                val intent = Intent(context, TelesalesForegroundService::class.java)
+                                ContextCompat.startForegroundService(context, intent)
+                                Toast.makeText(context, resources.getString(R.string.home_service_start_success), Toast.LENGTH_SHORT).show()
                             } else {
-                                context.stopService(intent)
+                                showConfirmStopServiceDialog = true
                             }
                         },
                         onSyncNowClick = {
@@ -422,24 +437,8 @@ fun MainScreen(
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
-                                viewModel.syncFiles(context, filesToSync) { msg, success ->
+                                viewModel.syncFiles(context, filesToSync) { msg, _ ->
                                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        },
-                        onFixBatteryOptClick = {
-                            try {
-                                val intent =
-                                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                        data = "package:${context.packageName}".toUri()
-                                    }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                try {
-                                    val fallbackIntent =
-                                        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                                    context.startActivity(fallbackIntent)
-                                } catch (_: Exception) {
                                 }
                             }
                         }
@@ -453,7 +452,7 @@ fun MainScreen(
                         currentlyPlayingPath = currentlyPlayingPath,
                         onPlayClick = { filePath -> playOrStop(filePath) },
                         onSyncClick = { item ->
-                            viewModel.syncFiles(context, listOf(item)) { msg, success ->
+                            viewModel.syncFiles(context, listOf(item)) { msg, _ ->
                                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             }
                         },
@@ -480,11 +479,193 @@ fun MainScreen(
                         .clickable(enabled = false) {},
                     contentAlignment = Alignment.Center
                 ) {
-                    androidx.compose.material3.CircularProgressIndicator(
+                    CircularProgressIndicator(
                         color = PrimaryTeal
                     )
                 }
             }
         }
+    }
+
+    // Dialog 1: Xác nhận Tạm dừng Dịch vụ
+    if (showConfirmStopServiceDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showConfirmStopServiceDialog = false 
+                viewModel.resetStopServiceOtpState()
+            },
+            containerColor = SurfaceLowest,
+            titleContentColor = OnSurfaceDark,
+            textContentColor = OnSurfaceVariant,
+            title = {
+                Text(
+                    text = stringResource(R.string.home_service_stop_confirm_title),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.home_service_stop_confirm_msg),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                val isLoading = requestStopServiceOtpState is Resource.Loading
+                Button(
+                    onClick = {
+                        session?.userId?.let { userId ->
+                            viewModel.requestStopServiceOtp(userId)
+                        } ?: run {
+                            Toast.makeText(context, resources.getString(R.string.msg_user_not_found, 0), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed),
+                    enabled = !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(Dimens.Size20),
+                            strokeWidth = Dimens.Space2
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.home_service_stop_confirm_btn),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { 
+                        showConfirmStopServiceDialog = false 
+                        viewModel.resetStopServiceOtpState()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceMuted)
+                ) {
+                    Text(
+                        stringResource(R.string.home_service_stop_cancel),
+                        color = OnSurfaceMuted,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        )
+    }
+
+    // Dialog 2: Nhập OTP Xác nhận Tạm dừng Dịch vụ
+    if (showStopServiceOtpDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showStopServiceOtpDialog = false 
+                viewModel.resetStopServiceOtpState()
+            },
+            containerColor = SurfaceLowest,
+            titleContentColor = OnSurfaceDark,
+            textContentColor = OnSurfaceVariant,
+            title = {
+                Text(
+                    text = stringResource(R.string.otp_security_verification),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Dimens.Space16)
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_service_stop_otp_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+
+                    OtpSixDigitInput(
+                        value = stopServiceOtpInput,
+                        onValueChange = { viewModel.onStopServiceOtpChanged(it) },
+                        focusRequester = stopServiceFocusRequester,
+                        onDone = {
+                            keyboardController?.hide()
+                            session?.userId?.let { userId ->
+                                viewModel.verifyStopServiceOtp(userId) {
+                                    val intent = Intent(context, TelesalesForegroundService::class.java)
+                                    context.stopService(intent)
+                                    showStopServiceOtpDialog = false
+                                    Toast.makeText(
+                                        context,
+                                        resources.getString(R.string.home_service_stop_success),
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (stopServiceOtpError != null) {
+                        Text(
+                            text = stopServiceOtpError ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                val isLoading = verifyStopServiceOtpState is Resource.Loading
+                Button(
+                    onClick = {
+                        keyboardController?.hide()
+                        session?.userId?.let { userId ->
+                            viewModel.verifyStopServiceOtp(userId) {
+                                val intent = Intent(context, TelesalesForegroundService::class.java)
+                                context.stopService(intent)
+                                showStopServiceOtpDialog = false
+                                Toast.makeText(
+                                    context,
+                                    resources.getString(R.string.home_service_stop_success),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    },
+                    enabled = !isLoading && stopServiceOtpInput.length == 6,
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTeal)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(Dimens.Size20),
+                            strokeWidth = Dimens.Space2
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.home_service_stop_otp_confirm),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { 
+                        showStopServiceOtpDialog = false
+                        viewModel.resetStopServiceOtpState()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceMuted)
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_service_stop_cancel),
+                        color = OnSurfaceMuted,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        )
     }
 }

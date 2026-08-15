@@ -20,6 +20,7 @@ class UploadAudioWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
+        ServiceLocator.init(applicationContext)
         val isAnswered = inputData.getBoolean(KEY_IS_ANSWERED, true)
         val recordingUri = inputData.getString(KEY_RECORDING_URI)
         val recordingId = inputData.getString(KEY_RECORDING_ID)
@@ -33,47 +34,52 @@ class UploadAudioWorker(
         var failureReason: String? = null
         syncStatusManager.setStatus(recordingId, SyncStatus.UPLOADING)
 
+        val callType = CallType.fromWire(inputData.getString(KEY_CALL_TYPE))
+        val duration = inputData.getInt(KEY_DURATION, 0)
+        val metadata = CallRecordMetadata(
+            recordingUri = if (isAnswered) (recordingUri ?: "") else recordingUri,
+            phoneNumberFrom = inputData.getString(KEY_PHONE_FROM),
+            phoneNumberTo = inputData.getString(KEY_PHONE_TO),
+            callType = callType ?: CallType.OUTGOING,
+            durationSeconds = duration,
+            callAtFormatted = inputData.getString(KEY_CALL_AT),
+            isAnswered = isAnswered
+        )
+
         return try {
-            val callType = CallType.fromWire(inputData.getString(KEY_CALL_TYPE))
-            val duration = inputData.getInt(KEY_DURATION, 0)
-            
             if (isAnswered) {
                 val validation = RecordingUriValidator.validate(applicationContext, recordingUri)
                 if (validation is RecordingUriValidation.Invalid) {
                     failureReason = validation.reason
                     FileLogger.log(applicationContext, "VALIDATION_ERROR", "Tệp ghi âm không hợp lệ ($failureReason) - URI: $recordingUri")
+                    ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
                     return Result.failure()
                 }
                 if (callType == null || duration <= 0) {
                     failureReason = "invalid_call_metadata"
                     FileLogger.log(applicationContext, "METADATA_ERROR", "Metadata không hợp lệ (callType=$callType, duration=$duration) - URI: $recordingUri")
+                    ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
                     return Result.failure()
                 }
             } else {
                 if (callType == null) {
                     failureReason = "invalid_call_metadata"
                     FileLogger.log(applicationContext, "METADATA_ERROR", "Metadata cuộc gọi không hợp lệ (callType=null) - ID: $recordingId")
+                    ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
                     return Result.failure()
                 }
             }
 
-            ServiceLocator.init(applicationContext)
-            val metadata = CallRecordMetadata(
-                recordingUri = if (isAnswered) requireNotNull(recordingUri) else recordingUri,
-                phoneNumberFrom = inputData.getString(KEY_PHONE_FROM),
-                phoneNumberTo = inputData.getString(KEY_PHONE_TO),
-                callType = callType,
-                durationSeconds = duration,
-                callAtFormatted = inputData.getString(KEY_CALL_AT),
-                isAnswered = isAnswered
-            )
             Log.d("API_LOG", "Bắt đầu Upload File (isAnswered=$isAnswered) - Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted}")
             
             val uploadResource = ServiceLocator.uploadCallRecordUseCase(metadata)
             val decision = UploadWorkPolicy.decide(uploadResource)
             terminalStatus = decision.terminalStatus
             when (decision.result) {
-                UploadWorkResult.SUCCESS -> Result.success()
+                UploadWorkResult.SUCCESS -> {
+                    ServiceLocator.complianceNotifier.notifyUploadSuccess(metadata)
+                    Result.success()
+                }
                 UploadWorkResult.RETRY -> {
                     if (uploadResource is Resource.Error) {
                         FileLogger.log(applicationContext, "WORKER_RETRY", "Upload cần retry (HTTP ${uploadResource.code}): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}")
@@ -86,6 +92,7 @@ class UploadAudioWorker(
                     }
                     UnauthorizedEventBus.notifyUnauthorized()
                     failureReason = "unauthorized"
+                    ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
                     Result.failure()
                 }
 
@@ -94,6 +101,7 @@ class UploadAudioWorker(
                         FileLogger.log(applicationContext, "WORKER_REJECTED", "Upload bị Server từ chối (HTTP ${uploadResource.code}): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}")
                     }
                     failureReason = "upload_rejected"
+                    ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
                     Result.failure()
                 }
             }
@@ -104,6 +112,7 @@ class UploadAudioWorker(
         } catch (se: SecurityException) {
             failureReason = "recording_permission_denied"
             FileLogger.logException(applicationContext, "PERMISSION_DENIED", "Thiếu quyền truy cập file/gọi", se)
+            ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
             Result.failure()
         } catch (e: RuntimeException) {
             terminalStatus = SyncStatus.PENDING
@@ -112,7 +121,7 @@ class UploadAudioWorker(
             Result.retry()
         } finally {
             if (failureReason != null) {
-                syncStatusManager.setFailure(recordingId, requireNotNull(failureReason))
+                syncStatusManager.setFailure(recordingId, failureReason)
             } else {
                 syncStatusManager.setStatus(recordingId, terminalStatus)
             }

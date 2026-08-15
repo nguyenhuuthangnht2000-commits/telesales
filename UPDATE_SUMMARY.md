@@ -276,3 +276,111 @@
   - Giúp quản lý và DEV mở trực tiếp file log trên điện thoại để xem chính xác lý do Server từ chối request mà không cần máy tính hay cắm cáp ADB.
 
 *Cập nhật lần cuối: 14/08/2026 15:45 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 21. Bổ sung Thông báo (Notification) Kết quả Upload Thành Công & Thất Bại
+- **Mục tiêu:** Bắn notification trên thanh trạng thái hệ thống ngay khi quá trình đồng bộ/upload file ghi âm hoặc metadata cuộc gọi lên Server thành công hoặc gặp lỗi để người dùng/nhân viên telesales dễ dàng nhận biết.
+- **Thành phần cập nhật:**
+  - `res/values/strings.xml`: Khai báo tập trung toàn bộ chuỗi văn bản thông báo Tiếng Việt (`notification_upload_success_title`, `notification_upload_success_content`, `notification_upload_unanswered_success_content`, `notification_upload_failed_title`, `notification_upload_failed_content`, `notification_upload_failed_unauthorized`).
+  - `ComplianceNotifier.kt`: Bổ sung 2 hàm `notifyUploadSuccess(metadata)` và `notifyUploadFailed(metadata, failureReason)`. Thiết lập `PendingIntent` mở `MainActivity`, tự động sinh Notification ID duy nhất theo từng cuộc gọi để cập nhật thông báo mượt mà.
+  - `UploadAudioWorker.kt`: Gọi `complianceNotifier.notifyUploadSuccess(metadata)` khi upload hoàn tất và `complianceNotifier.notifyUploadFailed(metadata, failureReason)` khi validation không hợp lệ, lỗi xác thực 401 hoặc server từ chối request.
+
+*Cập nhật lần cuối: 15/08/2026 10:05 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 22. Sửa lỗi Type Mismatch CallType & Đổi tên Ứng dụng thành NK_QuocTe
+- **Fix Type Mismatch:** Trong [`UploadAudioWorker.kt`](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/UploadAudioWorker.kt), truyền `callType ?: CallType.OUTGOING` khi khởi tạo `CallRecordMetadata` để tương thích hoàn toàn giữa kiểu `CallType?` từ `fromWire()` và `CallType` không null của domain model.
+- **Đổi tên ứng dụng:** Cập nhật `app_name` trong [`strings.xml`](file:///d:/telesales/app/src/main/res/values/strings.xml) thành `"NK_QuocTe"`.
+
+*Cập nhật lần cuối: 15/08/2026 10:10 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 23. Kích hoạt Tự động Mở WarningActivity khi Phát hiện Vi phạm Ghi âm
+- **Mục tiêu:** Đảm bảo khi cuộc gọi kết thúc có thời lượng (`duration > 0`) mà thiếu file ghi âm (do nhân viên tắt ghi âm cuộc gọi), ứng dụng sẽ tự động bật thẳng màn hình `WarningActivity` đè lên màn hình hiện tại.
+- **Thành phần cập nhật:**
+  - `ComplianceNotifier.kt`: Bổ sung lệnh gọi trực tiếp `appContext.startActivity(warningIntent)` với các cờ `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP`, kết hợp cùng cơ chế dự phòng FullScreen Intent Notification để đảm bảo tính răn đe tối đa trên mọi phiên bản Android.
+
+*Cập nhật lần cuối: 15/08/2026 10:40 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 24. Xác thực OTP khi Tắt Dịch vụ Ghi âm trên HomeScreen
+- **Mục tiêu:** Bảo vệ công tắc Toggle trên màn hình Trang chủ (`HomeScreenContent`), yêu cầu quy trình xác thực OTP gửi về Email của Quản lý trước khi cho phép tạm dừng `TelesalesForegroundService`.
+- **Thành phần cập nhật:**
+  - `res/values/strings.xml`: Khai báo tập trung toàn bộ chuỗi văn bản Tiếng Việt cho luồng xác nhận và OTP tắt dịch vụ (`home_service_stop_confirm_title`, `home_service_stop_confirm_msg`, `home_service_stop_confirm_btn`, `home_service_stop_otp_desc`, `home_service_stop_otp_confirm`, `home_service_stop_cancel`, `home_service_stop_success`, `home_service_start_success`).
+  - `MainScreenViewModel.kt`: Bổ sung các StateFlow và hàm `requestStopServiceOtp(userId)`, `verifyStopServiceOtp(userId, onSuccess)`, `onStopServiceOtpChanged(input)`, `resetStopServiceOtpState()`.
+  - `MainScreen.kt`: Tích hợp Dialog 1 (Xác nhận tạm dừng dịch vụ) và Dialog 2 (Nhập OTP 6 số bằng `OtpSixDigitInput`). Khi người dùng gạt BẬT lại (OFF -> ON), kích hoạt Service ngay lập tức; khi người dùng gạt TẮT (ON -> OFF), mở popup xác thực OTP 2 bước và chỉ dừng Service khi xác thực thành công.
+
+*Cập nhật lần cuối: 15/08/2026 10:55 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 25. Dọn dẹp Lint Warnings & Errors trong MainScreen
+- **Mục tiêu:** Xử lý triệt để toàn bộ 17 lỗi và cảnh báo lint/IDE trong [`MainScreen.kt`](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/ui/main/MainScreen.kt).
+- **Thành phần cập nhật:**
+  - `Querying resource values using LocalContext.current`: Chuyển sang sử dụng `resources.getString(...)` từ `LocalResources.current`.
+  - `@SuppressLint("BatteryLife")`: Bổ sung chú thích cho `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` phù hợp với ứng dụng telesales ghi âm ngầm.
+  - `Unnecessary SDK_INT >= 28`: Sử dụng trực tiếp `ContextCompat.startForegroundService(context, intent)`.
+  - `Unused parameters`: Đổi các tham số không dùng `success -> _`, `e: Exception -> _: Exception`.
+  - `Redundant qualifier`: Rút gọn `androidx.compose.material3.CircularProgressIndicator` thành `CircularProgressIndicator`.
+
+*Cập nhật lần cuối: 15/08/2026 11:05 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 26. Tích hợp Điều hướng Cài đặt Hệ thống & Khắc phục Quyền trên HomeScreen
+- **Mục tiêu:** Cung cấp các nút "Khắc phục" và "Cài đặt" trực tiếp trên từng mục quyền/cài đặt hệ thống ở màn hình Trang chủ (`HomeScreenContent`), giúp nhân viên bấm vào là chuyển thẳng tới đúng màn hình Cài đặt tương ứng của Android.
+- **Thành phần cập nhật:**
+  - `ui/util/SettingsNavUtils.kt`: Bộ tiện ích điều hướng cài đặt Android an toàn (kèm fallback đa tầng):
+    - `openAppSettings(context)`: Mở trang Chi tiết ứng dụng để cấp quyền (Cuộc gọi, Nhật ký cuộc gọi, File âm thanh/Bộ nhớ).
+    - `openNotificationSettings(context)`: Mở trang Cài đặt thông báo ứng dụng.
+    - `openBatteryOptimizationSettings(context)`: Mở trang Tắt tối ưu hóa pin (Unrestricted).
+    - `openCallRecordingSettings(context)`: Mở trang Cài đặt ghi âm cuộc gọi trong ứng dụng Điện thoại hệ thống.
+    - `openAutostartSettings(context)`: Mở trang Cài đặt Tự khởi chạy/Chạy ngầm chuyên biệt theo từng hãng (Xiaomi/MIUI/HyperOS, Samsung, OPPO, Vivo, Huawei).
+  - `HomeScreenContent.kt`: Nâng cấp thẻ "Trạng thái Quyền & Cài đặt":
+    - Trạng thái cuộc gọi (`READ_PHONE_STATE`): Hiện nút "Khắc phục" khi chưa cấp.
+    - Nhật ký cuộc gọi (`READ_CALL_LOG`): Hiện nút "Khắc phục" khi chưa cấp.
+    - File âm thanh / Ghi âm (`READ_MEDIA_AUDIO` / `READ_EXTERNAL_STORAGE`): Hiện nút "Khắc phục" khi chưa cấp.
+    - Thông báo ứng dụng (`POST_NOTIFICATIONS`): Hiện nút "Khắc phục" khi chưa cấp.
+    - Tối ưu hóa pin: Nút "Khắc phục" chuyển sang trang cấu hình pin không hạn chế.
+    - Ghi âm cuộc gọi hệ thống: Nút "Cài đặt" mở cài đặt cuộc gọi để bật tự động ghi âm.
+    - Tự khởi chạy & Chạy ngầm: Nút "Cấu hình" mở trang Autostart của hãng.
+  - `MainScreen.kt`: Theo dõi trạng thái quyền động trong `Lifecycle.Event.ON_RESUME`, tự động làm mới giao diện ngay lập tức khi nhân viên vừa từ Cài đặt quay lại ứng dụng.
+
+*Cập nhật lần cuối: 15/08/2026 11:10 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 27. Gỡ bỏ Card Trạng thái Cấp quyền khỏi Màn hình HomeScreen
+- **Mục tiêu:** Tối giản giao diện trang chủ (`HomeScreenContent`), loại bỏ hoàn toàn card danh sách quyền hệ thống và các nút khắc phục để tránh nhân viên thao tác nhầm hoặc sử dụng sai mục đích.
+- **Thành phần cập nhật:**
+  - `HomeScreenContent.kt`:
+    - Xóa bỏ card "Trạng thái Quyền & Cài đặt" (System Permissions & Settings Checklist) và hàm `PermissionRow`.
+    - Dọn dẹp các tham số trạng thái quyền (`hasPhoneStatePerm`, `hasCallLogPerm`, `hasAudioPerm`, `hasNotificationPerm`, `isBatteryOptimized`) và các callback `onFix...`.
+    - Dọn dẹp các import icon/component không còn sử dụng.
+    - Giữ lại cấu trúc tinh gọn gồm 4 phần: Thẻ điều khiển Bật/Tắt Dịch vụ, Các chỉ số cuộc gọi nhanh (Metrics Stack), Cuộc gọi gần đây (Recent Calls), và Lưu ý tuân thủ bảo mật (Compliance Note).
+  - `MainScreen.kt`:
+    - Loại bỏ các biến state theo dõi quyền và hàm `refreshPermissionStates()`.
+    - Đơn giản hóa lời gọi Composable `HomeScreenContent`.
+
+*Cập nhật lần cuối: 15/08/2026 14:10 bởi Antigravity AI Pair Programmer.*
+
+---
+
+## 28. Nâng cấp Phiên bản Ứng dụng lên v1.2 (versionCode 3)
+- **Mục tiêu:** Nâng phiên bản ứng dụng để chuẩn bị build release và phát hành bản cập nhật mới nhất (gồm tính năng OTP bảo vệ khi tắt dịch vụ, tối ưu giao diện HomeScreen, fix các vấn đề lint/warning).
+- **Thành phần cập nhật:**
+  - `app/build.gradle.kts`: Cập nhật `versionCode = 3`, `versionName = "1.2"`.
+
+*Cập nhật lần cuối: 15/08/2026 14:15 bởi Antigravity AI Pair Programmer.*
+
+
+
+
+
+
+
+

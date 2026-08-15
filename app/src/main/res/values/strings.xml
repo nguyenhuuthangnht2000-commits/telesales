@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TelesalesApp</string>
+    <string name="app_name">NK_QuocTe</string>
     <!-- HomeScreenContent Strings -->
     <string name="service_title">Dịch vụ Ghi âm Cuộc gọi</string>
     <string name="service_active">HOẠT ĐỘNG</string>
@@ -11,12 +11,20 @@
     <string name="sync_now">Đồng bộ</string>
     <string name="recent_calls">Cuộc gọi gần đây</string>
     <string name="recent_calls_empty_desc">Lịch sử cuộc gọi sẽ hiển thị tại đây khi trong ca làm việc.</string>
-    <string name="sys_permissions_status">Trạng thái Quyền Hệ thống</string>
-    <string name="perm_record_audio">Ghi âm cuộc gọi (RECORD_AUDIO)</string>
+    <string name="sys_permissions_status">Trạng thái Quyền &amp; Cài đặt</string>
+    <string name="perm_phone_state">Trạng thái cuộc gọi (READ_PHONE_STATE)</string>
     <string name="perm_read_call_log">Nhật ký cuộc gọi (READ_CALL_LOG)</string>
+    <string name="perm_audio_files">File âm thanh / Ghi âm (STORAGE/MEDIA)</string>
+    <string name="perm_notifications">Thông báo ứng dụng (NOTIFICATIONS)</string>
     <string name="battery_opt">Tối ưu hóa Pin</string>
-    <string name="battery_opt_ignored">Đã bỏ qua (Tốt)</string>
+    <string name="battery_opt_ignored">Đã bỏ qua tối ưu (Tốt)</string>
     <string name="battery_opt_needed">Cần tắt tối ưu pin để không bị dừng ngầm</string>
+    <string name="call_recording_setting">Ghi âm cuộc gọi hệ thống</string>
+    <string name="call_recording_setting_desc">Bật tự động ghi âm trong cài đặt cuộc gọi máy</string>
+    <string name="call_recording_setting_action">Cài đặt</string>
+    <string name="oem_autostart_setting">Tự khởi chạy &amp; Chạy ngầm</string>
+    <string name="oem_autostart_setting_desc">Cấu hình tự chạy để duy trì dịch vụ liên tục</string>
+    <string name="oem_autostart_setting_action">Cấu hình</string>
     <string name="fix_issue">Khắc phục</string>
     <string name="compliance_note_title">Quy định Bảo mật &amp; Tuân thủ</string>
     <string name="compliance_note_desc">Vui lòng tuân thủ quy trình giao tiếp với khách hàng của Nha Khoa Quảng Ninh. File ghi âm được mã hóa bảo mật khi đồng bộ lên Server.</string>
@@ -137,4 +145,20 @@
     <string name="notification_review_content">Ứng dụng chưa thể xác minh chắc chắn bản ghi tương ứng nên chưa đồng bộ.</string>
     <string name="msg_upload_queued">Đã xếp hàng đồng bộ bản ghi hợp lệ.</string>
     <string name="msg_recording_needs_review">Một hoặc nhiều bản ghi chưa đủ điều kiện an toàn để đồng bộ.</string>
+    <!-- Upload Notifications -->
+    <string name="notification_upload_success_title">Tải lên server thành công</string>
+    <string name="notification_upload_success_content">Đã đồng bộ cuộc gọi (%1$s) lên hệ thống.</string>
+    <string name="notification_upload_unanswered_success_content">Đã đồng bộ cuộc gọi không kết nối (%1$s) lên hệ thống.</string>
+    <string name="notification_upload_failed_title">Tải lên server thất bại</string>
+    <string name="notification_upload_failed_content">Không thể tải lên cuộc gọi (%1$s). Vui lòng kiểm tra lại kết nối mạng.</string>
+    <string name="notification_upload_failed_unauthorized">Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại để tiếp tục đồng bộ.</string>
+    <!-- Stop Service OTP Strings -->
+    <string name="home_service_stop_confirm_title">Xác nhận Tạm dừng Dịch vụ</string>
+    <string name="home_service_stop_confirm_msg">Bạn có chắc chắn muốn tạm dừng dịch vụ ghi âm cuộc gọi? Thao tác này cần mã OTP xác nhận từ Quản lý.</string>
+    <string name="home_service_stop_confirm_btn">Gửi OTP &amp; Tiếp tục</string>
+    <string name="home_service_stop_otp_desc">Vui lòng nhập mã OTP 6 chữ số đã được gửi đến email quản lý để xác nhận tạm dừng dịch vụ.</string>
+    <string name="home_service_stop_otp_confirm">Xác nhận</string>
+    <string name="home_service_stop_cancel">Hủy</string>
+    <string name="home_service_stop_success">Đã tạm dừng dịch vụ ghi âm cuộc gọi.</string>
+    <string name="home_service_start_success">Đã kích hoạt dịch vụ ghi âm cuộc gọi.</string>
 </resources>

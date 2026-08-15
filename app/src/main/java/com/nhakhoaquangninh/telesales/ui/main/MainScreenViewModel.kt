@@ -9,11 +9,14 @@ import com.nhakhoaquangninh.telesales.data.local.FailedCallEvent
 import com.nhakhoaquangninh.telesales.data.local.FailedCallEventManager
 import com.nhakhoaquangninh.telesales.data.local.SyncStatus
 import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
+import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
+import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordingWindow
 import com.nhakhoaquangninh.telesales.domain.model.RecordingCandidate
 import com.nhakhoaquangninh.telesales.domain.model.RecordingMatchPolicy
 import com.nhakhoaquangninh.telesales.domain.model.RecordingMatchResult
+import com.nhakhoaquangninh.telesales.domain.model.UserSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +29,9 @@ data class AudioItemState(
 )
 
 class MainScreenViewModel : BaseViewModel() {
+    private val requestOtpUseCase = ServiceLocator.requestOtpUseCase
+    private val verifyOtpUseCase = ServiceLocator.verifyOtpUseCase
+
     private val _audioFiles = MutableStateFlow<List<AudioItemState>>(emptyList())
     val audioFiles: StateFlow<List<AudioItemState>> = _audioFiles
 
@@ -34,6 +40,60 @@ class MainScreenViewModel : BaseViewModel() {
 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing
+
+    private val _requestStopServiceOtpState = MutableStateFlow<Resource<String>>(Resource.Idle)
+    val requestStopServiceOtpState: StateFlow<Resource<String>> = _requestStopServiceOtpState
+
+    private val _verifyStopServiceOtpState = MutableStateFlow<Resource<UserSession>>(Resource.Idle)
+    val verifyStopServiceOtpState: StateFlow<Resource<UserSession>> = _verifyStopServiceOtpState
+
+    private val _stopServiceOtpInput = MutableStateFlow("")
+    val stopServiceOtpInput: StateFlow<String> = _stopServiceOtpInput
+
+    private val _stopServiceOtpError = MutableStateFlow<String?>(null)
+    val stopServiceOtpError: StateFlow<String?> = _stopServiceOtpError
+
+    fun onStopServiceOtpChanged(input: String) {
+        if (input.length <= 6 && input.all { it.isDigit() }) {
+            _stopServiceOtpInput.value = input
+            if (_stopServiceOtpError.value != null) {
+                _stopServiceOtpError.value = null
+            }
+        }
+    }
+
+    fun requestStopServiceOtp(userId: Int) {
+        _requestStopServiceOtpState.value = Resource.Loading
+        launchSafe(onError = { error -> _requestStopServiceOtpState.value = error }) {
+            val result = withContext(Dispatchers.IO) { requestOtpUseCase(userId.toString()) }
+            _requestStopServiceOtpState.value = result
+        }
+    }
+
+    fun verifyStopServiceOtp(userId: Int, onSuccess: () -> Unit) {
+        val otp = _stopServiceOtpInput.value
+        _verifyStopServiceOtpState.value = Resource.Loading
+        launchSafe(onError = { error -> _verifyStopServiceOtpState.value = error }) {
+            val result = withContext(Dispatchers.IO) { verifyOtpUseCase(userId, otp) }
+            if (result is Resource.Error && result.source == ErrorSource.APP_CLIENT) {
+                _stopServiceOtpError.value = result.message
+            } else if (result is Resource.Success) {
+                onSuccess()
+            }
+            _verifyStopServiceOtpState.value = result
+        }
+    }
+
+    fun resetRequestStopServiceOtpState() {
+        _requestStopServiceOtpState.value = Resource.Idle
+    }
+
+    fun resetStopServiceOtpState() {
+        _requestStopServiceOtpState.value = Resource.Idle
+        _verifyStopServiceOtpState.value = Resource.Idle
+        _stopServiceOtpInput.value = ""
+        _stopServiceOtpError.value = null
+    }
 
     fun loadFiles(context: Context) {
         val appContext = context.applicationContext
