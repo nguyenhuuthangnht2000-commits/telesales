@@ -445,7 +445,16 @@
     - Thêm `LaunchedEffect(Unit) { viewModel.clearInput() }` đảm bảo mỗi lần màn hình xác thực OTP hiển thị, ô nhập mã luôn ở trạng thái trống mới hoàn toàn.
     - Gọi `viewModel.resetState()` khi nhân viên bấm liên kết "Quay lại Đăng nhập".
 
-*Cập nhật lần cuối: 16/08/2026 21:52 bởi Antigravity AI Pair Programmer.*
+## 35. Nâng Cấp Phiên Bản v1.3 (versionCode 4) & Đóng Gói Bản Release APK
+- **Mục tiêu:** Cập nhật phiên bản chính thức v1.3 tích hợp toàn bộ các tính năng Firebase Crashlytics, API Logout 2 bước, chia sẻ file log, sửa lỗi WarningActivity, dọn sạch mã OTP và xuất bản tệp `app-release.apk`.
+- **Thành phần cập nhật:**
+  - `app/build.gradle.kts`:
+    - Nâng `versionCode = 4`, `versionName = "1.3"`.
+    - Bổ sung cấu hình `lint { disable += "InvalidFragmentVersionForActivityResult" }` cho bản build release với ComponentActivity.
+  - Đóng gói thành công tệp release: `app/build/outputs/apk/release/app-release.apk` (Dung lượng: ~4.4 MB).
+
+*Cập nhật lần cuối: 16/08/2026 22:38 bởi Antigravity AI Pair Programmer.*
+
 
 
 
