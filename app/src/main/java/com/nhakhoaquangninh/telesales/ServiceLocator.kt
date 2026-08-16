@@ -16,6 +16,8 @@ import com.nhakhoaquangninh.telesales.domain.repository.AuthRepository
 import com.nhakhoaquangninh.telesales.domain.repository.CallRecordRepository
 import com.nhakhoaquangninh.telesales.domain.repository.RecordingRepository
 import com.nhakhoaquangninh.telesales.domain.usecase.GetSessionUseCase
+import com.nhakhoaquangninh.telesales.domain.usecase.LogoutUseCase
+import com.nhakhoaquangninh.telesales.domain.usecase.RequestLogoutOtpUseCase
 import com.nhakhoaquangninh.telesales.domain.usecase.RequestOtpUseCase
 import com.nhakhoaquangninh.telesales.domain.usecase.UploadCallRecordUseCase
 import com.nhakhoaquangninh.telesales.domain.usecase.VerifyOtpUseCase
@@ -105,6 +107,14 @@ object ServiceLocator {
 
     val getSessionUseCase: GetSessionUseCase by lazy {
         GetSessionUseCase(authRepository)
+    }
+
+    val requestLogoutOtpUseCase: RequestLogoutOtpUseCase by lazy {
+        RequestLogoutOtpUseCase(authRepository)
+    }
+
+    val logoutUseCase: LogoutUseCase by lazy {
+        LogoutUseCase(authRepository)
     }
 
     val uploadCallRecordUseCase: UploadCallRecordUseCase by lazy {

@@ -1,6 +1,7 @@
 package com.nhakhoaquangninh.telesales.data.remote
 
 import com.nhakhoaquangninh.telesales.data.remote.dto.BaseResponse
+import com.nhakhoaquangninh.telesales.data.remote.dto.LogoutRequest
 import com.nhakhoaquangninh.telesales.data.remote.dto.RequestOtpRequest
 import com.nhakhoaquangninh.telesales.data.remote.dto.VerifyOtpData
 import com.nhakhoaquangninh.telesales.data.remote.dto.VerifyOtpRequest
@@ -27,6 +28,19 @@ interface ApiService {
         @Header("X-Api-Key") apiKey: String,
         @Body request: VerifyOtpRequest
     ): Response<BaseResponse<VerifyOtpData>>
+
+    @POST("auth/logout/request-otp")
+    suspend fun requestLogoutOtp(
+        @Header("X-Api-Key") apiKey: String,
+        @Header("Authorization") authorization: String
+    ): Response<BaseResponse<Unit>>
+
+    @POST("auth/logout")
+    suspend fun logout(
+        @Header("X-Api-Key") apiKey: String,
+        @Header("Authorization") authorization: String,
+        @Body request: LogoutRequest
+    ): Response<BaseResponse<Unit>>
 
     @Multipart
     @POST("call-records")

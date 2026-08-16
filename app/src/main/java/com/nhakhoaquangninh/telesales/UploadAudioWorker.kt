@@ -47,24 +47,45 @@ class UploadAudioWorker(
         )
 
         return try {
+            FileLogger.setCustomKey("call_phone_from", metadata.phoneNumberFrom ?: "")
+            FileLogger.setCustomKey("call_phone_to", metadata.phoneNumberTo ?: "")
+            FileLogger.setCustomKey("call_type", metadata.callType.wireValue)
+            FileLogger.setCustomKey("call_duration", metadata.durationSeconds)
+            FileLogger.setCustomKey("call_is_answered", metadata.isAnswered)
+
             if (isAnswered) {
                 val validation = RecordingUriValidator.validate(applicationContext, recordingUri)
                 if (validation is RecordingUriValidation.Invalid) {
                     failureReason = validation.reason
-                    FileLogger.log(applicationContext, "VALIDATION_ERROR", "Tệp ghi âm không hợp lệ ($failureReason) - URI: $recordingUri")
+                    FileLogger.logNonFatalError(
+                        context = applicationContext,
+                        tag = "VALIDATION_ERROR",
+                        message = "Tệp ghi âm không hợp lệ ($failureReason) - URI: $recordingUri",
+                        customKeys = mapOf("validation_reason" to failureReason, "uri" to (recordingUri ?: ""))
+                    )
                     ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
                     return Result.failure()
                 }
                 if (callType == null || duration <= 0) {
                     failureReason = "invalid_call_metadata"
-                    FileLogger.log(applicationContext, "METADATA_ERROR", "Metadata không hợp lệ (callType=$callType, duration=$duration) - URI: $recordingUri")
+                    FileLogger.logNonFatalError(
+                        context = applicationContext,
+                        tag = "METADATA_ERROR",
+                        message = "Metadata không hợp lệ (callType=$callType, duration=$duration) - URI: $recordingUri",
+                        customKeys = mapOf("callType" to (callType?.wireValue ?: "null"), "duration" to duration)
+                    )
                     ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
                     return Result.failure()
                 }
             } else {
                 if (callType == null) {
                     failureReason = "invalid_call_metadata"
-                    FileLogger.log(applicationContext, "METADATA_ERROR", "Metadata cuộc gọi không hợp lệ (callType=null) - ID: $recordingId")
+                    FileLogger.logNonFatalError(
+                        context = applicationContext,
+                        tag = "METADATA_ERROR",
+                        message = "Metadata cuộc gọi không hợp lệ (callType=null) - ID: $recordingId",
+                        customKeys = mapOf("recordingId" to recordingId)
+                    )
                     ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
                     return Result.failure()
                 }
@@ -88,7 +109,12 @@ class UploadAudioWorker(
                 }
                 UploadWorkResult.UNAUTHORIZED -> {
                     if (uploadResource is Resource.Error) {
-                        FileLogger.log(applicationContext, "WORKER_UNAUTHORIZED", "Upload bị từ chối xác thực (HTTP 401): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}")
+                        FileLogger.logNonFatalError(
+                            context = applicationContext,
+                            tag = "WORKER_UNAUTHORIZED",
+                            message = "Upload bị từ chối xác thực (HTTP 401): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}",
+                            customKeys = mapOf("http_code" to 401, "server_body" to (uploadResource.rawDetails ?: ""))
+                        )
                     }
                     UnauthorizedEventBus.notifyUnauthorized()
                     failureReason = "unauthorized"
@@ -98,7 +124,12 @@ class UploadAudioWorker(
 
                 UploadWorkResult.FAILURE -> {
                     if (uploadResource is Resource.Error) {
-                        FileLogger.log(applicationContext, "WORKER_REJECTED", "Upload bị Server từ chối (HTTP ${uploadResource.code}): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}")
+                        FileLogger.logNonFatalError(
+                            context = applicationContext,
+                            tag = "WORKER_REJECTED",
+                            message = "Upload bị Server từ chối (HTTP ${uploadResource.code}): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}",
+                            customKeys = mapOf("http_code" to (uploadResource.code ?: -1), "server_body" to (uploadResource.rawDetails ?: ""))
+                        )
                     }
                     failureReason = "upload_rejected"
                     ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)

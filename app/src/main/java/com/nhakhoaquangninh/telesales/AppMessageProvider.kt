@@ -17,4 +17,8 @@ class AppMessageProvider(private val context: Context) : MessageProvider {
     override fun getOtpInvalidMessage(): String = context.getString(R.string.msg_otp_invalid)
     override fun getUserInfoMissingMessage(): String = context.getString(R.string.msg_user_info_missing)
     override fun getOtpVerifyFailedMessage(): String = context.getString(R.string.msg_otp_verify_failed)
+    override fun getLogoutOtpSentMessage(): String = context.getString(R.string.msg_logout_otp_sent)
+    override fun getLogoutOtpRequestFailedMessage(): String = context.getString(R.string.msg_logout_otp_request_failed)
+    override fun getLogoutSuccessMessage(): String = context.getString(R.string.msg_logout_success)
+    override fun getLogoutFailedMessage(): String = context.getString(R.string.msg_logout_failed)
 }

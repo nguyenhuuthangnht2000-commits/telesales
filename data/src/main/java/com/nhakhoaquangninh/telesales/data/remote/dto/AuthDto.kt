@@ -14,6 +14,11 @@ data class VerifyOtpRequest(
     val otp: String
 )
 
+data class LogoutRequest(
+    @SerializedName("otp")
+    val otp: String
+)
+
 data class VerifyOtpData(
     @SerializedName("token")
     val token: String? = null,

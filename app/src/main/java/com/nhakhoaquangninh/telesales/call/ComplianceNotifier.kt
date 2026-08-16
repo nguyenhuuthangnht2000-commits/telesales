@@ -132,20 +132,51 @@ class ComplianceNotifier(context: Context) {
     }
 
     fun notifyMissingRecording() {
-        Toast.makeText(
+        com.nhakhoaquangninh.telesales.core.FileLogger.log(
             appContext,
-            appContext.getString(R.string.notification_warning_toast),
-            Toast.LENGTH_LONG
-        ).show()
+            "COMPLIANCE",
+            "🚨 Phát hiện cuộc gọi có thời lượng đàm thoại nhưng THIẾU FILE GHI ÂM (Vi phạm quy định telesales). Đang kích hoạt WarningActivity..."
+        )
+
+        // Hiển thị Toast trên Main Thread an toàn
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            try {
+                Toast.makeText(
+                    appContext,
+                    appContext.getString(R.string.notification_warning_toast),
+                    Toast.LENGTH_LONG
+                ).show()
+            } catch (e: Exception) {
+                android.util.Log.w("ComplianceNotifier", "Không thể hiển thị Toast: ${e.message}")
+            }
+        }
+
         val warningIntent = Intent(appContext, WarningActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
+
         // 1. Tự động mở WarningActivity trực tiếp đè lên màn hình
-        runCatching {
+        val startDirectSuccess = runCatching {
             appContext.startActivity(warningIntent)
-        }.onFailure { e ->
+            true
+        }.getOrElse { e ->
             android.util.Log.e("ComplianceNotifier", "Không thể tự động mở WarningActivity trực tiếp: ${e.message}")
+            com.nhakhoaquangninh.telesales.core.FileLogger.log(
+                appContext,
+                "COMPLIANCE",
+                "⚠️ Không thể mở WarningActivity trực tiếp (có thể do thiếu quyền Overlay hoặc bị OEM chặn): ${e.message}"
+            )
+            false
         }
+
+        if (startDirectSuccess) {
+            com.nhakhoaquangninh.telesales.core.FileLogger.log(
+                appContext,
+                "COMPLIANCE",
+                "✅ Đã gọi startActivity(WarningActivity) thành công!"
+            )
+        }
+
         // 2. Dự phòng: Đẩy Notification mức khẩn cấp cao nhất kèm FullScreenIntent
         val pendingIntent = PendingIntent.getActivity(
             appContext,
@@ -154,24 +185,26 @@ class ComplianceNotifier(context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         ensureWarningChannel()
-        notificationManager?.notify(
-            WARNING_NOTIFICATION_ID,
-            NotificationCompat.Builder(appContext, WARNING_CHANNEL_ID)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(appContext.getString(R.string.notification_warning_title))
-                .setContentText(appContext.getString(R.string.notification_warning_content))
-                .setStyle(
-                    NotificationCompat.BigTextStyle()
-                        .bigText(appContext.getString(R.string.notification_warning_detail))
-                )
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setFullScreenIntent(pendingIntent, true)
-                .setContentIntent(pendingIntent)
-                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-                .setAutoCancel(true)
-                .build()
-        )
+        runCatching {
+            notificationManager?.notify(
+                WARNING_NOTIFICATION_ID,
+                NotificationCompat.Builder(appContext, WARNING_CHANNEL_ID)
+                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setContentTitle(appContext.getString(R.string.notification_warning_title))
+                    .setContentText(appContext.getString(R.string.notification_warning_content))
+                    .setStyle(
+                        NotificationCompat.BigTextStyle()
+                            .bigText(appContext.getString(R.string.notification_warning_detail))
+                    )
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
+                    .setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setFullScreenIntent(pendingIntent, true)
+                    .setContentIntent(pendingIntent)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setAutoCancel(true)
+                    .build()
+            )
+        }
     }
 
     fun notifyHistoryChanged() {

@@ -71,13 +71,21 @@ class CallEventCoordinator(
             return
         }
 
-        var decision = CallEventDecisionPolicy.decideConnected(
+        val match = callLog?.takeIf { it.durationSeconds > 0 }?.let(recordingLocator::findMatch)
+        val decision = CallEventDecisionPolicy.decideConnected(
             snapshot = snapshot,
             callLog = callLog,
             attempt = MAX_CALL_LOG_ATTEMPTS,
             maxAttempts = MAX_CALL_LOG_ATTEMPTS,
-            match = callLog?.takeIf { it.durationSeconds > 0 }?.let(recordingLocator::findMatch)
+            match = match
         )
+
+        com.nhakhoaquangninh.telesales.core.FileLogger.log(
+            appContext,
+            "CALL_COORDINATOR",
+            "Kết thúc xử lý cuộc gọi (SĐT: ${snapshot.otherPhoneNumber ?: callLog?.phoneNumber}, Chiều: ${if (snapshot.incoming) "ĐẾN" else "ĐI"}, Thời lượng CallLog: ${callLog?.durationSeconds ?: 0}s, Match: $match) -> Quyết định: $decision"
+        )
+
         when (decision) {
             is CallEventDecision.SaveNotConnected -> saveFailedCall(
                 snapshot = snapshot,

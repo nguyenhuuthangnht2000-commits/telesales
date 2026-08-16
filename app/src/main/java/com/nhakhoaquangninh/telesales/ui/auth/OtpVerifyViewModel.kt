@@ -5,9 +5,9 @@ import com.nhakhoaquangninh.telesales.core.BaseViewModel
 import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
 import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.UserSession
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class OtpVerifyViewModel : BaseViewModel() {
@@ -41,11 +41,20 @@ class OtpVerifyViewModel : BaseViewModel() {
             if (result is Resource.Error && result.source == ErrorSource.APP_CLIENT) {
                 _otpError.value = result.message
             }
+            if (result is Resource.Success) {
+                clearInput()
+            }
             _uiState.value = result
         }
     }
 
+    fun clearInput() {
+        _otpInput.value = ""
+        _otpError.value = null
+    }
+
     fun resetState() {
         _uiState.value = Resource.Idle
+        clearInput()
     }
 }

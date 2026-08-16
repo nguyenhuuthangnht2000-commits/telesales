@@ -94,6 +94,10 @@
     <string name="msg_otp_invalid">Mã OTP không chính xác hoặc đã hết hạn (15 phút)!</string>
     <string name="msg_user_info_missing">Không tìm thấy thông tin nhân viên!</string>
     <string name="msg_otp_verify_failed">Xác thực OTP thất bại.</string>
+    <string name="msg_logout_otp_sent">Mã OTP đăng xuất đã được gửi về email của quản lý.</string>
+    <string name="msg_logout_otp_request_failed">Yêu cầu OTP đăng xuất thất bại.</string>
+    <string name="msg_logout_success">Đăng xuất thành công.</string>
+    <string name="msg_logout_failed">Đăng xuất thất bại.</string>
     <string name="msg_no_file_to_sync">Không có file nào cần đồng bộ</string>
     <!-- WarningActivity Strings -->
     <string name="warning_title">CẢNH BÁO VI PHẠM</string>
@@ -161,4 +165,15 @@
     <string name="home_service_stop_cancel">Hủy</string>
     <string name="home_service_stop_success">Đã tạm dừng dịch vụ ghi âm cuộc gọi.</string>
     <string name="home_service_start_success">Đã kích hoạt dịch vụ ghi âm cuộc gọi.</string>
+    <string name="prompt_enable_call_recording">Vui lòng BẬT \'Tự động ghi âm cuộc gọi\' trong cài đặt cuộc gọi để ghi nhận cuộc gọi telesales!</string>
+    <string name="perm_all_granted_starting_service">Đã cấp đủ quyền hệ thống.</string>
+    <!-- Log Viewer & Share Strings -->
+    <string name="settings_view_log_btn">Xem nhật ký lỗi (Log)</string>
+    <string name="settings_view_log_desc">Kiểm tra chi tiết lỗi upload &amp; kết nối máy chủ</string>
+    <string name="settings_share_log_btn">Chia sẻ tệp nhật ký lỗi</string>
+    <string name="settings_share_log_desc">Gửi file log qua Zalo, Telegram hoặc Email cho Kỹ thuật</string>
+    <string name="settings_log_title">Nhật ký Lỗi &amp; Chẩn đoán</string>
+    <string name="settings_log_clear_btn">Xóa log</string>
+    <string name="settings_log_share_btn">Chia sẻ file</string>
+    <string name="settings_log_cleared_toast">Đã xóa sạch nhật ký lỗi!</string>
 </resources>

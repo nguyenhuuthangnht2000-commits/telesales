@@ -1,8 +1,10 @@
 package com.nhakhoaquangninh.telesales.data.repository
 
+import com.nhakhoaquangninh.telesales.core.FileLogger
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.data.remote.ApiService
 import com.nhakhoaquangninh.telesales.data.remote.RetrofitClient
+import com.nhakhoaquangninh.telesales.data.remote.dto.LogoutRequest
 import com.nhakhoaquangninh.telesales.data.remote.dto.RequestOtpRequest
 import com.nhakhoaquangninh.telesales.data.remote.dto.VerifyOtpRequest
 import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
@@ -66,6 +68,7 @@ class AuthRepositoryImpl(
                     phoneNumber = user?.phone?.trim()?.takeIf { it.isNotEmpty() }
                 )
                 tokenManager.saveSession(session)
+                FileLogger.setUserId(userId.toString())
                 Resource.Success(data = session, message = baseResp.message)
             } else {
                 Resource.Error(
@@ -90,9 +93,93 @@ class AuthRepositoryImpl(
         }
     }
 
+    override suspend fun requestLogoutOtp(): Resource<String> {
+        val token = tokenManager.getToken()
+        if (token.isNullOrEmpty()) {
+            return Resource.Error(
+                message = messageProvider.getTokenMissingMessage(),
+                source = ErrorSource.SERVER,
+                code = 401
+            )
+        }
+
+        val response = apiService.requestLogoutOtp(
+            apiKey = RetrofitClient.DEFAULT_API_KEY,
+            authorization = "Bearer $token"
+        )
+
+        val code = response.code()
+        return if (response.isSuccessful && code == 200) {
+            val msg = response.body()?.message ?: messageProvider.getLogoutOtpSentMessage()
+            Resource.Success(data = msg)
+        } else {
+            val errBody = response.errorBody()?.string()
+            val fallback = when (code) {
+                401 -> messageProvider.getTokenExpiredMessage()
+                500 -> messageProvider.getServerErrorMessage()
+                else -> messageProvider.getLogoutOtpRequestFailedMessage()
+            }
+            val message = ApiErrorParser.getServerMessageOrDefault(errBody, fallback)
+            Resource.Error(
+                message = message,
+                source = ErrorSource.SERVER,
+                code = code,
+                rawDetails = errBody
+            )
+        }
+    }
+
+    override suspend fun logout(otp: String): Resource<Boolean> {
+        val token = tokenManager.getToken()
+        if (token.isNullOrEmpty()) {
+            return Resource.Error(
+                message = messageProvider.getTokenMissingMessage(),
+                source = ErrorSource.SERVER,
+                code = 401
+            )
+        }
+
+        if (otp.length != 6 || !otp.all { it.isDigit() }) {
+            return Resource.Error(
+                message = messageProvider.getOtpInvalidMessage(),
+                source = ErrorSource.APP_CLIENT
+            )
+        }
+
+        val response = apiService.logout(
+            apiKey = RetrofitClient.DEFAULT_API_KEY,
+            authorization = "Bearer $token",
+            request = LogoutRequest(otp = otp)
+        )
+
+        val code = response.code()
+        return if (response.isSuccessful && code == 200) {
+            clearSession()
+            val msg = response.body()?.message ?: messageProvider.getLogoutSuccessMessage()
+            Resource.Success(data = true, message = msg)
+        } else {
+            val errBody = response.errorBody()?.string()
+            val fallback = when (code) {
+                401 -> messageProvider.getOtpInvalidMessage()
+                422 -> messageProvider.getOtpInvalidMessage()
+                else -> messageProvider.getLogoutFailedMessage()
+            }
+            val message = ApiErrorParser.getServerMessageOrDefault(errBody, fallback)
+            Resource.Error(
+                message = message,
+                source = ErrorSource.SERVER,
+                code = code,
+                rawDetails = errBody
+            )
+        }
+    }
+
     override fun getSavedSession(): UserSession? = tokenManager.getSession()
 
     override fun isLoggedIn(): Boolean = tokenManager.isLoggedIn()
 
-    override fun clearSession() = tokenManager.clearSession()
+    override fun clearSession() {
+        FileLogger.setUserId("")
+        tokenManager.clearSession()
+    }
 }

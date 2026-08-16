@@ -377,6 +377,83 @@
 
 *Cập nhật lần cuối: 15/08/2026 14:15 bởi Antigravity AI Pair Programmer.*
 
+---
+
+## 29. Tích hợp Firebase Crashlytics & Analytics (Giám sát Lỗi Upload & Hệ thống Từ Xa)
+- **Mục tiêu:** Cho phép quản trị viên và đội ngũ kỹ thuật theo dõi thời gian thực (real-time) chính xác nguyên nhân các cuộc gọi upload thất bại, sự cố mạng, HTTP status code từ Server, và metadata cuộc gọi từ xa mà không cần can thiệp trực tiếp vào thiết bị của nhân viên.
+- **Thành phần cập nhật:**
+  - `gradle/libs.versions.toml`: Khai báo plugins `google-services:4.4.2`, `firebase-crashlytics:3.0.3` và thư viện `firebase-bom:33.10.0`, `firebase-analytics`, `firebase-crashlytics`.
+  - `build.gradle.kts` (Root) & `app/build.gradle.kts`: Áp dụng Google Services và Crashlytics Gradle plugins, import dependencies qua Firebase BOM.
+  - `core/build.gradle.kts`: Bổ sung Firebase BOM và `firebase-crashlytics`.
+  - `FileLogger.kt` (`:core`): Nâng cấp thành cơ chế **Ghi Log Kép (Dual Logging)**:
+    - Vẫn ghi offline vào tệp văn bản cục bộ `Android/data/com.nhakhoaquangninh.telesales/files/Documents/telesales_upload_error_log.txt`.
+    - Tự động đẩy log lên Firebase Crashlytics timeline (`FirebaseCrashlytics.getInstance().log(...)`).
+    - Bổ sung `logNonFatalError(...)` để ghi nhận các lỗi quan trọng (HTTP 401, Server error, file missing, metadata invalid) thành Non-Fatal Exceptions kèm Custom Keys ngữ cảnh.
+    - Cung cấp `setUserId(userId)` và `setCustomKey(key, value)` để lọc lỗi theo từng nhân viên trên Firebase Console.
+  - `TelesalesApplication.kt` & `AuthRepositoryImpl.kt`: Tự động đồng bộ `userId` của nhân viên lên Crashlytics khi app khởi động và sau khi xác thực OTP thành công, đồng thời reset khi logout (`clearSession`).
+  - `UploadAudioWorker.kt` & `CallRecordRepositoryImpl.kt`: Gán các Custom Keys chi tiết (`call_phone_from`, `call_phone_to`, `call_type`, `call_duration`, `call_is_answered`, `http_code`) và bắn lỗi Non-Fatal lên Crashlytics khi upload thất bại.
+
+## 30. Tự Động Điều Hướng Sang Cài Đặt Ghi Âm Cuộc Gọi Sau Khi Cấp Quyền Thông Báo & Khởi Chạy
+- **Mục tiêu:** Tự động hóa trải nghiệm thiết lập ban đầu cho nhân viên: ngay sau khi người dùng cấp quyền thông báo và các quyền runtime hệ thống, ứng dụng sẽ tự động chuyển tiếp người dùng sang màn hình Cài đặt ghi âm cuộc gọi của ứng dụng Điện thoại hệ thống để bật "Tự động ghi âm cuộc gọi".
+- **Thành phần cập nhật:**
+  - `SettingsNavUtils.kt`: Nâng cấp hàm `openCallRecordingSettings(context)` hỗ trợ danh sách Intent tùy biến sâu theo từng hãng sản xuất (Xiaomi/HyperOS, Samsung, Oppo/Realme, Vivo, Huawei) cùng fallback chuẩn AOSP và Dialer.
+  - `MainActivity.kt`: Tích hợp luồng phân quyền và điều hướng 3 bước tuần tự:
+    1. Yêu cầu cấp quyền runtime (`READ_PHONE_STATE`, `READ_CALL_LOG`, `POST_NOTIFICATIONS`, `READ_MEDIA_AUDIO`).
+    2. Kiểm tra và yêu cầu quyền Overlay (Vẽ trên ứng dụng khác).
+    3. Tự động hiển thị Toast hướng dẫn và mở màn hình **Cài đặt ghi âm cuộc gọi** (lưu cờ `KEY_CALL_RECORDING_PROMPTED` vào `SharedPreferences` để không lặp lại phiền toái ở các lần mở app sau).
+    4. Khởi chạy `TelesalesForegroundService`.
+  - `strings.xml`: Khai báo tập trung chuỗi thông báo hướng dẫn `prompt_enable_call_recording` và `perm_all_granted_starting_service`.
+
+## 31. Cập Nhật Luồng Đăng Xuất (Logout) 2 Bước Theo Chuẩn API Mới
+- **Mục tiêu:** Đồng bộ quy trình đăng xuất theo đặc tả API mới (`POST /auth/logout/request-otp` và `POST /auth/logout`), xác thực mã OTP gửi về email quản lý trước khi hủy phiên làm việc trên máy chủ và thiết bị.
+- **Thành phần cập nhật:**
+  - `data/remote/dto/AuthDto.kt`: Bổ sung `LogoutRequest(val otp: String)`.
+  - `data/remote/ApiService.kt`: Bổ sung 2 endpoint `requestLogoutOtp` và `logout`.
+  - `domain/repository/AuthRepository.kt` & `AuthRepositoryImpl.kt`: Triển khai `requestLogoutOtp(): Resource<String>` và `logout(otp: String): Resource<Boolean>`. Khi logout thành công, tự động xóa phiên cục bộ (`clearSession`) và reset `userId` trong Crashlytics.
+  - `domain/usecase/`: Tạo `RequestLogoutOtpUseCase.kt` và `LogoutUseCase.kt`.
+  - `ServiceLocator.kt`: Đăng ký `requestLogoutOtpUseCase` và `logoutUseCase`.
+  - `SettingsViewModel.kt` & `SettingsScreenContent.kt`: Kết nối UI xác thực OTP đăng xuất với 2 use case mới.
+  - `strings.xml` & `AppMessageProvider.kt`: Khai báo tập trung chuỗi phản hồi thông báo đăng xuất.
+  - `huong-dan-tich-hop-api.md`: Đồng bộ tài liệu tích hợp API mới nhất (ngày 16/08/2026).
+
+## 32. Tích Hợp Nút Xem Trực Tiếp và Chia Sẻ Tệp Nhật Ký Lỗi (Error Log)
+- **Mục tiêu:** Cho phép nhân viên và kỹ thuật viên xem trực tiếp toàn bộ log ghi nhận lỗi/hoạt động hoặc chia sẻ tệp log chẩn đoán (`telesales_upload_error_log.txt`) qua các ứng dụng (Zalo, Gmail, Telegram, Google Drive...) ngay trong màn hình Cài đặt của ứng dụng (tối ưu hóa chỉ chia sẻ tệp file `.txt` trực tiếp, không dùng sao chép rườm rà).
+- **Thành phần cập nhật:**
+  - `core/FileLogger.kt`: Bổ sung 3 hàm tiện ích: `getLogFile(context)`, `readLogContent(context)` và `clearLog(context)`.
+  - `app/src/main/res/xml/file_paths.xml` & `AndroidManifest.xml`: Cấu hình `androidx.core.content.FileProvider` cấp quyền chia sẻ tệp log và tệp dữ liệu ra ngoài ứng dụng một cách an toàn.
+  - `ui/util/LogShareUtils.kt`: Tạo tiện ích chia sẻ tệp log qua Android Intent (`ACTION_SEND` + `FileProvider URI`).
+  - `ui/main/components/SettingsScreenContent.kt`:
+    - Thêm mục **"Xem nhật ký lỗi (Log)"**: Mở cửa sổ Dialog xem nội dung log với phông Monospace, hỗ trợ nút "Xóa log" và nút "Chia sẻ file".
+    - Thêm mục **"Chia sẻ tệp nhật ký lỗi"**: Mở menu chia sẻ hệ thống để gửi tệp `telesales_upload_error_log.txt` cho bộ phận kỹ thuật.
+  - `strings.xml`: Khai báo tập trung toàn bộ chuỗi giao diện cho tính năng Xem và Chia sẻ Log.
+
+## 33. Khắc Phục Lỗi Điều Hướng & Kích Hoạt Màn Hình Cảnh Báo Vi Phạm (WarningActivity)
+- **Mục tiêu:** Sửa lỗi khiến màn hình `WarningActivity` không tự động mở khi cuộc gọi kết thúc có thời lượng đàm thoại (`duration > 0`) nhưng thiếu file ghi âm do nhân viên tắt tính năng ghi âm cuộc gọi.
+- **Nguyên nhân cốt lõi được phát hiện & xử lý:**
+  1. Trong `ComplianceNotifier.notifyMissingRecording()`, lệnh `Toast.makeText()` được gọi trực tiếp từ background thread của `ProcessCallWorker` (thiếu UI Main Looper), gây ra crash ngầm `Can't toast on a thread that has not called Looper.prepare()`, làm dừng đột ngột luồng xử lý trước khi lệnh `startActivity(WarningActivity)` được gọi! Đã bọc `Toast.makeText` bằng `Handler(Looper.getMainLooper()).post`.
+  2. Bổ sung cơ chế ghi log chẩn đoán (`FileLogger`) chi tiết trong `CallEventCoordinator.kt` và `ComplianceNotifier.kt` để theo dõi rõ: trạng thái cuộc gọi, số điện thoại, thời lượng đàm thoại thực tế, kết quả quét file và trạng thái mở `WarningActivity`.
+  3. Củng cố cấu hình `NotificationChannel` với mức ưu tiên `IMPORTANCE_HIGH` và `lockscreenVisibility = VISIBILITY_PUBLIC` kèm `setFullScreenIntent` dự phòng khi `startActivity` bị giới hạn từ background.
+
+## 34. Tự Động Xóa Sạch Dữ Liệu Nhập OTP Sau Khi Xác Thực & Đăng Xuất
+- **Mục tiêu:** Đảm bảo bảo mật và trải nghiệm người dùng, tự động dọn sạch mã OTP đã nhập ngay sau khi xác thực thành công hoặc khi người dùng đăng xuất / quay lại màn hình Đăng nhập.
+- **Thành phần cập nhật:**
+  - `ui/auth/OtpVerifyViewModel.kt`:
+    - Bổ sung hàm `clearInput()` để reset `_otpInput.value = ""` và `_otpError.value = null`.
+    - Tự động gọi `clearInput()` ngay khi UseCase `verifyOtp` trả về `Resource.Success`.
+    - Cập nhật hàm `resetState()` để dọn sạch cả trạng thái UI lẫn chuỗi OTP nhập dở.
+  - `ui/auth/OtpVerifyScreen.kt`:
+    - Thêm `LaunchedEffect(Unit) { viewModel.clearInput() }` đảm bảo mỗi lần màn hình xác thực OTP hiển thị, ô nhập mã luôn ở trạng thái trống mới hoàn toàn.
+    - Gọi `viewModel.resetState()` khi nhân viên bấm liên kết "Quay lại Đăng nhập".
+
+*Cập nhật lần cuối: 16/08/2026 21:52 bởi Antigravity AI Pair Programmer.*
+
+
+
+
+
+
+
+
 
 
 

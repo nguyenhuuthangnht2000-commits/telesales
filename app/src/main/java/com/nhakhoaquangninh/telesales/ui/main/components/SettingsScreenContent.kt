@@ -1,6 +1,7 @@
 package com.nhakhoaquangninh.telesales.ui.main.components
 
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,18 +22,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,13 +46,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nhakhoaquangninh.telesales.R
+import com.nhakhoaquangninh.telesales.core.FileLogger
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
+import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.theme.ActiveEmerald
 import com.nhakhoaquangninh.telesales.theme.DangerDark
 import com.nhakhoaquangninh.telesales.theme.DangerRed
@@ -60,16 +72,10 @@ import com.nhakhoaquangninh.telesales.theme.SuccessContainer
 import com.nhakhoaquangninh.telesales.theme.SuccessText
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
 import com.nhakhoaquangninh.telesales.theme.SurfaceMuted
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nhakhoaquangninh.telesales.ui.main.SettingsViewModel
-import com.nhakhoaquangninh.telesales.domain.common.Resource
-import com.nhakhoaquangninh.telesales.ui.components.OtpSixDigitInput
 import com.nhakhoaquangninh.telesales.ui.components.ErrorDialog
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.nhakhoaquangninh.telesales.ui.components.OtpSixDigitInput
+import com.nhakhoaquangninh.telesales.ui.main.SettingsViewModel
+import com.nhakhoaquangninh.telesales.ui.util.LogShareUtils
 
 @Composable
 fun SettingsScreenContent(
@@ -82,7 +88,8 @@ fun SettingsScreenContent(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showFaqDialog by remember { mutableStateOf(false) }
     var showOtpDialog by remember { mutableStateOf(false) }
-    
+    var showLogDialog by remember { mutableStateOf(false) }
+    var logContent by remember { mutableStateOf("") }
     val requestOtpState by viewModel.requestOtpState.collectAsStateWithLifecycle()
     val verifyOtpState by viewModel.verifyOtpState.collectAsStateWithLifecycle()
     val otpInput by viewModel.otpInput.collectAsStateWithLifecycle()
@@ -254,6 +261,27 @@ fun SettingsScreenContent(
                     subtitle = "Tắt tối ưu pin & cấp quyền chạy ngầm",
                     onClick = { showFaqDialog = true }
                 )
+
+                // Tùy chọn 2: Xem nhật ký lỗi (Log Viewer)
+                SettingOptionRow(
+                    icon = Icons.AutoMirrored.Filled.Article,
+                    title = stringResource(R.string.settings_view_log_btn),
+                    subtitle = stringResource(R.string.settings_view_log_desc),
+                    onClick = {
+                        logContent = FileLogger.readLogContent(context)
+                        showLogDialog = true
+                    }
+                )
+
+                // Tùy chọn 3: Chia sẻ tệp nhật ký lỗi
+                SettingOptionRow(
+                    icon = Icons.Default.Share,
+                    title = stringResource(R.string.settings_share_log_btn),
+                    subtitle = stringResource(R.string.settings_share_log_desc),
+                    onClick = {
+                        LogShareUtils.shareLogFile(context)
+                    }
+                )
             }
         }
 
@@ -316,9 +344,7 @@ fun SettingsScreenContent(
                 val isLoading = requestOtpState is Resource.Loading
                 Button(
                     onClick = {
-                        session?.userId?.let { userId ->
-                            viewModel.requestOtp(userId)
-                        }
+                        viewModel.requestLogoutOtp()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = DangerRed),
                     enabled = !isLoading
@@ -401,8 +427,8 @@ fun SettingsScreenContent(
     // Dialog Xác thực OTP Đăng xuất
     if (showOtpDialog) {
         AlertDialog(
-            onDismissRequest = { 
-                showOtpDialog = false 
+            onDismissRequest = {
+                showOtpDialog = false
                 viewModel.resetVerifyOtpState()
             },
             containerColor = SurfaceLowest,
@@ -425,18 +451,18 @@ fun SettingsScreenContent(
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
-                    
+
                     OtpSixDigitInput(
                         value = otpInput,
                         onValueChange = { viewModel.onOtpChanged(it) },
                         focusRequester = focusRequester,
                         onDone = {
                             keyboardController?.hide()
-                            session?.userId?.let { userId -> viewModel.verifyOtp(userId) }
+                            viewModel.verifyLogoutOtp()
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    
+
                     if (otpError != null) {
                         Text(
                             text = otpError ?: "",
@@ -452,7 +478,7 @@ fun SettingsScreenContent(
                 Button(
                     onClick = {
                         keyboardController?.hide()
-                        session?.userId?.let { userId -> viewModel.verifyOtp(userId) }
+                        viewModel.verifyLogoutOtp()
                     },
                     enabled = !isLoading && otpInput.length == 6,
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryTeal)
@@ -474,7 +500,7 @@ fun SettingsScreenContent(
             },
             dismissButton = {
                 Button(
-                    onClick = { 
+                    onClick = {
                         showOtpDialog = false
                         viewModel.resetVerifyOtpState()
                     },
@@ -482,6 +508,121 @@ fun SettingsScreenContent(
                 ) {
                     Text(
                         text = stringResource(R.string.settings_logout_cancel),
+                        color = OnSurfaceMuted,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        )
+    }
+
+    // Dialog Xem Nhật ký lỗi (Log Viewer)
+    if (showLogDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogDialog = false },
+            containerColor = SurfaceLowest,
+            titleContentColor = OnSurfaceDark,
+            textContentColor = OnSurfaceVariant,
+            title = {
+                Text(
+                    text = stringResource(R.string.settings_log_title),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.Space8)
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(Dimens.Space24 * 10)
+                            .clip(RoundedCornerShape(Dimens.Space8)),
+                        color = SurfaceMuted,
+                        border = BorderStroke(
+                            Dimens.BorderThickness,
+                            OutlineVariant.copy(alpha = 0.4f)
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(Dimens.PaddingSmall)
+                        ) {
+                            Text(
+                                text = logContent,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    fontSize = androidx.compose.ui.unit.TextUnit(
+                                        11f,
+                                        androidx.compose.ui.unit.TextUnitType.Sp
+                                    )
+                                ),
+                                color = OnSurfaceDark
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            FileLogger.clearLog(context)
+                            logContent = FileLogger.readLogContent(context)
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.settings_log_cleared_toast),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = DangerRed.copy(alpha = 0.12f)),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            horizontal = Dimens.Space8,
+                            vertical = Dimens.Space6
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = DangerRed,
+                            modifier = Modifier.size(Dimens.Size16)
+                        )
+                        Spacer(modifier = Modifier.width(Dimens.Space4))
+                        Text(
+                            stringResource(R.string.settings_log_clear_btn),
+                            color = DangerRed,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        LogShareUtils.shareLogFile(context)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryTeal)
+                ) {
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.Size16)
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.Space6))
+                    Text(
+                        stringResource(R.string.settings_log_share_btn),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showLogDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceMuted)
+                ) {
+                    Text(
+                        stringResource(R.string.settings_logout_cancel),
                         color = OnSurfaceMuted,
                         fontWeight = FontWeight.Bold
                     )

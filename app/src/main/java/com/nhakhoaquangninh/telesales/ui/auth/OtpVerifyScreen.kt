@@ -91,6 +91,10 @@ fun OtpVerifyScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
+    LaunchedEffect(Unit) {
+        viewModel.clearInput()
+    }
+
     // Countdown Timer for Resend
     var timeLeft by remember { mutableIntStateOf(45) }
     LaunchedEffect(timeLeft) {
@@ -344,7 +348,10 @@ fun OtpVerifyScreen(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(Dimens.Space8))
-                            .clickable { onBackToLogin() }
+                            .clickable {
+                                viewModel.resetState()
+                                onBackToLogin()
+                            }
                             .padding(horizontal = Dimens.Space12, vertical = Dimens.Space8),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center

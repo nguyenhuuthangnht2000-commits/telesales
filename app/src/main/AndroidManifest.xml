@@ -88,6 +88,17 @@
                 android:value="Lắng nghe trạng thái cuộc gọi để kiểm soát tuân thủ telesales" />
         </service>
 
+        <!-- ── FileProvider chia sẻ file log và file ghi âm ──────────── -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
     </application>
 
 </manifest>

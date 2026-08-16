@@ -14,4 +14,8 @@ interface MessageProvider {
     fun getOtpInvalidMessage(): String
     fun getUserInfoMissingMessage(): String
     fun getOtpVerifyFailedMessage(): String
+    fun getLogoutOtpSentMessage(): String
+    fun getLogoutOtpRequestFailedMessage(): String
+    fun getLogoutSuccessMessage(): String
+    fun getLogoutFailedMessage(): String
 }

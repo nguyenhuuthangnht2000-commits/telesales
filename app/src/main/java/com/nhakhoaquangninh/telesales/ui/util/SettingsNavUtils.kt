@@ -65,21 +65,47 @@ object SettingsNavUtils {
     }
 
     fun openCallRecordingSettings(context: Context) {
-        try {
-            val intent = Intent("android.telecom.action.SHOW_CALL_SETTINGS").apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-        } catch (_: Exception) {
+        val oemCallRecordingIntents = listOf(
+            // Xiaomi / MIUI / HyperOS (Trang cài đặt ghi âm cuộc gọi)
+            Intent().setComponent(ComponentName("com.android.phone", "com.android.phone.settings.CallRecordSetting")),
+            Intent().setComponent(ComponentName("com.android.phone", "com.android.phone.CallFeaturesSetting")),
+            Intent().setComponent(ComponentName("com.android.server.telecom", "com.android.server.telecom.settings.CallRecordSetting")),
+
+            // Samsung (Cài đặt cuộc gọi & ghi âm cuộc gọi)
+            Intent("android.telecom.action.SHOW_CALL_SETTINGS"),
+            Intent().setComponent(ComponentName("com.samsung.android.incallui", "com.samsung.android.incallui.setting.CallSettingActivity")),
+            Intent().setComponent(ComponentName("com.samsung.android.dialer", "com.samsung.android.dialer.app.dialer.DialtactsActivity")),
+
+            // Oppo / Realme / ColorOS
+            Intent().setComponent(ComponentName("com.android.phone", "com.android.phone.RecordSetting")),
+            Intent().setComponent(ComponentName("com.coloros.phonenoarea", "com.coloros.phonenoarea.RecordSetting")),
+            Intent().setComponent(ComponentName("com.oppo.phone", "com.oppo.phone.RecordSetting")),
+
+            // Vivo / FuntouchOS / OriginOS
+            Intent().setComponent(ComponentName("com.android.phone", "com.android.phone.VivoCallRecordSetting")),
+            Intent().setComponent(ComponentName("com.vivo.phonenoarea", "com.vivo.phonenoarea.RecordSetting")),
+
+            // Huawei / Honor
+            Intent().setComponent(ComponentName("com.android.phone", "com.android.phone.MSimCallFeaturesSetting")),
+
+            // Standard Android Telecom Call Settings
+            Intent("android.telecom.action.SHOW_CALL_SETTINGS"),
+
+            // Fallback: Ứng dụng Điện thoại (Dialer)
+            Intent(Intent.ACTION_DIAL)
+        )
+
+        for (intent in oemCallRecordingIntents) {
             try {
-                val dialIntent = Intent(Intent.ACTION_DIAL).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(dialIntent)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                return
             } catch (_: Exception) {
-                openAppSettings(context)
             }
         }
+
+        // Cuối cùng fallback về App Settings
+        openAppSettings(context)
     }
 
     fun openAutostartSettings(context: Context) {

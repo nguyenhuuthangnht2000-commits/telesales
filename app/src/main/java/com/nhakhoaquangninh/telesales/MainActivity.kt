@@ -1,7 +1,9 @@
 package com.nhakhoaquangninh.telesales
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -15,8 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.nhakhoaquangninh.telesales.core.BaseActivity
 import com.nhakhoaquangninh.telesales.theme.TelesalesAppTheme
+import com.nhakhoaquangninh.telesales.ui.util.SettingsNavUtils
 
 class MainActivity : BaseActivity() {
+
+    private var hasPromptedCallRecording = false
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
@@ -37,11 +42,11 @@ class MainActivity : BaseActivity() {
             }
 
             if (readPhoneStateGranted && readCallLogGranted && postNotificationsGranted && storageGranted) {
-                showToast("Đã cấp đủ quyền. Khởi chạy Foreground Service...")
-                checkOverlayPermissionAndStartService()
+                showToast(getString(R.string.perm_all_granted_starting_service))
+                checkNextPermissionsAndNavigate()
             } else {
                 showToast(
-                    "Vui lòng cấp đủ các quyền đọc trạng thái cuộc gọi & bộ nhớ để ứng dụng hoạt động!",
+                    "Vui lòng cấp đủ các quyền đọc trạng thái cuộc gọi, thông báo & bộ nhớ để ứng dụng hoạt động!",
                     isLong = true
                 )
             }
@@ -49,6 +54,9 @@ class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        hasPromptedCallRecording = prefs.getBoolean(KEY_CALL_RECORDING_PROMPTED, false)
 
         val permissionsToRequest = mutableListOf(
             Manifest.permission.READ_PHONE_STATE,
@@ -63,7 +71,13 @@ class MainActivity : BaseActivity() {
             permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
 
-        requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
+        val needsRuntimePermission = permissionsToRequest.any {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (needsRuntimePermission) {
+            requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
+        }
 
         setContent {
             TelesalesAppTheme {
@@ -77,10 +91,11 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
-        checkOverlayPermissionAndStartService()
+        checkNextPermissionsAndNavigate()
     }
 
-    private fun checkOverlayPermissionAndStartService() {
+    private fun checkNextPermissionsAndNavigate() {
+        // 1. Kiểm tra quyền Overlay (Vẽ trên ứng dụng khác)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             showToast(
                 "Vui lòng bật quyền 'Vẽ trên ứng dụng khác' để cảnh báo hoạt động!",
@@ -94,11 +109,33 @@ class MainActivity : BaseActivity() {
             return
         }
 
+        // 2. Sau khi đã cấp các quyền runtime & thông báo, điều hướng sang Bật Ghi Âm Cuộc Gọi (lần đầu khởi chạy)
+        if (!hasPromptedCallRecording) {
+            hasPromptedCallRecording = true
+            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_CALL_RECORDING_PROMPTED, true)
+                .apply()
+
+            showToast(
+                getString(R.string.prompt_enable_call_recording),
+                isLong = true
+            )
+            SettingsNavUtils.openCallRecordingSettings(this)
+            return
+        }
+
+        // 3. Đã hoàn tất các bước phân quyền & thiết lập -> Khởi chạy Foreground Service
         startTelesalesService()
     }
 
     private fun startTelesalesService() {
         val serviceIntent = Intent(this, TelesalesForegroundService::class.java)
         ContextCompat.startForegroundService(this, serviceIntent)
+    }
+
+    companion object {
+        private const val PREFS_NAME = "telesales_app_prefs"
+        private const val KEY_CALL_RECORDING_PROMPTED = "key_call_recording_prompted"
     }
 }

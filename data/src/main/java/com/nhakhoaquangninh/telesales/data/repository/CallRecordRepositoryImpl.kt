@@ -37,7 +37,12 @@ class CallRecordRepositoryImpl(
     override suspend fun uploadCallRecord(metadata: CallRecordMetadata): Resource<Boolean> {
         val token = tokenManager.getToken()
         if (token.isNullOrEmpty()) {
-            FileLogger.log(appContext, "AUTH_ERROR", "Token không tồn tại hoặc chưa đăng nhập. Không thể upload cuộc gọi.")
+            FileLogger.logNonFatalError(
+                context = appContext,
+                tag = "AUTH_ERROR",
+                message = "Token không tồn tại hoặc chưa đăng nhập. Không thể upload cuộc gọi.",
+                customKeys = mapOf("reason" to "missing_token")
+            )
             return Resource.Error(
                 message = messageProvider.getTokenMissingMessage(),
                 source = ErrorSource.SERVER,
@@ -52,7 +57,12 @@ class CallRecordRepositoryImpl(
         if (metadata.isAnswered) {
             val payload = metadata.recordingUri?.let { resolvePayload(it) }
                 ?: run {
-                    FileLogger.log(appContext, "FILE_ERROR", "Không thể đọc tệp ghi âm hợp lệ từ URI: ${metadata.recordingUri}")
+                    FileLogger.logNonFatalError(
+                        context = appContext,
+                        tag = "FILE_ERROR",
+                        message = "Không thể đọc tệp ghi âm hợp lệ từ URI: ${metadata.recordingUri}",
+                        customKeys = mapOf("recordingUri" to (metadata.recordingUri ?: "null"))
+                    )
                     return Resource.Error(
                         message = "Không thể đọc tệp ghi âm hợp lệ",
                         source = ErrorSource.APP_CLIENT
@@ -102,7 +112,15 @@ class CallRecordRepositoryImpl(
         } else {
             val errorBody = response.errorBody()?.string()
             android.util.Log.d("API_LOG", "Upload File Failed - Code: $code, Body: $errorBody")
-            FileLogger.log(appContext, "API_FAILURE", "Upload bị từ chối (HTTP $code) | Chi tiết lỗi Server: $errorBody")
+            FileLogger.logNonFatalError(
+                context = appContext,
+                tag = "API_FAILURE",
+                message = "Upload bị từ chối (HTTP $code) | Chi tiết lỗi Server: $errorBody",
+                customKeys = mapOf(
+                    "http_code" to code,
+                    "server_error_body" to (errorBody ?: "")
+                )
+            )
             if (code == 401) {
                 tokenManager.clearSession()
                 Resource.Error(
