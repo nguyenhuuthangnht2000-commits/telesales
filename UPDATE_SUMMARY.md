@@ -453,7 +453,22 @@
     - Bổ sung cấu hình `lint { disable += "InvalidFragmentVersionForActivityResult" }` cho bản build release với ComponentActivity.
   - Đóng gói thành công tệp release: `app/build/outputs/apk/release/app-release.apk` (Dung lượng: ~4.4 MB).
 
-*Cập nhật lần cuối: 16/08/2026 22:38 bởi Antigravity AI Pair Programmer.*
+## 36. Căn Chỉnh & Tối Ưu Hóa Icon Ứng Dụng Fit Khung Biểu Tượng Chuẩn Android (Adaptive Icons)
+- **Mục tiêu:** Khắc phục tình trạng icon app bị phóng to quá mức, mất chữ "NHA KHOA QUỐC TẾ" và bị cắt viền tròn/dải màu khi hiển thị trên màn hình chính của các dòng điện thoại Android (Pixel, Samsung, Xiaomi, Oppo...).
+- **Nguyên nhân cốt lõi:**
+  - Dự án trước đó thiếu thư mục `mipmap-anydpi-v26/` định nghĩa Adaptive Icons theo chuẩn Android 8.0+.
+  - Các tệp ảnh `ic_launcher.webp` và `ic_launcher_round.webp` bị crop quá sát viền (chiếm 100% kích thước canvas), khiến hệ điều hành tự động cắt theo mask (tròn, squircle, bo góc) làm mất chữ và dải biểu tượng.
+- **Thành phần cập nhật & xử lý:**
+  1. **Bổ sung Adaptive Icon XML (`res/mipmap-anydpi-v26/`):**
+     - Khai báo `ic_launcher.xml` và `ic_launcher_round.xml` tách bạch 2 lớp `background` (@drawable/ic_launcher_background nền trắng chuẩn) và `foreground` (@mipmap/ic_launcher_foreground).
+  2. **Tái tạo toàn bộ bộ ảnh Foreground & Legacy Icons:**
+     - Căn chỉnh tỷ lệ logo nằm chuẩn xác trong vùng Safe Zone (~65% canvas 108dp cho adaptive foreground và ~83% canvas 48dp cho legacy square/round icon).
+     - Tạo lại đầy đủ các độ phân giải: `mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi` cho `ic_launcher.webp`, `ic_launcher_round.webp`, và `ic_launcher_foreground.webp`.
+     - Cập nhật lại ảnh `ic_launcher-playstore.png` kích thước 512x512 px độ nét cao.
+  3. **Làm sạch viền ảnh:** Xóa bỏ hoàn toàn các vệt viền/đường kẻ dư thừa từ ảnh nguồn cũ.
+
+*Cập nhật lần cuối: 17/08/2026 23:25 bởi Antigravity AI Pair Programmer.*
+
 
 
 
