@@ -8,7 +8,8 @@ object CallMetadataMapper {
         ownPhoneNumber: String?,
         durationSeconds: Int,
         callAtFormatted: String?,
-        isAnswered: Boolean = true
+        isAnswered: Boolean = true,
+        careType: Int? = null
     ): CallRecordMetadata {
         val otherNumber = otherPhoneNumber.normalizePhoneNumber()
         val ownNumber = ownPhoneNumber.normalizePhoneNumber()
@@ -19,7 +20,8 @@ object CallMetadataMapper {
             callType = callType,
             durationSeconds = durationSeconds.coerceAtLeast(0),
             callAtFormatted = callAtFormatted,
-            isAnswered = isAnswered
+            isAnswered = isAnswered,
+            careType = careType,
         )
     }
 

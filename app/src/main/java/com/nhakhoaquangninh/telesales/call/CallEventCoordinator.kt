@@ -12,12 +12,14 @@ import com.nhakhoaquangninh.telesales.data.local.FailedCallEventManager
 import com.nhakhoaquangninh.telesales.domain.model.CallMetadataMapper
 import com.nhakhoaquangninh.telesales.domain.model.CallType
 import com.nhakhoaquangninh.telesales.domain.model.FailureReason
+import com.nhakhoaquangninh.telesales.domain.model.RecordingMatchResult
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.milliseconds
 
 class CallEventCoordinator(
     context: Context,
@@ -71,7 +73,11 @@ class CallEventCoordinator(
             return
         }
 
-        val match = callLog?.takeIf { it.durationSeconds > 0 }?.let(recordingLocator::findMatch)
+        val match = if (callLog != null && callLog.durationSeconds > 0) {
+            awaitRecordingMatch(callLog)
+        } else {
+            null
+        }
         val decision = CallEventDecisionPolicy.decideConnected(
             snapshot = snapshot,
             callLog = callLog,
@@ -108,9 +114,25 @@ class CallEventCoordinator(
                 notifier.notifyRecordingQueued()
             }
 
-            is CallEventDecision.NeedsReview -> notifier.notifyNeedsReview()
+            is CallEventDecision.NeedsReview -> {
+                saveFailedCall(
+                    snapshot = snapshot,
+                    callLog = callLog,
+                    callType = callLog?.callType ?: if (snapshot.incoming) CallType.INCOMING else CallType.OUTGOING,
+                    failureReason = FailureReason.NOT_CONNECTED
+                )
+                notifier.notifyNeedsReview()
+            }
             CallEventDecision.RecordingNotFound,
-            CallEventDecision.RetryCallLog -> notifier.notifyMissingRecording()
+            CallEventDecision.RetryCallLog -> {
+                saveFailedCall(
+                    snapshot = snapshot,
+                    callLog = callLog,
+                    callType = callLog?.callType ?: if (snapshot.incoming) CallType.INCOMING else CallType.OUTGOING,
+                    failureReason = FailureReason.NOT_CONNECTED
+                )
+                notifier.notifyMissingRecording()
+            }
         }
     }
 
@@ -127,6 +149,27 @@ class CallEventCoordinator(
             if (attempt < MAX_CALL_LOG_ATTEMPTS) delay(CALL_LOG_RETRY_DELAY_MILLIS)
         }
         return latest
+    }
+
+    private suspend fun awaitRecordingMatch(callLog: CallLogEntry): RecordingMatchResult {
+        var lastResult: RecordingMatchResult = RecordingMatchResult.NotFound
+        val retryDelays = listOf(0L, 3_000L, 7_000L, 15_000L, 25_000L)
+        for ((index, delayMillis) in retryDelays.withIndex()) {
+            if (delayMillis > 0L) {
+                delay(delayMillis.milliseconds)
+            }
+            val match = recordingLocator.findMatch(callLog)
+            lastResult = match
+            if (match is RecordingMatchResult.Matched) {
+                com.nhakhoaquangninh.telesales.core.FileLogger.log(
+                    appContext,
+                    "RECORDING_LOCATOR",
+                    "Tìm thấy file ghi âm thành công ở lần thử ${index + 1}: ${match.recording.displayName} (${match.recording.uri})"
+                )
+                return match
+            }
+        }
+        return lastResult
     }
 
     private fun saveFailedCall(

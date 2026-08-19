@@ -7,5 +7,6 @@ data class CallRecordMetadata(
     val callType: CallType = CallType.OUTGOING,
     val durationSeconds: Int = 0,
     val callAtFormatted: String? = null,
-    val isAnswered: Boolean = true
+    val isAnswered: Boolean = true,
+    val careType: Int? = null,
 )

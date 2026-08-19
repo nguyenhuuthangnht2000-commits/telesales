@@ -33,5 +33,9 @@ class TokenManager private constructor(private val secureStore: SecureSessionSto
 
     fun isLoggedIn(): Boolean = getSession() != null
 
+    fun saveSelectedCareTypeValue(value: Int) = secureStore.saveSelectedCareTypeValue(value)
+
+    fun getSelectedCareTypeValue(): Int? = secureStore.getSelectedCareTypeValue()
+
     fun clearSession() = secureStore.clear()
 }

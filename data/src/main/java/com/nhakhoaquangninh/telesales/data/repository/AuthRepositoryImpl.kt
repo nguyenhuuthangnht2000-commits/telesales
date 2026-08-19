@@ -10,6 +10,7 @@ import com.nhakhoaquangninh.telesales.data.remote.dto.VerifyOtpRequest
 import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
 import com.nhakhoaquangninh.telesales.domain.common.MessageProvider
 import com.nhakhoaquangninh.telesales.domain.common.Resource
+import com.nhakhoaquangninh.telesales.domain.model.CareTypeOption
 import com.nhakhoaquangninh.telesales.domain.model.UserSession
 import com.nhakhoaquangninh.telesales.domain.repository.AuthRepository
 
@@ -65,7 +66,13 @@ class AuthRepositoryImpl(
                     token = token,
                     userName = user?.name,
                     email = user?.email,
-                    phoneNumber = user?.phone?.trim()?.takeIf { it.isNotEmpty() }
+                    phoneNumber = user?.phone?.trim()?.takeIf { it.isNotEmpty() },
+                    careTypeOptions = data.careTypeOptions?.map {
+                        CareTypeOption(
+                            value = it.value,
+                            label = it.label
+                        )
+                    } ?: emptyList()
                 )
                 tokenManager.saveSession(session)
                 FileLogger.setUserId(userId.toString())

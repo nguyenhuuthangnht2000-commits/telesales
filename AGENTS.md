@@ -11,7 +11,7 @@
   1. **Xác thực:** Đăng nhập theo luồng `Nhập User ID -> Yêu cầu OTP (gửi qua email quản lý) -> Xác thực OTP -> Lưu Bearer Token + API Key`.
   2. **Ghi âm cuộc gọi ngầm:** Tự động bắt sự kiện cuộc gọi (`CallStateReceiver`), khởi chạy `TelesalesForegroundService`, dùng `AudioRecorderHelper` để ghi âm cuộc gọi.
   3. **Đồng bộ dữ liệu:** Sử dụng `WorkManager` (`UploadAudioWorker`) để upload file ghi âm + thông tin cuộc gọi lên Server theo chuẩn REST API (`multipart/form-data`).
-  4. **Giám sát & Cảnh báo:** Hiển thị notification foreground service và màn hình `WarningActivity` nếu bị ngắt quyền hoặc bị tắt dịch vụ ngầm.
+  4. **Giám sát & Đồng bộ:** Hiển thị notification foreground service và tự động lưu cache dữ liệu cuộc gọi cục bộ khi gặp sự cố mạng/file để tự động đồng bộ lại lên Server.
 
 ---
 

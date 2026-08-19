@@ -5,7 +5,9 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.util.Base64
+import com.nhakhoaquangninh.telesales.domain.model.CareTypeOption
 import com.nhakhoaquangninh.telesales.domain.model.UserSession
+import org.json.JSONArray
 import org.json.JSONObject
 import java.nio.ByteBuffer
 import java.security.KeyStore
@@ -14,6 +16,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import androidx.core.content.edit
 
 internal interface SessionCipher {
     fun encrypt(plainText: ByteArray): ByteArray
@@ -79,7 +82,7 @@ internal class AndroidKeystoreSessionCipher : SessionCipher {
 }
 
 internal class SecureSessionStore(
-    private val context: Context,
+    context: Context,
     private val cipher: SessionCipher
 ) {
     private val securePrefs = context.getSharedPreferences(SECURE_PREF_NAME, Context.MODE_PRIVATE)
@@ -88,7 +91,7 @@ internal class SecureSessionStore(
     fun save(session: UserSession) {
         try {
             persistEncrypted(session)
-            legacyPrefs.edit().clear().commit()
+            legacyPrefs.edit(commit = true) { clear() }
         } catch (error: Exception) {
             if (error.isUnrecoverableKeyFailure()) {
                 clearAfterUnrecoverableKeyFailure()
@@ -108,14 +111,14 @@ internal class SecureSessionStore(
                     clearAfterUnrecoverableKeyFailure()
                     return null
                 }
-                securePrefs.edit().clear().commit()
+                securePrefs.edit(commit = true) { clear() }
             }
         }
 
         val legacy = readLegacy() ?: return null
         return try {
             persistEncrypted(legacy)
-            legacyPrefs.edit().clear().commit()
+            legacyPrefs.edit(commit = true) { clear() }
             legacy
         } catch (error: Exception) {
             if (error.isUnrecoverableKeyFailure()) {
@@ -133,8 +136,8 @@ internal class SecureSessionStore(
         check(securePrefs.edit().putString(KEY_ENCRYPTED_SESSION, encoded).commit())
     }
     fun clear() {
-        securePrefs.edit().clear().commit()
-        legacyPrefs.edit().clear().commit()
+        securePrefs.edit(commit = true) { clear() }
+        legacyPrefs.edit(commit = true) { clear() }
     }
 
     private fun readLegacy(): UserSession? {
@@ -165,18 +168,43 @@ internal class SecureSessionStore(
         putNullable("userName", userName)
         putNullable("email", email)
         putNullable("phoneNumber", phoneNumber)
+        if (careTypeOptions.isNotEmpty()) {
+            val careArray = JSONArray()
+            careTypeOptions.forEach { opt ->
+                careArray.put(JSONObject().apply {
+                    put("value", opt.value)
+                    put("label", opt.label)
+                })
+            }
+            put("careTypeOptions", careArray)
+        }
     }
 
     private fun JSONObject.toSession(): UserSession {
         val userId = getInt("userId")
         val token = getString("token")
         require(userId > 0 && token.isNotBlank())
+        val careOptions = mutableListOf<CareTypeOption>()
+        val careArray = optJSONArray("careTypeOptions")
+        if (careArray != null) {
+            for (i in 0 until careArray.length()) {
+                val item = careArray.optJSONObject(i)
+                if (item != null) {
+                    val value = item.optInt("value")
+                    val label = item.optString("label")
+                    if (label.isNotBlank()) {
+                        careOptions.add(CareTypeOption(value = value, label = label))
+                    }
+                }
+            }
+        }
         return UserSession(
             userId = userId,
             token = token,
             userName = nullableString("userName"),
             email = nullableString("email"),
-            phoneNumber = nullableString("phoneNumber")
+            phoneNumber = nullableString("phoneNumber"),
+            careTypeOptions = careOptions
         )
     }
 
@@ -187,6 +215,18 @@ internal class SecureSessionStore(
     private fun JSONObject.nullableString(key: String): String? =
         takeUnless { isNull(key) }?.optString(key)?.takeIf { it.isNotBlank() }
 
+    fun saveSelectedCareTypeValue(value: Int) {
+        securePrefs.edit { putInt(KEY_SELECTED_CARE_TYPE, value) }
+    }
+
+    fun getSelectedCareTypeValue(): Int? {
+        return if (securePrefs.contains(KEY_SELECTED_CARE_TYPE)) {
+            securePrefs.getInt(KEY_SELECTED_CARE_TYPE, -1).takeIf { it >= 0 }
+        } else {
+            null
+        }
+    }
+
     private companion object {
         const val SECURE_PREF_NAME = "TelesalesSecureSession"
         const val LEGACY_PREF_NAME = "TelesalesSession"
@@ -196,5 +236,6 @@ internal class SecureSessionStore(
         const val KEY_USER_NAME = "user_name"
         const val KEY_USER_EMAIL = "user_email"
         const val KEY_USER_PHONE = "user_phone"
+        const val KEY_SELECTED_CARE_TYPE = "selected_care_type_value"
     }
 }

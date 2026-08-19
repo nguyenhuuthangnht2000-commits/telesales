@@ -116,6 +116,13 @@ fun MainScreen(
 
     var selectedTab by remember { mutableIntStateOf(0) }
     val session = remember { TokenManager.getInstance(context).getSession() }
+    val careTypeOptions = remember(session) { session?.careTypeOptions ?: emptyList() }
+    val selectedCareType by viewModel.selectedCareType.collectAsStateWithLifecycle()
+
+    LaunchedEffect(careTypeOptions) {
+        val savedValue = TokenManager.getInstance(context).getSelectedCareTypeValue()
+        viewModel.initCareType(careTypeOptions, savedValue, context)
+    }
 
     val isServiceRunning by TelesalesForegroundService.isRunning.collectAsStateWithLifecycle()
 
@@ -418,6 +425,11 @@ fun MainScreen(
                         totalCallsToday = audioFiles.size,
                         syncedCalls = 0,
                         pendingCalls = audioFiles.size,
+                        careTypeOptions = careTypeOptions,
+                        selectedCareType = selectedCareType,
+                        onCareTypeSelected = { option ->
+                            viewModel.onCareTypeSelected(option, context)
+                        },
                         onToggleService = { enable ->
                             if (enable) {
                                 val intent = Intent(context, TelesalesForegroundService::class.java)

@@ -160,7 +160,13 @@ curl -X POST https://<domain>/api/mobile/auth/verify-otp \
       "phone": "0901234567",
       "department": "CSKH",
       "branch": "Ha Noi"
-    }
+    },
+    "careTypeOptions": [
+      {
+        "value": 1,
+        "label": "Chăm sóc da"
+      }
+    ]
   }
 }
 ```
@@ -292,6 +298,7 @@ curl -X POST https://<domain>/api/mobile/auth/logout \
 | `call_type` | string | Không | `incoming` = cuộc gọi đến, `outgoing` = cuộc gọi đi |
 | `duration` | int | Không | Thời lượng cuộc gọi (giây). Mặc định: 0 |
 | `call_at` | string | Không | Thời điểm cuộc gọi. Format: `YYYY-MM-DD HH:mm:ss` |
+| `care_type` | int | Không | ID / Giá trị loại hình chăm sóc đã chọn (từ `careTypeOptions`) |
 
 > [!NOTE]
 > `user_id` **không cần truyền** — server tự động lấy từ Bearer token.
@@ -312,6 +319,7 @@ curl -X POST https://<domain>/api/mobile/call-records \
   -F "call_type=outgoing" \
   -F "duration=185" \
   -F "call_at=2026-08-01 14:30:00" \
+  -F "care_type=1" \
   -F "recording=@/path/to/recording.mp3"
 ```
 

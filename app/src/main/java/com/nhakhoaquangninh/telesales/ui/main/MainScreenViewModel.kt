@@ -9,10 +9,12 @@ import com.nhakhoaquangninh.telesales.data.local.FailedCallEvent
 import com.nhakhoaquangninh.telesales.data.local.FailedCallEventManager
 import com.nhakhoaquangninh.telesales.data.local.SyncStatus
 import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
+import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
 import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordingWindow
+import com.nhakhoaquangninh.telesales.domain.model.CareTypeOption
 import com.nhakhoaquangninh.telesales.domain.model.RecordingCandidate
 import com.nhakhoaquangninh.telesales.domain.model.RecordingMatchPolicy
 import com.nhakhoaquangninh.telesales.domain.model.RecordingMatchResult
@@ -31,6 +33,9 @@ data class AudioItemState(
 class MainScreenViewModel : BaseViewModel() {
     private val requestOtpUseCase = ServiceLocator.requestOtpUseCase
     private val verifyOtpUseCase = ServiceLocator.verifyOtpUseCase
+
+    private val _selectedCareType = MutableStateFlow<CareTypeOption?>(null)
+    val selectedCareType: StateFlow<CareTypeOption?> = _selectedCareType
 
     private val _audioFiles = MutableStateFlow<List<AudioItemState>>(emptyList())
     val audioFiles: StateFlow<List<AudioItemState>> = _audioFiles
@@ -52,6 +57,24 @@ class MainScreenViewModel : BaseViewModel() {
 
     private val _stopServiceOtpError = MutableStateFlow<String?>(null)
     val stopServiceOtpError: StateFlow<String?> = _stopServiceOtpError
+
+    fun initCareType(options: List<CareTypeOption>, savedValue: Int? = null, context: Context? = null) {
+        if (options.isEmpty()) return
+        if (_selectedCareType.value == null) {
+            val found = options.find { it.value == savedValue } ?: options.first()
+            _selectedCareType.value = found
+            context?.let {
+                TokenManager.getInstance(it).saveSelectedCareTypeValue(found.value)
+            }
+        }
+    }
+
+    fun onCareTypeSelected(option: CareTypeOption, context: Context? = null) {
+        _selectedCareType.value = option
+        context?.let {
+            TokenManager.getInstance(it).saveSelectedCareTypeValue(option.value)
+        }
+    }
 
     fun onStopServiceOtpChanged(input: String) {
         if (input.length <= 6 && input.all { it.isDigit() }) {
@@ -151,17 +174,21 @@ class MainScreenViewModel : BaseViewModel() {
         }) {
             _isSyncing.value = true
             ServiceLocator.init(appContext)
+            val currentCareType = _selectedCareType.value?.value ?: TokenManager.getInstance(appContext).getSelectedCareTypeValue()
             val scheduledCount = withContext(Dispatchers.IO) {
                 val syncManager = SyncStatusManager.getInstance(appContext)
                 files.count { item ->
-                    if (isStrongUploadCandidate(item)) {
-                        ServiceLocator.uploadScheduler.enqueue(requireNotNull(item.metadata))
+                    val enrichedMetadata = item.metadata?.copy(
+                        careType = item.metadata.careType ?: currentCareType
+                    )
+                    if (isStrongUploadCandidate(item) && enrichedMetadata != null) {
+                        ServiceLocator.uploadScheduler.enqueue(enrichedMetadata)
                         true
                     } else {
                         syncManager.setMetadata(
                             item.recording.uri,
                             SyncStatus.NEEDS_REVIEW,
-                            item.metadata
+                            enrichedMetadata ?: item.metadata
                         )
                         false
                     }

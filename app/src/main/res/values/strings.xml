@@ -31,6 +31,13 @@
     <string name="perm_granted">Đã cấp</string>
     <string name="perm_denied">Chưa cấp</string>
 
+    <!-- Care Type Strings -->
+    <string name="care_type_title">Loại hình chăm sóc</string>
+    <string name="care_type_desc">Chọn loại hình chăm sóc để phân loại dữ liệu cuộc gọi phù hợp.</string>
+    <string name="care_type_select_hint">Chọn loại chăm sóc</string>
+    <string name="care_type_empty">Chưa có danh sách loại chăm sóc</string>
+    <string name="care_type_options_count">%d lựa chọn</string>
+
     <!-- History Screen Strings -->
     <string name="history_title">Lịch sử cuộc gọi</string>
     <string name="history_desc">Xem lại và quản lý cuộc gọi gần đây.</string>

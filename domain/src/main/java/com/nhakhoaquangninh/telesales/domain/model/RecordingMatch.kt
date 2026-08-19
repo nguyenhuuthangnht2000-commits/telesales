@@ -41,21 +41,33 @@ sealed interface RecordingMatchResult {
 }
 
 object RecordingMatchPolicy {
-    private const val EARLY_TOLERANCE_MILLIS = 5_000L
-    private const val LATE_TOLERANCE_MILLIS = 30_000L
+    private const val EARLY_TOLERANCE_MILLIS = 15_000L
+    private const val LATE_TOLERANCE_MILLIS = 75_000L
     private const val MIN_DURATION_TOLERANCE_MILLIS = 10_000L
     private const val DURATION_TOLERANCE_RATIO = 0.25
 
     private val approvedPathMarkers = setOf(
         "recordings/call/",
         "recordings/call records/",
+        "recordings/",
         "record/call/",
-        "callrecordings/",
-        "miui/sound_recorder/call_rec/",
-        "vivo/callrecord/",
         "record/callrec/",
+        "callrecordings/",
+        "call_rec/",
+        "callrec/",
+        "call recording/",
+        "call records/",
+        "miui/sound_recorder/call_rec/",
+        "miui/sound_recorder/",
+        "vivo/callrecord/",
+        "vivo/record/",
         "coloros/recorder/call/",
-        "phonerecord/"
+        "coloros/recorder/",
+        "phonerecord/",
+        "voice recorder/",
+        "sounds/call/",
+        "audio/call/",
+        "audio/recordings/"
     )
 
     fun match(

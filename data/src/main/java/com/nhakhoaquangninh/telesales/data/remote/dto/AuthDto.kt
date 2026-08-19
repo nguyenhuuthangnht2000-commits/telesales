@@ -23,7 +23,16 @@ data class VerifyOtpData(
     @SerializedName("token")
     val token: String? = null,
     @SerializedName("user")
-    val user: UserInfoDto? = null
+    val user: UserInfoDto? = null,
+    @SerializedName("careTypeOptions", alternate = ["care_type_options"])
+    val careTypeOptions: List<CareTypeOptionDto>? = null
+)
+
+data class CareTypeOptionDto(
+    @SerializedName("value")
+    val value: Int,
+    @SerializedName("label")
+    val label: String
 )
 
 data class UserInfoDto(

@@ -2,6 +2,7 @@ package com.nhakhoaquangninh.telesales.ui.main.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,14 +21,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PhoneInTalk
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,23 +43,32 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.nhakhoaquangninh.telesales.R
+import com.nhakhoaquangninh.telesales.domain.model.CareTypeOption
 import com.nhakhoaquangninh.telesales.theme.ActiveEmerald
 import com.nhakhoaquangninh.telesales.theme.Dimens
 import com.nhakhoaquangninh.telesales.theme.OnPrimaryContainer
+import com.nhakhoaquangninh.telesales.theme.OnSecondaryContainer
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
 import com.nhakhoaquangninh.telesales.theme.OutlineVariant
 import com.nhakhoaquangninh.telesales.theme.PrimaryContainer
 import com.nhakhoaquangninh.telesales.theme.PrimaryTeal
+import com.nhakhoaquangninh.telesales.theme.SecondaryContainer
 import com.nhakhoaquangninh.telesales.theme.SurfaceContainer
+import com.nhakhoaquangninh.telesales.theme.SurfaceContainerLow
 import com.nhakhoaquangninh.telesales.theme.SurfaceLowest
 import com.nhakhoaquangninh.telesales.theme.WarningAmber
 
@@ -62,10 +78,15 @@ fun HomeScreenContent(
     totalCallsToday: Int,
     syncedCalls: Int,
     pendingCalls: Int,
+    careTypeOptions: List<CareTypeOption> = emptyList(),
+    selectedCareType: CareTypeOption? = null,
+    onCareTypeSelected: (CareTypeOption) -> Unit = {},
     onToggleService: (Boolean) -> Unit,
     onSyncNowClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isDropdownExpanded by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -160,7 +181,163 @@ fun HomeScreenContent(
             }
         }
 
-        // ── 2. Quick Metrics Stack ──────────────────────────────────────
+        // ── 2. Care Type Selection Card (Combobox / Dropdown) ───────────
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(Dimens.CornerRadiusLarge),
+            colors = CardDefaults.cardColors(containerColor = SurfaceLowest),
+            border = BorderStroke(Dimens.BorderThickness, OutlineVariant.copy(alpha = 0.3f))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Dimens.PaddingMedium)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MedicalServices,
+                            contentDescription = null,
+                            tint = PrimaryTeal,
+                            modifier = Modifier.size(Dimens.IconSizeMedium)
+                        )
+                        Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
+                        Text(
+                            text = stringResource(R.string.care_type_title),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = OnSurfaceDark
+                        )
+                    }
+                    if (careTypeOptions.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(Dimens.CornerRadiusSmall),
+                            color = SecondaryContainer.copy(alpha = 0.4f)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.care_type_options_count, careTypeOptions.size),
+                                modifier = Modifier.padding(horizontal = Dimens.Space8, vertical = Dimens.Space2),
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = OnSecondaryContainer
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(Dimens.Space4))
+                Text(
+                    text = stringResource(R.string.care_type_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OnSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
+
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(Dimens.CornerRadiusMedium))
+                            .border(
+                                BorderStroke(
+                                    Dimens.BorderThickness,
+                                    if (isDropdownExpanded) PrimaryTeal else OutlineVariant.copy(alpha = 0.5f)
+                                ),
+                                shape = RoundedCornerShape(Dimens.CornerRadiusMedium)
+                            )
+                            .clickable { isDropdownExpanded = !isDropdownExpanded },
+                        color = SurfaceContainerLow,
+                        shape = RoundedCornerShape(Dimens.CornerRadiusMedium)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.Space14),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = selectedCareType?.label ?: stringResource(R.string.care_type_select_hint),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = if (selectedCareType != null) FontWeight.SemiBold else FontWeight.Normal
+                                ),
+                                color = if (selectedCareType != null) OnSurfaceDark else OnSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
+                            Icon(
+                                imageVector = if (isDropdownExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = if (isDropdownExpanded) PrimaryTeal else OnSurfaceVariant,
+                                modifier = Modifier.size(Dimens.IconSizeMedium)
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = isDropdownExpanded,
+                        onDismissRequest = { isDropdownExpanded = false },
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .background(SurfaceLowest)
+                    ) {
+                        if (careTypeOptions.isEmpty()) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringResource(R.string.care_type_empty),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = OnSurfaceVariant
+                                    )
+                                },
+                                onClick = { isDropdownExpanded = false },
+                                enabled = false
+                            )
+                        } else {
+                            careTypeOptions.forEach { option ->
+                                val isSelected = option.value == selectedCareType?.value
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = option.label,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            ),
+                                            color = if (isSelected) PrimaryTeal else OnSurfaceDark
+                                        )
+                                    },
+                                    trailingIcon = if (isSelected) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = PrimaryTeal,
+                                                modifier = Modifier.size(Dimens.IconSizeSmall)
+                                            )
+                                        }
+                                    } else null,
+                                    onClick = {
+                                        onCareTypeSelected(option)
+                                        isDropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── 3. Quick Metrics Stack ──────────────────────────────────────
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium)

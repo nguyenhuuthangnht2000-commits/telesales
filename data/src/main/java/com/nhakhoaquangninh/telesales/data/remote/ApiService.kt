@@ -53,6 +53,7 @@ interface ApiService {
         @Part("call_type") callType: RequestBody? = null,
         @Part("duration") duration: RequestBody? = null,
         @Part("call_at") callAt: RequestBody? = null,
-        @Part("is_answered") isAnswered: RequestBody? = null
+        @Part("is_answered") isAnswered: RequestBody? = null,
+        @Part("care_type") careType: RequestBody? = null
     ): Response<ResponseBody>
 }

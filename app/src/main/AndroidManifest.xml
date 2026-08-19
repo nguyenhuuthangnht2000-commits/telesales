@@ -30,11 +30,6 @@
     <!-- ⑦ Hiển thị thông báo (WorkManager, Foreground Service notification) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- ⑧ Hiển thị WarningActivity đè lên các ứng dụng khác từ background & Rung khẩn cấp -->
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-
     <application
         android:name=".TelesalesApplication"
         android:allowBackup="false"
@@ -57,17 +52,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- ── Màn hình cảnh báo toàn màn hình ─────────────────────────── -->
-        <activity
-            android:name=".WarningActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:launchMode="singleTop"
-            android:noHistory="true"
-            android:showWhenLocked="true"
-            android:theme="@style/Theme.TelesalesApp"
-            android:turnScreenOn="true" />
 
         <!-- ── Receiver lắng nghe sự kiện thay đổi trạng thái cuộc gọi ──── -->
         <receiver

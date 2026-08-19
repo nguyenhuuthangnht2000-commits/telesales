@@ -4,6 +4,55 @@
 
 ---
 
+## 7. 🛡️ Loại Bỏ Hoàn Toàn Màn Hình WarningActivity & Chuyển Sang Lưu Cache + Tự Động Upload Lại
+- **Loại bỏ Màn hình Cảnh báo ([WarningActivity.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/WarningActivity.kt) & [AndroidManifest.xml](file:///d:/New%20folder/TelesalesApp/app/src/main/AndroidManifest.xml)):**
+  - Xóa bỏ hoàn toàn tệp `WarningActivity.kt` và thẻ `<activity android:name=".WarningActivity" .../>` trong AndroidManifest.
+  - Xóa bỏ các quyền overlay nguy hiểm không còn dùng (`USE_FULL_SCREEN_INTENT`, `SYSTEM_ALERT_WINDOW`).
+  - Tuyệt đối không bật đè màn hình cảnh báo hay phát chuông báo động, không làm gián đoạn trải nghiệm của nhân viên telesales khi làm việc.
+- **Lưu Cache Cục bộ & Tự Động Upload Lại ([CallEventCoordinator.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/call/CallEventCoordinator.kt) & [ComplianceNotifier.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/call/ComplianceNotifier.kt)):**
+  - Khi gặp các trường hợp lỗi (không tìm thấy file ngay, `NeedsReview`, `RecordingNotFound` hoặc lỗi mạng), hệ thống tự động lưu toàn bộ thông tin cuộc gọi vào Room Database (`CallRecordEntity` & `FailedCallEventManager`).
+  - Đẩy cuộc gọi vào hàng đợi `UploadAudioWorker` để tự động thử upload lại ngầm khi có mạng.
+  - Thông báo nhẹ nhàng trên thanh trạng thái (Notification bar) thay cho màn hình full-screen.
+
+---
+
+## 6. ⚡ Tối Ưu Hóa Tìm Kiếm File Ghi Âm & Khắc Phục Timeout Upload Giờ Cao Điểm
+- **Khắc phục lỗi MediaStore Indexing Lag ([CallEventCoordinator.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/call/CallEventCoordinator.kt)):**
+  - Xây dựng hàm `awaitRecordingMatch()` thực hiện cơ chế Multi-Attempt Retry qua 5 lần dãn cách (0s, +3s, +7s, +15s, +25s) tổng thời gian ~50s thay vì chỉ tìm 1 lần sau 3s rồi báo `RecordingNotFound`.
+  - Ghi log chẩn đoán `[RECORDING_LOCATOR]` chi tiết lần thử tìm thấy file thành công.
+- **Nới rộng khung thời gian tìm kiếm ([RecordingMatch.kt](file:///d:/New%20folder/TelesalesApp/domain/src/main/java/com/nhakhoaquangninh/telesales/domain/model/RecordingMatch.kt) & [RecordingLocator.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/call/RecordingLocator.kt)):**
+  - Tăng dung sai tìm kiếm `LATE_TOLERANCE_MILLIS` từ `30s` lên `75s` và `EARLY_TOLERANCE_MILLIS` từ `5s` lên `15s` để bao phủ triệt để thời gian đổ chuông dài (Ringing time) khi khách hàng bắt máy muộn.
+  - Tăng phạm vi query MediaStore `QUERY_LATE_MILLIS` lên `90s` và `QUERY_EARLY_MILLIS` lên `20s`.
+- **Mở rộng bộ lọc đường dẫn ghi âm ([RecordingMatch.kt](file:///d:/New%20folder/TelesalesApp/domain/src/main/java/com/nhakhoaquangninh/telesales/domain/model/RecordingMatch.kt)):**
+  - Bổ sung toàn diện danh sách thư mục âm thanh cuộc gọi chuẩn trên Android 11-15 cho Samsung, Xiaomi (MIUI/HyperOS), Oppo (ColorOS), Vivo (FuntouchOS), Realme (`recordings/`, `call_rec/`, `voice recorder/`, `sounds/call/`, `audio/recordings/`...).
+- **Tăng tính bền bỉ của Upload Worker ([RetrofitClient.kt](file:///d:/New%20folder/TelesalesApp/data/src/main/java/com/nhakhoaquangninh/telesales/data/remote/RetrofitClient.kt) & [UploadScheduler.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/call/UploadScheduler.kt)):**
+  - Tăng `connectTimeout` lên `45s`, `readTimeout` và `writeTimeout` lên `120s`, bật `retryOnConnectionFailure(true)` trong `OkHttpClient`.
+  - Cấu hình `BackoffPolicy.EXPONENTIAL` với khoảng chờ khởi tạo `15s` cho `UploadAudioWorker` để tự động khôi phục tác vụ khi mạng bị gián đoạn.
+
+---
+
+## 5. 📋 Cập Nhật API Verify OTP, Dropdown Loại Chăm Sóc & Truyền `care_type` vào Upload API
+- **Domain Layer ([CareTypeOption.kt](file:///d:/New%20folder/TelesalesApp/domain/src/main/java/com/nhakhoaquangninh/telesales/domain/model/CareTypeOption.kt), [UserSession.kt](file:///d:/New%20folder/TelesalesApp/domain/src/main/java/com/nhakhoaquangninh/telesales/domain/model/UserSession.kt), [CallRecordMetadata.kt](file:///d:/New%20folder/TelesalesApp/domain/src/main/java/com/nhakhoaquangninh/telesales/domain/model/CallRecordMetadata.kt), [CallMetadataMapper.kt](file:///d:/New%20folder/TelesalesApp/domain/src/main/java/com/nhakhoaquangninh/telesales/domain/model/CallMetadataMapper.kt)):**
+  - Khởi tạo data class `CareTypeOption(val value: Int, val label: String)`.
+  - Mở rộng model `UserSession` với trường `careTypeOptions: List<CareTypeOption> = emptyList()`.
+  - Bổ sung trường `careType: Int? = null` vào `CallRecordMetadata` và mapper `CallMetadataMapper.create()`.
+- **Data Layer DTO & API ([AuthDto.kt](file:///d:/New%20folder/TelesalesApp/data/src/main/java/com/nhakhoaquangninh/telesales/data/remote/dto/AuthDto.kt), [ApiService.kt](file:///d:/New%20folder/TelesalesApp/data/src/main/java/com/nhakhoaquangninh/telesales/data/remote/ApiService.kt), [CallRecordRepositoryImpl.kt](file:///d:/New%20folder/TelesalesApp/data/src/main/java/com/nhakhoaquangninh/telesales/data/repository/CallRecordRepositoryImpl.kt)):**
+  - Bổ sung `CareTypeOptionDto` và cập nhật `VerifyOtpData` nhận `careTypeOptions` (hỗ trợ alias `care_type_options`).
+  - Mở rộng `uploadCallRecord` endpoint gửi kèm part `"care_type"` multipart form-data.
+  - Tự động lấy giá trị `careType` từ metadata hoặc fallback sang giá trị đang chọn trong `TokenManager`.
+- **Lưu trữ Cục bộ Bảo mật ([SecureSessionStore.kt](file:///d:/New%20folder/TelesalesApp/data/src/main/java/com/nhakhoaquangninh/telesales/data/local/SecureSessionStore.kt) & [TokenManager.kt](file:///d:/New%20folder/TelesalesApp/data/src/main/java/com/nhakhoaquangninh/telesales/data/local/TokenManager.kt)):**
+  - Mã hoá và giải mã trường `careTypeOptions` dạng `JSONArray` trong session được bảo vệ bằng Android KeyStore.
+  - Lưu trữ và khôi phục lựa chọn loại chăm sóc hiện tại (`selected_care_type_value`).
+- **Giao diện HomeScreen & Worker ([HomeScreenContent.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/ui/main/components/HomeScreenContent.kt), [MainScreen.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/ui/main/MainScreen.kt), [MainScreenViewModel.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/ui/main/MainScreenViewModel.kt), [UploadScheduler.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/call/UploadScheduler.kt), [UploadAudioWorker.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/UploadAudioWorker.kt)):**
+  - Mặc định tự động chọn giá trị đầu tiên trong danh sách `careTypeOptions` nếu chưa từng lưu cấu hình trước đó.
+  - Thẻ Card hiển thị combobox droplist lựa chọn loại hình chăm sóc ngay dưới khối điều khiển dịch vụ GSM.
+  - Truyền giá trị `care_type` xuyên suốt qua `UploadScheduler` -> `UploadAudioWorker` -> `CallRecordRepositoryImpl` khi upload tự động hoặc thủ công.
+- **Tài liệu Tích hợp ([huong-dan-tich-hop-api.md](file:///d:/New%20folder/TelesalesApp/huong-dan-tich-hop-api.md)):**
+  - Cập nhật mẫu response 200 OK của endpoint `POST /api/mobile/auth/verify-otp`.
+  - Bổ sung trường `care_type` vào bảng tham số và cURL mẫu của `POST /api/mobile/call-records`.
+
+---
+
 ## 4. 🛠️ Khắc Phục Lỗi Upload File Trên Bản Release (Release Build Upload Fixes)
 - **Bổ sung ProGuard Keep Rules ([app/proguard-rules.pro](file:///d:/telesales/app/proguard-rules.pro)):**
   - Khai báo keep `ListenableWorker`, `InputMerger` (`OverwritingInputMerger`, `ArrayCreatingInputMerger`) và các Worker cụ thể (`UploadAudioWorker`, `ProcessCallWorker`) kèm constructor để WorkManager không bị lỗi `ClassNotFoundException` / `NoSuchMethodException` do R8 obfuscation.

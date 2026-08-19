@@ -103,7 +103,7 @@ class RecordingLocator(context: Context) {
 
     private companion object {
         const val TAG = "RecordingLocator"
-        const val QUERY_EARLY_MILLIS = 10_000L
-        const val QUERY_LATE_MILLIS = 35_000L
+        const val QUERY_EARLY_MILLIS = 20_000L
+        const val QUERY_LATE_MILLIS = 90_000L
     }
 }

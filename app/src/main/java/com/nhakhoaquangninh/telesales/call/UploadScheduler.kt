@@ -29,6 +29,11 @@ class UploadScheduler(context: Context) {
             .putInt(UploadAudioWorker.KEY_DURATION, metadata.durationSeconds)
             .putString(UploadAudioWorker.KEY_CALL_AT, metadata.callAtFormatted)
             .putBoolean(UploadAudioWorker.KEY_IS_ANSWERED, metadata.isAnswered)
+            .apply {
+                if (metadata.careType != null) {
+                    putInt(UploadAudioWorker.KEY_CARE_TYPE, metadata.careType!!)
+                }
+            }
             .build()
         val request = OneTimeWorkRequestBuilder<UploadAudioWorker>()
             .setInputData(input)
@@ -36,6 +41,11 @@ class UploadScheduler(context: Context) {
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
+            )
+            .setBackoffCriteria(
+                androidx.work.BackoffPolicy.EXPONENTIAL,
+                15_000L,
+                java.util.concurrent.TimeUnit.MILLISECONDS
             )
             .build()
         workManager.enqueueUniqueWork(

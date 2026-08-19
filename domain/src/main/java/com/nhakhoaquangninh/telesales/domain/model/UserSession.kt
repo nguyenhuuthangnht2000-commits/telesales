@@ -5,5 +5,6 @@ data class UserSession(
     val token: String,
     val userName: String? = null,
     val email: String? = null,
-    val phoneNumber: String? = null
+    val phoneNumber: String? = null,
+    val careTypeOptions: List<CareTypeOption> = emptyList()
 )

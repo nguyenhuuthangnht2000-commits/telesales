@@ -52,6 +52,7 @@ class CallRecordRepositoryImpl(
 
         val textMediaType = "text/plain".toMediaTypeOrNull()
         val isAnsweredString = if (metadata.isAnswered) "true" else "false"
+        val careTypeValue = metadata.careType ?: tokenManager.getSelectedCareTypeValue()
 
         var bodyPart: MultipartBody.Part? = null
         if (metadata.isAnswered) {
@@ -80,7 +81,7 @@ class CallRecordRepositoryImpl(
         FileLogger.log(
             appContext,
             "UPLOAD_START",
-            "Bắt đầu gửi request POST /call-records | isAnswered=$isAnsweredString | Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType.wireValue} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted} | File đính kèm: ${if (bodyPart != null) "Có" else "Không (null)"}"
+            "Bắt đầu gửi request POST /call-records | careType=$careTypeValue | isAnswered=$isAnsweredString | Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType.wireValue} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted} | File đính kèm: ${if (bodyPart != null) "Có" else "Không (null)"}"
         )
 
         val response = try {
@@ -93,7 +94,8 @@ class CallRecordRepositoryImpl(
                 callType = metadata.callType.wireValue.toRequestBody(textMediaType),
                 duration = metadata.durationSeconds.toString().toRequestBody(textMediaType),
                 callAt = metadata.callAtFormatted?.toRequestBody(textMediaType),
-                isAnswered = isAnsweredString.toRequestBody(textMediaType)
+                isAnswered = isAnsweredString.toRequestBody(textMediaType),
+                careType = careTypeValue?.toString()?.toRequestBody(textMediaType)
             )
         } catch (ioe: IOException) {
             FileLogger.logException(appContext, "NETWORK_ERROR", "Mất kết nối máy chủ khi upload (IOException): ${ioe.message}", ioe)

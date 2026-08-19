@@ -36,6 +36,7 @@ class UploadAudioWorker(
 
         val callType = CallType.fromWire(inputData.getString(KEY_CALL_TYPE))
         val duration = inputData.getInt(KEY_DURATION, 0)
+        val careType = inputData.getInt(KEY_CARE_TYPE, -1).takeIf { it >= 0 }
         val metadata = CallRecordMetadata(
             recordingUri = if (isAnswered) (recordingUri ?: "") else recordingUri,
             phoneNumberFrom = inputData.getString(KEY_PHONE_FROM),
@@ -43,7 +44,8 @@ class UploadAudioWorker(
             callType = callType ?: CallType.OUTGOING,
             durationSeconds = duration,
             callAtFormatted = inputData.getString(KEY_CALL_AT),
-            isAnswered = isAnswered
+            isAnswered = isAnswered,
+            careType = careType
         )
 
         return try {
@@ -171,6 +173,7 @@ class UploadAudioWorker(
         const val KEY_DURATION = "duration"
         const val KEY_CALL_AT = "call_at"
         const val KEY_IS_ANSWERED = "is_answered"
+        const val KEY_CARE_TYPE = "care_type"
 
         private const val TAG = "UploadAudioWorker"
     }
