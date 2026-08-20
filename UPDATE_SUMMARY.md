@@ -4,6 +4,30 @@
 
 ---
 
+## 25. 🔐 Bổ Sung Chức Năng Xóa Nhật Ký Lỗi (Log) Yêu Cầu Xác Thực OTP Quản Lý
+- **Cơ chế Xác thực OTP khi Xóa Nhật Ký Lỗi ([SettingsViewModel.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/ui/main/SettingsViewModel.kt), [SettingsScreenContent.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/ui/main/components/SettingsScreenContent.kt), [strings.xml](file:///d:/telesales/app/src/main/res/values/strings.xml)):**
+  - **Mục tiêu:** Tăng cường an toàn dữ liệu và bảo mật hệ thống; nhân viên muốn xóa file log chẩn đoán lỗi cục bộ bắt buộc phải xác thực mã OTP 6 chữ số gửi về email quản lý (đồng nhất với cơ chế bảo mật của luồng tạm dừng dịch vụ).
+  - **Khắc phục & Triển khai:**
+    1. Trong `SettingsViewModel.kt`, bổ sung `requestClearLogOtp(userId)` (gọi `requestOtpUseCase`) và `verifyClearLogOtp(userId, context)` (gọi `verifyOtpUseCase` -> `FileLogger.clearLog(context)`) được quản lý bằng `launchSafe`.
+    2. Trong `SettingsScreenContent.kt`, bổ sung hàng tùy chọn "Xóa nhật ký lỗi" mang biểu tượng thùng rác trong nhóm Cài đặt & Hỗ trợ, đồng thời nâng cấp nút "Xóa log" trong Dialog Xem Log để kích hoạt luồng OTP.
+    3. Thiết kế 2 Dialog chuẩn Material 3: Dialog Xác nhận gửi OTP và Dialog nhập mã OTP 6 chữ số (`OtpSixDigitInput`) với đầy đủ loading, validate số và thông báo Toast thành công.
+    4. Nâng dung lượng lưu trữ log cục bộ tối đa lên **10MB** (`FileLogger.MAX_LOG_SIZE_BYTES = 10MB`), lưu được ~20.000 cuộc gọi (~5 đến 6 tháng làm việc liên tục) và tối ưu phân đoạn hiển thị trên giao diện người dùng.
+
+---
+
+## 24. 🛡️ Khắc Phục Lỗi Mất File Ghi Âm (`FileNotFoundException` / `empty_recording`) & Cơ Chế Re-Scan + Fallback Metadata
+- **Cơ chế Re-Scan MediaStore thông minh khi file bị rename/move ([UploadAudioWorker.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/UploadAudioWorker.kt), [UploadScheduler.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/call/UploadScheduler.kt), [ServiceLocator.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/ServiceLocator.kt)):**
+  - **Nguyên nhân:** Trên một số thiết bị Android (Xiaomi, Samsung, Oppo), ứng dụng ghi âm mặc định của hệ thống lưu file tạm trong lúc đàm thoại và tiến hành rename/flush hoặc dọn dẹp temp cache sau khi cuộc gọi kết thúc. `RecordingLocator` ban đầu bắt được URI tạm, nhưng khi Worker đọc file (sau 30-50s), URI cũ đã bị vô hiệu hóa dẫn đến `FileNotFoundException` và `empty_recording`, khiến Worker hủy bỏ (`Result.failure()`) và làm mất dữ liệu cuộc gọi.
+  - **Khắc phục:** 
+    1. Khi `RecordingUriValidator.validate` phát hiện file không hợp lệ hoặc unreadable, Worker tự động gọi `ServiceLocator.recordingLocator.findMatch(...)` quét lại MediaStore theo SĐT và thời gian cuộc gọi để lấy URI mới nhất đã được đổi tên.
+    2. Bổ sung trường `KEY_STARTED_AT_MILLIS` truyền xuyên suốt qua `UploadScheduler` -> `UploadAudioWorker` để hỗ trợ định vị chính xác khung giờ cuộc gọi.
+- **Bảo toàn dữ liệu cuộc gọi tuyệt đối (Zero Data Loss Fallback) ([UploadAudioWorker.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/UploadAudioWorker.kt) & [CallRecordRepositoryImpl.kt](file:///d:/telesales/data/src/main/java/com/nhakhoaquangninh/telesales/data/repository/CallRecordRepositoryImpl.kt)):**
+  - Trong trường hợp xấu nhất (người dùng vô tình xóa file âm thanh hoặc file bị hỏng hoàn toàn), ứng dụng tự động kích hoạt **Fallback Metadata Upload**: Tiếp tục gửi thông tin cuộc gọi lên Server CRM với `isAnswered=true`, `duration=X`, `care_type=Y`, `recording=null` thay vì hủy bỏ task.
+  - Ghi log chẩn đoán `[RECORDING_LOST_FALLBACK]` và thông báo nhẹ nhàng qua `ComplianceNotifier.notifyMissingRecording()`.
+  - Trong `CallRecordRepositoryImpl`, xử lý êm ái khi `recordingUri == null` hoặc rỗng khi `isAnswered = true` (không ném lỗi `FILE_ERROR`), đồng thời phân loại chính xác `FileNotFoundException` thành lỗi client `ErrorSource.APP_CLIENT` thay vì ngộ nhận là lỗi mạng `NETWORK_ERROR`.
+
+---
+
 ## 23. 🎯 Khắc Phục Triệt Để Luồng Upload `care_type` & Toàn Diện Hệ Thống Logging
 - **Khắc phục lỗi thiếu trường `care_type` khi upload lên Server ([AuthRepositoryImpl.kt](file:///d:/telesales/data/src/main/java/com/nhakhoaquangninh/telesales/data/repository/AuthRepositoryImpl.kt), [SecureSessionStore.kt](file:///d:/telesales/data/src/main/java/com/nhakhoaquangninh/telesales/data/local/SecureSessionStore.kt), [CallEventCoordinator.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/call/CallEventCoordinator.kt), [UploadScheduler.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/call/UploadScheduler.kt), [AuthDto.kt](file:///d:/telesales/data/src/main/java/com/nhakhoaquangninh/telesales/data/remote/dto/AuthDto.kt)):**
   - **Nguyên nhân:**

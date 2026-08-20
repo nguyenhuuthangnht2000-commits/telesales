@@ -89,11 +89,19 @@ fun SettingsScreenContent(
     var showFaqDialog by remember { mutableStateOf(false) }
     var showOtpDialog by remember { mutableStateOf(false) }
     var showLogDialog by remember { mutableStateOf(false) }
+    var showConfirmClearLogDialog by remember { mutableStateOf(false) }
+    var showClearLogOtpDialog by remember { mutableStateOf(false) }
     var logContent by remember { mutableStateOf("") }
     val requestOtpState by viewModel.requestOtpState.collectAsStateWithLifecycle()
     val verifyOtpState by viewModel.verifyOtpState.collectAsStateWithLifecycle()
     val otpInput by viewModel.otpInput.collectAsStateWithLifecycle()
     val otpError by viewModel.otpError.collectAsStateWithLifecycle()
+
+    val requestClearLogOtpState by viewModel.requestClearLogOtpState.collectAsStateWithLifecycle()
+    val verifyClearLogOtpState by viewModel.verifyClearLogOtpState.collectAsStateWithLifecycle()
+    val clearLogOtpInput by viewModel.clearLogOtpInput.collectAsStateWithLifecycle()
+    val clearLogOtpError by viewModel.clearLogOtpError.collectAsStateWithLifecycle()
+
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -113,6 +121,27 @@ fun SettingsScreenContent(
         }
     }
 
+    LaunchedEffect(requestClearLogOtpState) {
+        if (requestClearLogOtpState is Resource.Success) {
+            showConfirmClearLogDialog = false
+            showClearLogOtpDialog = true
+            viewModel.resetRequestClearLogOtpState()
+        }
+    }
+
+    LaunchedEffect(verifyClearLogOtpState) {
+        if (verifyClearLogOtpState is Resource.Success) {
+            showClearLogOtpDialog = false
+            logContent = ""
+            viewModel.resetClearLogOtpState()
+            Toast.makeText(
+                context,
+                context.getString(R.string.settings_clear_log_success),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     if (requestOtpState is Resource.Error) {
         ErrorDialog(
             error = requestOtpState as Resource.Error,
@@ -124,6 +153,20 @@ fun SettingsScreenContent(
         ErrorDialog(
             error = verifyOtpState as Resource.Error,
             onDismiss = { viewModel.resetVerifyOtpState() }
+        )
+    }
+
+    if (requestClearLogOtpState is Resource.Error) {
+        ErrorDialog(
+            error = requestClearLogOtpState as Resource.Error,
+            onDismiss = { viewModel.resetRequestClearLogOtpState() }
+        )
+    }
+
+    if (verifyClearLogOtpState is Resource.Error && (verifyClearLogOtpState as Resource.Error).source != com.nhakhoaquangninh.telesales.domain.common.ErrorSource.APP_CLIENT) {
+        ErrorDialog(
+            error = verifyClearLogOtpState as Resource.Error,
+            onDismiss = { viewModel.resetClearLogOtpState() }
         )
     }
 
@@ -280,6 +323,16 @@ fun SettingsScreenContent(
                     subtitle = stringResource(R.string.settings_share_log_desc),
                     onClick = {
                         LogShareUtils.shareLogFile(context)
+                    }
+                )
+
+                // Tùy chọn 4: Xóa nhật ký lỗi (cần OTP)
+                SettingOptionRow(
+                    icon = Icons.Default.Delete,
+                    title = stringResource(R.string.settings_clear_log_btn),
+                    subtitle = stringResource(R.string.settings_clear_log_desc),
+                    onClick = {
+                        showConfirmClearLogDialog = true
                     }
                 )
             }
@@ -567,13 +620,7 @@ fun SettingsScreenContent(
 
                     Button(
                         onClick = {
-                            FileLogger.clearLog(context)
-                            logContent = FileLogger.readLogContent(context)
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.settings_log_cleared_toast),
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            showConfirmClearLogDialog = true
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = DangerRed.copy(alpha = 0.12f)),
@@ -623,6 +670,178 @@ fun SettingsScreenContent(
                 ) {
                     Text(
                         stringResource(R.string.settings_logout_cancel),
+                        color = OnSurfaceMuted,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        )
+    }
+
+    // Dialog 1: Xác nhận Xóa Nhật ký Lỗi
+    if (showConfirmClearLogDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showConfirmClearLogDialog = false
+                viewModel.resetRequestClearLogOtpState()
+            },
+            containerColor = SurfaceLowest,
+            titleContentColor = OnSurfaceDark,
+            textContentColor = OnSurfaceVariant,
+            title = {
+                Text(
+                    text = stringResource(R.string.settings_clear_log_confirm_title),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.settings_clear_log_confirm_msg),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                val isLoading = requestClearLogOtpState is Resource.Loading
+                Button(
+                    onClick = {
+                        session?.userId?.let { userId ->
+                            viewModel.requestClearLogOtp(userId)
+                        } ?: run {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.msg_user_not_found, 0),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed),
+                    enabled = !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(Dimens.Size20),
+                            strokeWidth = Dimens.Space2
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.settings_clear_log_confirm_btn),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        showConfirmClearLogDialog = false
+                        viewModel.resetRequestClearLogOtpState()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceMuted)
+                ) {
+                    Text(
+                        stringResource(R.string.settings_clear_log_cancel),
+                        color = OnSurfaceMuted,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        )
+    }
+
+    // Dialog 2: Nhập OTP Xác nhận Xóa Nhật ký Lỗi
+    if (showClearLogOtpDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showClearLogOtpDialog = false
+                viewModel.resetClearLogOtpState()
+            },
+            containerColor = SurfaceLowest,
+            titleContentColor = OnSurfaceDark,
+            textContentColor = OnSurfaceVariant,
+            title = {
+                Text(
+                    text = stringResource(R.string.otp_security_verification),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Dimens.Space16)
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_clear_log_otp_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+
+                    OtpSixDigitInput(
+                        value = clearLogOtpInput,
+                        onValueChange = { viewModel.onClearLogOtpChanged(it) },
+                        focusRequester = focusRequester,
+                        onDone = {
+                            keyboardController?.hide()
+                            session?.userId?.let { userId ->
+                                viewModel.verifyClearLogOtp(userId, context) {
+                                    showLogDialog = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (clearLogOtpError != null) {
+                        Text(
+                            text = clearLogOtpError ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                val isLoading = verifyClearLogOtpState is Resource.Loading
+                Button(
+                    onClick = {
+                        keyboardController?.hide()
+                        session?.userId?.let { userId ->
+                            viewModel.verifyClearLogOtp(userId, context) {
+                                showLogDialog = false
+                            }
+                        }
+                    },
+                    enabled = !isLoading && clearLogOtpInput.length == 6,
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(Dimens.Size20),
+                            strokeWidth = Dimens.Space2
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.settings_clear_log_otp_confirm),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        showClearLogOtpDialog = false
+                        viewModel.resetClearLogOtpState()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceMuted)
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_clear_log_cancel),
                         color = OnSurfaceMuted,
                         fontWeight = FontWeight.Bold
                     )

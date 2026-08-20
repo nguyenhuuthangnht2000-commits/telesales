@@ -18,7 +18,7 @@ import java.util.Locale
 object FileLogger {
     private const val TAG = "FileLogger"
     private const val FILE_NAME = "telesales_upload_error_log.txt"
-    private const val MAX_LOG_SIZE_BYTES = 5L * 1024L * 1024L // Giới hạn 5MB tránh đầy bộ nhớ
+    private const val MAX_LOG_SIZE_BYTES = 10L * 1024L * 1024L // Giới hạn 10MB (~20.000 cuộc gọi)
 
     /**
      * Lấy con trỏ File tới tệp log chẩn đoán cục bộ.
@@ -38,7 +38,12 @@ object FileLogger {
             if (!file.exists() || file.length() == 0L) {
                 "Chưa có bản ghi lỗi hoặc hoạt động nào."
             } else {
-                file.readText()
+                val text = file.readText()
+                if (text.length > 200_000) {
+                    "... [Đã ẩn các bản ghi cũ hơn để tối ưu hiển thị, hãy bấm 'Chia sẻ file' để nhận toàn bộ file 10MB] ...\n\n" + text.takeLast(200_000)
+                } else {
+                    text
+                }
             }
         } catch (e: Exception) {
             "Lỗi khi đọc tệp log: ${e.message}"

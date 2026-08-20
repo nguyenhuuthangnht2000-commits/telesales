@@ -55,27 +55,25 @@ class CallRecordRepositoryImpl(
         val careTypeValue = metadata.careType ?: tokenManager.getSelectedCareTypeValue()
 
         var bodyPart: MultipartBody.Part? = null
-        if (metadata.isAnswered) {
-            val payload = metadata.recordingUri?.let { resolvePayload(it) }
-                ?: run {
-                    FileLogger.logNonFatalError(
-                        context = appContext,
-                        tag = "FILE_ERROR",
-                        message = "Không thể đọc tệp ghi âm hợp lệ từ URI: ${metadata.recordingUri}",
-                        customKeys = mapOf("recordingUri" to (metadata.recordingUri ?: "null"))
-                    )
-                    return Resource.Error(
-                        message = "Không thể đọc tệp ghi âm hợp lệ",
-                        source = ErrorSource.APP_CLIENT
-                    )
-                }
-            val recordingBody = ContentUriRequestBody(
-                resolver = resolver,
-                uri = payload.uri,
-                mediaType = payload.mimeType.toMediaType(),
-                contentLength = payload.sizeBytes
-            )
-            bodyPart = MultipartBody.Part.createFormData("recording", payload.displayName, recordingBody)
+        val recordingUri = metadata.recordingUri
+        if (metadata.isAnswered && !recordingUri.isNullOrBlank()) {
+            val payload = resolvePayload(recordingUri)
+            if (payload != null) {
+                val recordingBody = ContentUriRequestBody(
+                    resolver = resolver,
+                    uri = payload.uri,
+                    mediaType = payload.mimeType.toMediaType(),
+                    contentLength = payload.sizeBytes
+                )
+                bodyPart = MultipartBody.Part.createFormData("recording", payload.displayName, recordingBody)
+            } else {
+                FileLogger.logNonFatalError(
+                    context = appContext,
+                    tag = "FILE_ERROR",
+                    message = "Không thể đọc tệp ghi âm từ URI: $recordingUri. Chuyển sang upload metadata không đính kèm file.",
+                    customKeys = mapOf("recordingUri" to recordingUri)
+                )
+            }
         }
 
         FileLogger.log(
@@ -102,6 +100,19 @@ class CallRecordRepositoryImpl(
                 careType = careTypeValue?.toString()?.toRequestBody(textMediaType)
             )
         } catch (ioe: IOException) {
+            val isFileNotFound = ioe is FileNotFoundException || ioe.cause is FileNotFoundException
+            if (isFileNotFound) {
+                FileLogger.logNonFatalError(
+                    context = appContext,
+                    tag = "FILE_NOT_FOUND",
+                    message = "Tệp ghi âm bị mất khi đang stream upload: ${ioe.message}",
+                    customKeys = mapOf("error" to (ioe.message ?: ""))
+                )
+                return Resource.Error(
+                    message = "Tệp ghi âm không tồn tại hoặc đã bị xóa trên thiết bị",
+                    source = ErrorSource.APP_CLIENT
+                )
+            }
             FileLogger.logException(appContext, "NETWORK_ERROR", "Mất kết nối máy chủ khi upload (IOException): ${ioe.message}", ioe)
             return Resource.Error(
                 message = "Không thể kết nối máy chủ",

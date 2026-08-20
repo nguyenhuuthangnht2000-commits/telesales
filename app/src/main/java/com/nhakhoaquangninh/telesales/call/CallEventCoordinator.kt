@@ -113,7 +113,7 @@ class CallEventCoordinator(
                     isAnswered = true,
                     careType = currentCareType
                 )
-                uploadScheduler.enqueue(metadata)
+                uploadScheduler.enqueue(metadata, startedAtMillis = decision.call.startedAtMillis)
                 notifier.notifyRecordingQueued()
             }
 
@@ -214,7 +214,7 @@ class CallEventCoordinator(
         notifier.notifyHistoryChanged()
         
         // Mới: Gửi tự động lên server
-        uploadScheduler.enqueue(metadata)
+        uploadScheduler.enqueue(metadata, startedAtMillis = eventTime)
     }
 
     private fun formatCallTime(timestamp: Long): String =

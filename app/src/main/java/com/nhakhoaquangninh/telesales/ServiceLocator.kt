@@ -67,7 +67,7 @@ object ServiceLocator {
         )
     }
 
-    private val recordingLocator: RecordingLocator by lazy {
+    val recordingLocator: RecordingLocator by lazy {
         RecordingLocator(requireContext())
     }
 

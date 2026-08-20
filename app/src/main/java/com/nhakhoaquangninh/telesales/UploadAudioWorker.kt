@@ -56,18 +56,54 @@ class UploadAudioWorker(
             FileLogger.setCustomKey("call_is_answered", metadata.isAnswered)
             FileLogger.setCustomKey("call_care_type", metadata.careType ?: -1)
 
+            var effectiveRecordingUri = recordingUri
             if (isAnswered) {
-                val validation = RecordingUriValidator.validate(applicationContext, recordingUri)
+                val validation = RecordingUriValidator.validate(applicationContext, effectiveRecordingUri)
                 if (validation is RecordingUriValidation.Invalid) {
-                    failureReason = validation.reason
-                    FileLogger.logNonFatalError(
-                        context = applicationContext,
-                        tag = "VALIDATION_ERROR",
-                        message = "Tệp ghi âm không hợp lệ ($failureReason) - URI: $recordingUri",
-                        customKeys = mapOf("validation_reason" to failureReason, "uri" to (recordingUri ?: ""))
-                    )
-                    ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
-                    return Result.failure()
+                    val startedAtMillis = inputData.getLong(KEY_STARTED_AT_MILLIS, -1L).takeIf { it > 0 }
+                        ?: parseCallAtMillis(metadata.callAtFormatted)
+                    val otherPhone = if (metadata.callType == CallType.INCOMING) metadata.phoneNumberFrom else metadata.phoneNumberTo
+
+                    var reMatchedUri: String? = null
+                    if (startedAtMillis != null && duration > 0) {
+                        val callLogEntry = com.nhakhoaquangninh.telesales.call.CallLogEntry(
+                            phoneNumber = otherPhone,
+                            callType = metadata.callType,
+                            startedAtMillis = startedAtMillis,
+                            durationSeconds = duration
+                        )
+                        val reMatchResult = ServiceLocator.recordingLocator.findMatch(callLogEntry)
+                        if (reMatchResult is com.nhakhoaquangninh.telesales.domain.model.RecordingMatchResult.Matched) {
+                            val newCandidate = reMatchResult.recording
+                            val reValidation = RecordingUriValidator.validate(applicationContext, newCandidate.uri)
+                            if (reValidation is RecordingUriValidation.Valid) {
+                                effectiveRecordingUri = newCandidate.uri
+                                reMatchedUri = newCandidate.uri
+                                FileLogger.log(
+                                    applicationContext,
+                                    "RECORDING_RELOCATED",
+                                    "Đã tìm thấy lại file ghi âm sau khi rename/move: ${newCandidate.displayName} (${newCandidate.uri})"
+                                )
+                            }
+                        }
+                    }
+
+                    if (reMatchedUri == null) {
+                        // File could not be recovered on local storage.
+                        // Fallback: Upload metadata without audio file to preserve call records on CRM (Zero Data Loss)
+                        FileLogger.logNonFatalError(
+                            context = applicationContext,
+                            tag = "RECORDING_LOST_FALLBACK",
+                            message = "Không tìm thấy file ghi âm (${validation.reason}) cho cuộc gọi tới $otherPhone (${duration}s). Tự động fallback upload metadata.",
+                            customKeys = mapOf(
+                                "original_uri" to (recordingUri ?: ""),
+                                "validation_reason" to validation.reason,
+                                "phone" to (otherPhone ?: "")
+                            )
+                        )
+                        effectiveRecordingUri = null
+                        ServiceLocator.complianceNotifier.notifyMissingRecording()
+                    }
                 }
                 if (callType == null || duration <= 0) {
                     failureReason = "invalid_call_metadata"
@@ -94,9 +130,10 @@ class UploadAudioWorker(
                 }
             }
 
-            Log.d("API_LOG", "Bắt đầu Upload File (isAnswered=$isAnswered, careType=${metadata.careType}) - Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted}")
+            val finalMetadata = metadata.copy(recordingUri = effectiveRecordingUri)
+            Log.d("API_LOG", "Bắt đầu Upload File (isAnswered=$isAnswered, careType=${finalMetadata.careType}, uri=${finalMetadata.recordingUri}) - Từ: ${finalMetadata.phoneNumberFrom} | Tới: ${finalMetadata.phoneNumberTo} | Loại: ${finalMetadata.callType} | Thời lượng: ${finalMetadata.durationSeconds}s | Lúc: ${finalMetadata.callAtFormatted}")
             
-            val uploadResource = ServiceLocator.uploadCallRecordUseCase(metadata)
+            val uploadResource = ServiceLocator.uploadCallRecordUseCase(finalMetadata)
             val decision = UploadWorkPolicy.decide(uploadResource)
             terminalStatus = decision.terminalStatus
             when (decision.result) {
@@ -173,6 +210,17 @@ class UploadAudioWorker(
         }
     }
 
+    private fun parseCallAtMillis(callAt: String?): Long? {
+        if (callAt.isNullOrBlank()) return null
+        return try {
+            java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).apply {
+                timeZone = java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh")
+            }.parse(callAt)?.time
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     companion object {
         const val KEY_RECORDING_URI = "recording_uri"
         const val KEY_RECORDING_ID = "recording_id"
@@ -181,6 +229,7 @@ class UploadAudioWorker(
         const val KEY_CALL_TYPE = "call_type"
         const val KEY_DURATION = "duration"
         const val KEY_CALL_AT = "call_at"
+        const val KEY_STARTED_AT_MILLIS = "started_at_millis"
         const val KEY_IS_ANSWERED = "is_answered"
         const val KEY_CARE_TYPE = "care_type"
 

@@ -18,7 +18,7 @@ class UploadScheduler(context: Context) {
     private val workManager = WorkManager.getInstance(appContext)
     private val syncStatusManager = SyncStatusManager.getInstance(appContext)
 
-    fun enqueue(metadata: CallRecordMetadata) {
+    fun enqueue(metadata: CallRecordMetadata, startedAtMillis: Long? = null) {
         val recordingId = metadata.recordingUri ?: "missed_${System.currentTimeMillis()}"
         val effectiveCareType = metadata.careType
             ?: TokenManager.getInstance(appContext).getSelectedCareTypeValue()
@@ -38,6 +38,9 @@ class UploadScheduler(context: Context) {
             .putString(UploadAudioWorker.KEY_CALL_AT, enrichedMetadata.callAtFormatted)
             .putBoolean(UploadAudioWorker.KEY_IS_ANSWERED, enrichedMetadata.isAnswered)
             .apply {
+                if (startedAtMillis != null) {
+                    putLong(UploadAudioWorker.KEY_STARTED_AT_MILLIS, startedAtMillis)
+                }
                 if (effectiveCareType != null) {
                     putInt(UploadAudioWorker.KEY_CARE_TYPE, effectiveCareType)
                 }
