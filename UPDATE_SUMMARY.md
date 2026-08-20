@@ -4,6 +4,25 @@
 
 ---
 
+## 23. 🎯 Khắc Phục Triệt Để Luồng Upload `care_type` & Toàn Diện Hệ Thống Logging
+- **Khắc phục lỗi thiếu trường `care_type` khi upload lên Server ([AuthRepositoryImpl.kt](file:///d:/telesales/data/src/main/java/com/nhakhoaquangninh/telesales/data/repository/AuthRepositoryImpl.kt), [SecureSessionStore.kt](file:///d:/telesales/data/src/main/java/com/nhakhoaquangninh/telesales/data/local/SecureSessionStore.kt), [CallEventCoordinator.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/call/CallEventCoordinator.kt), [UploadScheduler.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/call/UploadScheduler.kt), [AuthDto.kt](file:///d:/telesales/data/src/main/java/com/nhakhoaquangninh/telesales/data/remote/dto/AuthDto.kt)):**
+  - **Nguyên nhân:**
+    1. Khi cuộc gọi kết thúc, `CallEventCoordinator` tạo `CallRecordMetadata` không gán `careType` (mặc định `null`), dẫn đến `UploadScheduler` không đưa `KEY_CARE_TYPE` vào Data của `UploadAudioWorker`.
+    2. Sau khi xác thực OTP thành công, `tokenManager` chưa lưu giá trị `selected_care_type_value` mặc định; `SecureSessionStore.getSelectedCareTypeValue()` trước đây trả về `null` thay vì fallback sang item đầu tiên trong danh sách `careTypeOptions` của session.
+    3. Trong Retrofit `@Multipart`, khi trường `careType` nhận `null`, Retrofit tự động lược bỏ (omit) hoàn toàn `@Part("care_type")` khỏi multipart request body, khiến Server nhận request không có `care_type`.
+  - **Khắc phục:**
+    1. Bổ sung alternate names phong phú cho `CareTypeOptionDto` (`id`, `care_type`, `care_type_id`, `careTypeId`, `type` cho `value`; `name`, `title`, `text`, `description` cho `label`) và hỗ trợ đọc `careTypeOptions` cả từ `VerifyOtpData` lẫn `UserInfoDto`.
+    2. Trong `AuthRepositoryImpl.verifyOtp`, tự động lưu giá trị `selected_care_type_value` ngay khi đăng nhập thành công.
+    3. Trong `SecureSessionStore.getSelectedCareTypeValue()`, bổ sung fallback tự động lấy `value` của option đầu tiên trong `careTypeOptions` nếu chưa có lựa chọn thủ công.
+    4. Trong `CallEventCoordinator.kt`, gán `careType` (từ `TokenManager`) vào `metadata` cho cả cuộc gọi kết nối thành công (`ScheduleUpload`) lẫn cuộc gọi nhỡ/thất bại (`saveFailedCall`).
+    5. Trong `UploadScheduler.kt`, tự động kiểm tra và fallback `careType` từ `TokenManager` trước khi build `inputData` gửi sang `UploadAudioWorker`.
+- **Toàn diện hóa hệ thống Ghi Log cho `care_type` ([UploadAudioWorker.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/UploadAudioWorker.kt), [CallRecordRepositoryImpl.kt](file:///d:/telesales/data/src/main/java/com/nhakhoaquangninh/telesales/data/repository/CallRecordRepositoryImpl.kt)):**
+  - Bổ sung `FileLogger.setCustomKey("call_care_type", ...)` đẩy lên Firebase Crashlytics trong `UploadAudioWorker`.
+  - Đưa `careType` vào Logcat `API_LOG` khi bắt đầu upload file trong Worker và in chi tiết toàn bộ các trường metadata trong `CallRecordRepositoryImpl`.
+  - Bổ sung trường `care_type` vào `customKeys` khi ghi nhận lỗi `API_FAILURE` và `WORKER_REJECTED` / `WORKER_UNAUTHORIZED`.
+
+---
+
 ## 22. ⚡ Tự Động Kích Hoạt Service Khi Vào App & Thiết Kế Lại UI Combobox Loại Chăm Sóc
 - **Luôn tự động kích hoạt Foreground Service ([TelesalesForegroundService.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/TelesalesForegroundService.kt), [MainActivity.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/MainActivity.kt), [MainScreen.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/ui/main/MainScreen.kt), [Navigation.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/Navigation.kt)):**
   - **Vấn đề trước đó:** Khi vào app nếu quyền đã được cấp trước đó hoặc khi chuyển tiếp từ màn OTP sang Main, `startService` chưa được gọi tự động ở một số luồng khiến trạng thái hiển thị "ĐÃ TẮT" và switch bị tắt.

@@ -61,13 +61,14 @@ class AuthRepositoryImpl(
             val token = data?.token
             val user = data?.user
             if (!token.isNullOrEmpty()) {
+                val rawCareOptions = data.careTypeOptions ?: user?.careTypeOptions
                 val session = UserSession(
                     userId = userId,
                     token = token,
                     userName = user?.name,
                     email = user?.email,
                     phoneNumber = user?.phone?.trim()?.takeIf { it.isNotEmpty() },
-                    careTypeOptions = data.careTypeOptions?.map {
+                    careTypeOptions = rawCareOptions?.map {
                         CareTypeOption(
                             value = it.value,
                             label = it.label
@@ -75,6 +76,9 @@ class AuthRepositoryImpl(
                     } ?: emptyList()
                 )
                 tokenManager.saveSession(session)
+                if (session.careTypeOptions.isNotEmpty() && tokenManager.getSelectedCareTypeValue() == null) {
+                    tokenManager.saveSelectedCareTypeValue(session.careTypeOptions.first().value)
+                }
                 FileLogger.setUserId(userId.toString())
                 Resource.Success(data = session, message = baseResp.message)
             } else {

@@ -54,6 +54,7 @@ class UploadAudioWorker(
             FileLogger.setCustomKey("call_type", metadata.callType.wireValue)
             FileLogger.setCustomKey("call_duration", metadata.durationSeconds)
             FileLogger.setCustomKey("call_is_answered", metadata.isAnswered)
+            FileLogger.setCustomKey("call_care_type", metadata.careType ?: -1)
 
             if (isAnswered) {
                 val validation = RecordingUriValidator.validate(applicationContext, recordingUri)
@@ -93,7 +94,7 @@ class UploadAudioWorker(
                 }
             }
 
-            Log.d("API_LOG", "Bắt đầu Upload File (isAnswered=$isAnswered) - Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted}")
+            Log.d("API_LOG", "Bắt đầu Upload File (isAnswered=$isAnswered, careType=${metadata.careType}) - Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted}")
             
             val uploadResource = ServiceLocator.uploadCallRecordUseCase(metadata)
             val decision = UploadWorkPolicy.decide(uploadResource)
@@ -115,7 +116,11 @@ class UploadAudioWorker(
                             context = applicationContext,
                             tag = "WORKER_UNAUTHORIZED",
                             message = "Upload bị từ chối xác thực (HTTP 401): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}",
-                            customKeys = mapOf("http_code" to 401, "server_body" to (uploadResource.rawDetails ?: ""))
+                            customKeys = mapOf(
+                                "http_code" to 401,
+                                "server_body" to (uploadResource.rawDetails ?: ""),
+                                "care_type" to (metadata.careType ?: -1)
+                            )
                         )
                     }
                     UnauthorizedEventBus.notifyUnauthorized()
@@ -130,7 +135,11 @@ class UploadAudioWorker(
                             context = applicationContext,
                             tag = "WORKER_REJECTED",
                             message = "Upload bị Server từ chối (HTTP ${uploadResource.code}): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}",
-                            customKeys = mapOf("http_code" to (uploadResource.code ?: -1), "server_body" to (uploadResource.rawDetails ?: ""))
+                            customKeys = mapOf(
+                                "http_code" to (uploadResource.code ?: -1),
+                                "server_body" to (uploadResource.rawDetails ?: ""),
+                                "care_type" to (metadata.careType ?: -1)
+                            )
                         )
                     }
                     failureReason = "upload_rejected"

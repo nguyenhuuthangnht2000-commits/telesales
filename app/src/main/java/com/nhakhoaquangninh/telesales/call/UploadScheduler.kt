@@ -10,6 +10,7 @@ import androidx.work.WorkManager
 import com.nhakhoaquangninh.telesales.UploadAudioWorker
 import com.nhakhoaquangninh.telesales.data.local.SyncStatus
 import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
+import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
 
 class UploadScheduler(context: Context) {
@@ -19,19 +20,26 @@ class UploadScheduler(context: Context) {
 
     fun enqueue(metadata: CallRecordMetadata) {
         val recordingId = metadata.recordingUri ?: "missed_${System.currentTimeMillis()}"
-        syncStatusManager.setMetadata(recordingId, SyncStatus.PENDING, metadata)
+        val effectiveCareType = metadata.careType
+            ?: TokenManager.getInstance(appContext).getSelectedCareTypeValue()
+        val enrichedMetadata = if (metadata.careType == null && effectiveCareType != null) {
+            metadata.copy(careType = effectiveCareType)
+        } else {
+            metadata
+        }
+        syncStatusManager.setMetadata(recordingId, SyncStatus.PENDING, enrichedMetadata)
         val input = Data.Builder()
-            .putString(UploadAudioWorker.KEY_RECORDING_URI, metadata.recordingUri)
+            .putString(UploadAudioWorker.KEY_RECORDING_URI, enrichedMetadata.recordingUri)
             .putString(UploadAudioWorker.KEY_RECORDING_ID, recordingId)
-            .putString(UploadAudioWorker.KEY_PHONE_FROM, metadata.phoneNumberFrom)
-            .putString(UploadAudioWorker.KEY_PHONE_TO, metadata.phoneNumberTo)
-            .putString(UploadAudioWorker.KEY_CALL_TYPE, metadata.callType.wireValue)
-            .putInt(UploadAudioWorker.KEY_DURATION, metadata.durationSeconds)
-            .putString(UploadAudioWorker.KEY_CALL_AT, metadata.callAtFormatted)
-            .putBoolean(UploadAudioWorker.KEY_IS_ANSWERED, metadata.isAnswered)
+            .putString(UploadAudioWorker.KEY_PHONE_FROM, enrichedMetadata.phoneNumberFrom)
+            .putString(UploadAudioWorker.KEY_PHONE_TO, enrichedMetadata.phoneNumberTo)
+            .putString(UploadAudioWorker.KEY_CALL_TYPE, enrichedMetadata.callType.wireValue)
+            .putInt(UploadAudioWorker.KEY_DURATION, enrichedMetadata.durationSeconds)
+            .putString(UploadAudioWorker.KEY_CALL_AT, enrichedMetadata.callAtFormatted)
+            .putBoolean(UploadAudioWorker.KEY_IS_ANSWERED, enrichedMetadata.isAnswered)
             .apply {
-                if (metadata.careType != null) {
-                    putInt(UploadAudioWorker.KEY_CARE_TYPE, metadata.careType!!)
+                if (effectiveCareType != null) {
+                    putInt(UploadAudioWorker.KEY_CARE_TYPE, effectiveCareType)
                 }
             }
             .build()

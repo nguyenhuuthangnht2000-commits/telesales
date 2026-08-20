@@ -9,6 +9,7 @@ import com.nhakhoaquangninh.telesales.OwnPhoneNumberResolver
 import com.nhakhoaquangninh.telesales.ProcessCallWorker
 import com.nhakhoaquangninh.telesales.data.local.FailedCallEvent
 import com.nhakhoaquangninh.telesales.data.local.FailedCallEventManager
+import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.domain.model.CallMetadataMapper
 import com.nhakhoaquangninh.telesales.domain.model.CallType
 import com.nhakhoaquangninh.telesales.domain.model.FailureReason
@@ -101,6 +102,7 @@ class CallEventCoordinator(
             )
 
             is CallEventDecision.ScheduleUpload -> {
+                val currentCareType = TokenManager.getInstance(appContext).getSelectedCareTypeValue()
                 val metadata = CallMetadataMapper.create(
                     recordingUri = decision.recording.uri,
                     callType = decision.call.callType,
@@ -108,7 +110,8 @@ class CallEventCoordinator(
                     ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
                     durationSeconds = decision.call.durationSeconds,
                     callAtFormatted = formatCallTime(decision.call.startedAtMillis),
-                    isAnswered = true
+                    isAnswered = true,
+                    careType = currentCareType
                 )
                 uploadScheduler.enqueue(metadata)
                 notifier.notifyRecordingQueued()
@@ -181,6 +184,7 @@ class CallEventCoordinator(
         val eventTime = callLog?.startedAtMillis?.takeIf { it > 0L }
             ?: snapshot.startedAtMillis.takeIf { it > 0L }
             ?: System.currentTimeMillis()
+        val currentCareType = TokenManager.getInstance(appContext).getSelectedCareTypeValue()
         val metadata = CallMetadataMapper.create(
             recordingUri = null,
             callType = callType,
@@ -188,7 +192,8 @@ class CallEventCoordinator(
             ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
             durationSeconds = 0,
             callAtFormatted = formatCallTime(eventTime),
-            isAnswered = false
+            isAnswered = false,
+            careType = currentCareType
         )
         val otherPhone = if (callType == CallType.INCOMING) {
             metadata.phoneNumberFrom

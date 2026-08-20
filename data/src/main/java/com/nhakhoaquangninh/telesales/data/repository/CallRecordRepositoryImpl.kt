@@ -83,6 +83,10 @@ class CallRecordRepositoryImpl(
             "UPLOAD_START",
             "Bắt đầu gửi request POST /call-records | careType=$careTypeValue | isAnswered=$isAnsweredString | Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType.wireValue} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted} | File đính kèm: ${if (bodyPart != null) "Có" else "Không (null)"}"
         )
+        android.util.Log.d(
+            "API_LOG",
+            "--> Gửi Multipart POST /call-records | care_type=$careTypeValue | is_answered=$isAnsweredString | from=${metadata.phoneNumberFrom} | to=${metadata.phoneNumberTo} | type=${metadata.callType.wireValue} | duration=${metadata.durationSeconds}s | call_at=${metadata.callAtFormatted} | file=${if (bodyPart != null) "Có" else "Không"}"
+        )
 
         val response = try {
             apiService.uploadCallRecord(
@@ -120,7 +124,8 @@ class CallRecordRepositoryImpl(
                 message = "Upload bị từ chối (HTTP $code) | Chi tiết lỗi Server: $errorBody",
                 customKeys = mapOf(
                     "http_code" to code,
-                    "server_error_body" to (errorBody ?: "")
+                    "server_error_body" to (errorBody ?: ""),
+                    "care_type" to (careTypeValue ?: -1)
                 )
             )
             if (code == 401) {

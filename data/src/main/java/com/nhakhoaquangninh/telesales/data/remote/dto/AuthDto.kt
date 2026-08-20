@@ -29,9 +29,9 @@ data class VerifyOtpData(
 )
 
 data class CareTypeOptionDto(
-    @SerializedName("value")
+    @SerializedName("value", alternate = ["id", "care_type", "careTypeId", "care_type_id", "type"])
     val value: Int,
-    @SerializedName("label")
+    @SerializedName("label", alternate = ["name", "title", "text", "description"])
     val label: String
 )
 
@@ -47,7 +47,9 @@ data class UserInfoDto(
     @SerializedName("department")
     val department: String? = null,
     @SerializedName("branch")
-    val branch: String? = null
+    val branch: String? = null,
+    @SerializedName("careTypeOptions", alternate = ["care_type_options"])
+    val careTypeOptions: List<CareTypeOptionDto>? = null
 )
 
 /**

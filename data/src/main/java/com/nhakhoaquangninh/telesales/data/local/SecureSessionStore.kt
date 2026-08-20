@@ -220,11 +220,11 @@ internal class SecureSessionStore(
     }
 
     fun getSelectedCareTypeValue(): Int? {
-        return if (securePrefs.contains(KEY_SELECTED_CARE_TYPE)) {
-            securePrefs.getInt(KEY_SELECTED_CARE_TYPE, -1).takeIf { it >= 0 }
-        } else {
-            null
+        if (securePrefs.contains(KEY_SELECTED_CARE_TYPE)) {
+            val saved = securePrefs.getInt(KEY_SELECTED_CARE_TYPE, -1)
+            if (saved >= 0) return saved
         }
+        return read()?.careTypeOptions?.firstOrNull()?.value
     }
 
     private companion object {
