@@ -40,6 +40,7 @@ fun MainNavigation() {
                     OtpVerifyScreen(
                         userId = key.userId,
                         onVerifySuccess = {
+                            TelesalesForegroundService.startService(context)
                             backStack.clear()   // Clear auth stack (Login & OtpVerify)
                             backStack.add(Main) // Set Main as root
                         },

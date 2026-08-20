@@ -65,5 +65,14 @@ class TelesalesForegroundService : Service() {
 
         private val _isRunning = MutableStateFlow(false)
         val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
+
+        fun startService(context: android.content.Context) {
+            try {
+                val serviceIntent = Intent(context.applicationContext, TelesalesForegroundService::class.java)
+                androidx.core.content.ContextCompat.startForegroundService(context.applicationContext, serviceIntent)
+            } catch (e: Exception) {
+                android.util.Log.e("TelesalesService", "Không thể khởi chạy Foreground Service: ${e.message}")
+            }
+        }
     }
 }

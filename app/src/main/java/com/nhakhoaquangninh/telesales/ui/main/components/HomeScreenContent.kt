@@ -1,5 +1,11 @@
 package com.nhakhoaquangninh.telesales.ui.main.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,19 +28,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PhoneInTalk
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,10 +56,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import com.nhakhoaquangninh.telesales.R
 import com.nhakhoaquangninh.telesales.domain.model.CareTypeOption
 import com.nhakhoaquangninh.telesales.theme.ActiveEmerald
@@ -63,6 +70,7 @@ import com.nhakhoaquangninh.telesales.theme.OnPrimaryContainer
 import com.nhakhoaquangninh.telesales.theme.OnSecondaryContainer
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceDark
 import com.nhakhoaquangninh.telesales.theme.OnSurfaceVariant
+import com.nhakhoaquangninh.telesales.theme.OutlineColor
 import com.nhakhoaquangninh.telesales.theme.OutlineVariant
 import com.nhakhoaquangninh.telesales.theme.PrimaryContainer
 import com.nhakhoaquangninh.telesales.theme.PrimaryTeal
@@ -181,7 +189,7 @@ fun HomeScreenContent(
             }
         }
 
-        // ── 2. Care Type Selection Card (Combobox / Dropdown) ───────────
+        // ── 2. Care Type Selection Card (Modern Interactive Combobox) ───────────
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(Dimens.CornerRadiusLarge),
@@ -238,98 +246,190 @@ fun HomeScreenContent(
                 )
                 Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
 
-                Box(
-                    modifier = Modifier.fillMaxWidth()
+                // Interactive Trigger Box
+                val chevronRotation by animateFloatAsState(
+                    targetValue = if (isDropdownExpanded) 180f else 0f,
+                    label = "chevron_rotation"
+                )
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(Dimens.CornerRadiusMedium))
+                        .border(
+                            BorderStroke(
+                                if (isDropdownExpanded) Dimens.Space2 else Dimens.BorderThickness,
+                                if (isDropdownExpanded) PrimaryTeal else OutlineVariant.copy(alpha = 0.5f)
+                            ),
+                            shape = RoundedCornerShape(Dimens.CornerRadiusMedium)
+                        )
+                        .clickable { isDropdownExpanded = !isDropdownExpanded },
+                    color = if (isDropdownExpanded) PrimaryTeal.copy(alpha = 0.04f) else SurfaceContainerLow,
+                    shape = RoundedCornerShape(Dimens.CornerRadiusMedium)
                 ) {
-                    Surface(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(Dimens.CornerRadiusMedium))
-                            .border(
-                                BorderStroke(
-                                    Dimens.BorderThickness,
-                                    if (isDropdownExpanded) PrimaryTeal else OutlineVariant.copy(alpha = 0.5f)
-                                ),
-                                shape = RoundedCornerShape(Dimens.CornerRadiusMedium)
-                            )
-                            .clickable { isDropdownExpanded = !isDropdownExpanded },
-                        color = SurfaceContainerLow,
-                        shape = RoundedCornerShape(Dimens.CornerRadiusMedium)
+                            .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.Space12),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.Space14),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        Surface(
+                            shape = CircleShape,
+                            color = if (isDropdownExpanded) PrimaryTeal else PrimaryTeal.copy(alpha = 0.12f),
+                            modifier = Modifier.size(Dimens.Size36)
                         ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.MedicalServices,
+                                    contentDescription = null,
+                                    tint = if (isDropdownExpanded) Color.White else PrimaryTeal,
+                                    modifier = Modifier.size(Dimens.IconSizeMedium)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(Dimens.Space12))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.care_type_current_active),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp
+                                ),
+                                color = PrimaryTeal
+                            )
+                            Spacer(modifier = Modifier.height(Dimens.Space2))
                             Text(
                                 text = selectedCareType?.label ?: stringResource(R.string.care_type_select_hint),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = if (selectedCareType != null) FontWeight.SemiBold else FontWeight.Normal
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
                                 ),
-                                color = if (selectedCareType != null) OnSurfaceDark else OnSurfaceVariant,
+                                color = OnSurfaceDark,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-                            Icon(
-                                imageVector = if (isDropdownExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = null,
-                                tint = if (isDropdownExpanded) PrimaryTeal else OnSurfaceVariant,
-                                modifier = Modifier.size(Dimens.IconSizeMedium)
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
 
-                    DropdownMenu(
-                        expanded = isDropdownExpanded,
-                        onDismissRequest = { isDropdownExpanded = false },
+                        Spacer(modifier = Modifier.width(Dimens.Space8))
+
+                        Surface(
+                            shape = CircleShape,
+                            color = if (isDropdownExpanded) PrimaryTeal.copy(alpha = 0.15f) else Color.Transparent,
+                            modifier = Modifier.size(Dimens.Size32)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = if (isDropdownExpanded) PrimaryTeal else OnSurfaceVariant,
+                                    modifier = Modifier
+                                        .size(Dimens.IconSizeLarge)
+                                        .graphicsLayer { rotationZ = chevronRotation }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Smooth Animated Expandable Dropdown List
+                AnimatedVisibility(
+                    visible = isDropdownExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth(0.9f)
-                            .background(SurfaceLowest)
+                            .fillMaxWidth()
+                            .padding(top = Dimens.Space10),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.Space8)
                     ) {
                         if (careTypeOptions.isEmpty()) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = stringResource(R.string.care_type_empty),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = OnSurfaceVariant
-                                    )
-                                },
-                                onClick = { isDropdownExpanded = false },
-                                enabled = false
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(Dimens.CornerRadiusMedium),
+                                color = SurfaceContainerLow,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.care_type_empty),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = OnSurfaceVariant,
+                                    modifier = Modifier.padding(Dimens.PaddingMedium),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         } else {
                             careTypeOptions.forEach { option ->
                                 val isSelected = option.value == selectedCareType?.value
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = option.label,
-                                            style = MaterialTheme.typography.bodyMedium.copy(
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(Dimens.CornerRadiusMedium))
+                                        .border(
+                                            BorderStroke(
+                                                if (isSelected) Dimens.Space2 else Dimens.BorderThickness,
+                                                if (isSelected) PrimaryTeal else OutlineVariant.copy(alpha = 0.4f)
                                             ),
-                                            color = if (isSelected) PrimaryTeal else OnSurfaceDark
+                                            shape = RoundedCornerShape(Dimens.CornerRadiusMedium)
                                         )
-                                    },
-                                    trailingIcon = if (isSelected) {
-                                        {
+                                        .clickable {
+                                            onCareTypeSelected(option)
+                                            isDropdownExpanded = false
+                                        },
+                                    color = if (isSelected) PrimaryTeal.copy(alpha = 0.08f) else SurfaceLowest,
+                                    shape = RoundedCornerShape(Dimens.CornerRadiusMedium)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(
+                                                horizontal = Dimens.PaddingMedium,
+                                                vertical = Dimens.Space12
+                                            ),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
                                             Icon(
-                                                imageVector = Icons.Default.Check,
+                                                imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                                                 contentDescription = null,
-                                                tint = PrimaryTeal,
-                                                modifier = Modifier.size(Dimens.IconSizeSmall)
+                                                tint = if (isSelected) PrimaryTeal else OutlineColor.copy(alpha = 0.6f),
+                                                modifier = Modifier.size(Dimens.IconSizeMedium)
+                                            )
+                                            Spacer(modifier = Modifier.width(Dimens.Space12))
+                                            Text(
+                                                text = option.label,
+                                                style = MaterialTheme.typography.bodyLarge.copy(
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                                ),
+                                                color = if (isSelected) PrimaryTeal else OnSurfaceDark,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }
-                                    } else null,
-                                    onClick = {
-                                        onCareTypeSelected(option)
-                                        isDropdownExpanded = false
+
+                                        if (isSelected) {
+                                            Surface(
+                                                shape = RoundedCornerShape(Dimens.CornerRadiusSmall),
+                                                color = PrimaryTeal,
+                                                modifier = Modifier.padding(start = Dimens.Space8)
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.care_type_active_badge),
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                    color = Color.White,
+                                                    modifier = Modifier.padding(
+                                                        horizontal = Dimens.Space8,
+                                                        vertical = Dimens.Space2
+                                                    )
+                                                )
+                                            }
+                                        }
                                     }
-                                )
+                                }
                             }
                         }
                     }

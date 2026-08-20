@@ -154,7 +154,7 @@ fun LoginScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
-                        painter = painterResource(id = R.mipmap.ic_launcher_round),
+                        painter = painterResource(id = R.drawable.ic_app_logo),
                         contentDescription = stringResource(R.string.login_dental_icon_desc),
                         modifier = Modifier
                             .size(Dimens.Size72)

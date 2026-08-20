@@ -1,6 +1,49 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# General Attributes & Optimization
+# ─────────────────────────────────────────────────────────────────────────────
 -keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*
+-keepattributes SourceFile,LineNumberTable
 
-# Keep WorkManager Workers & ListenableWorker reflection initialization
+# ─────────────────────────────────────────────────────────────────────────────
+# Kotlinx Serialization & Navigation 3
+# ─────────────────────────────────────────────────────────────────────────────
+-keepclassmembers class * {
+    *** Companion;
+}
+-keepclasseswithmembers class * {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclassmembers class * {
+    @kotlinx.serialization.SerialName <fields>;
+}
+-keep class * implements kotlinx.serialization.KSerializer { *; }
+-keep class *$$serializer { *; }
+-keepclasseswithmembers class * {
+    @kotlinx.serialization.Serializable *;
+}
+-keepclassmembers class * {
+    @kotlinx.serialization.Serializable *;
+    *** Companion;
+}
+-keep class androidx.navigation3.** { *; }
+-keep class * implements androidx.navigation3.runtime.NavKey { *; }
+-keep class com.nhakhoaquangninh.telesales.Login** { *; }
+-keep class com.nhakhoaquangninh.telesales.OtpVerify** { *; }
+-keep class com.nhakhoaquangninh.telesales.Main** { *; }
+-keep class com.nhakhoaquangninh.telesales.NavigationKeysKt** { *; }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Room Database
+# ─────────────────────────────────────────────────────────────────────────────
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep class com.nhakhoaquangninh.telesales.data.local.room.** { *; }
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Dao interface * { *; }
+-dontwarn androidx.room.paging.**
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WorkManager Workers
+# ─────────────────────────────────────────────────────────────────────────────
 -keep class * extends androidx.work.ListenableWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
@@ -12,37 +55,33 @@
 -keep class com.nhakhoaquangninh.telesales.UploadAudioWorker { *; }
 -keep class com.nhakhoaquangninh.telesales.ProcessCallWorker { *; }
 
-# Keep Retrofit & OkHttp
+# ─────────────────────────────────────────────────────────────────────────────
+# Retrofit, OkHttp & Gson
+# ─────────────────────────────────────────────────────────────────────────────
 -dontwarn retrofit2.**
 -keep class retrofit2.** { *; }
 -keepclasseswithmembers class * {
     @retrofit2.http.* <methods>;
 }
-
-# Keep Gson SerializedName fields
+-keep class com.google.gson.** { *; }
 -keepclassmembers class * {
     @com.google.gson.annotations.SerializedName <fields>;
 }
 
-# Keep Network API Service & DTOs
+# ─────────────────────────────────────────────────────────────────────────────
+# Data, Remote DTOs, Local Stores & Domain Models
+# ─────────────────────────────────────────────────────────────────────────────
 -keep interface com.nhakhoaquangninh.telesales.data.remote.ApiService { *; }
 -keep class com.nhakhoaquangninh.telesales.data.remote.dto.** { *; }
-
-# Keep Upload components & Repositories
+-keep class com.nhakhoaquangninh.telesales.data.local.** { *; }
+-keep class com.nhakhoaquangninh.telesales.data.repository.** { *; }
+-keep class com.nhakhoaquangninh.telesales.domain.model.** { *; }
 -keep class com.nhakhoaquangninh.telesales.call.** { *; }
 -keep class com.nhakhoaquangninh.telesales.UploadWorkPolicy** { *; }
--keep class com.nhakhoaquangninh.telesales.data.repository.CallRecordRepositoryImpl** { *; }
 
-# Giữ lại các data class / object phục vụ cho Navigation
--keep class com.nhakhoaquangninh.telesales.Login** { *; }
--keep class com.nhakhoaquangninh.telesales.OtpVerify** { *; }
--keep class com.nhakhoaquangninh.telesales.Main** { *; }
--keep class com.nhakhoaquangninh.telesales.NavigationKeysKt** { *; }
--keep,allowobfuscation,allowshrinking @kotlinx.serialization.Serializable class *
--keepclassmembers class * {
-    @kotlinx.serialization.Serializable *;
-}
-
-# Giữ lại các model trong domain tránh lỗi JSON Parser khi bị rút gọn
--keep class com.nhakhoaquangninh.telesales.domain.model.** { *; }
--keep class * extends androidx.room.RoomDatabase { void <init>(); }
+# ─────────────────────────────────────────────────────────────────────────────
+# Coroutines & Exceptions
+# ─────────────────────────────────────────────────────────────────────────────
+-dontwarn kotlinx.coroutines.**
+-keep public class * extends java.lang.Exception
+-keep class com.nhakhoaquangninh.telesales.core.TelesalesNonFatalException { *; }

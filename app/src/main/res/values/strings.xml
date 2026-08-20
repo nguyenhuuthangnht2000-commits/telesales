@@ -37,6 +37,8 @@
     <string name="care_type_select_hint">Chọn loại chăm sóc</string>
     <string name="care_type_empty">Chưa có danh sách loại chăm sóc</string>
     <string name="care_type_options_count">%d lựa chọn</string>
+    <string name="care_type_current_active">LOẠI HÌNH ĐANG CHỌN</string>
+    <string name="care_type_active_badge">Đang áp dụng</string>
 
     <!-- History Screen Strings -->
     <string name="history_title">Lịch sử cuộc gọi</string>
@@ -174,6 +176,7 @@
     <string name="home_service_start_success">Đã kích hoạt dịch vụ ghi âm cuộc gọi.</string>
     <string name="prompt_enable_call_recording">Vui lòng BẬT \'Tự động ghi âm cuộc gọi\' trong cài đặt cuộc gọi để ghi nhận cuộc gọi telesales!</string>
     <string name="perm_all_granted_starting_service">Đã cấp đủ quyền hệ thống.</string>
+    <string name="perm_missing_warning">Vui lòng cấp đủ các quyền đọc trạng thái cuộc gọi, thông báo &amp; bộ nhớ để ứng dụng hoạt động!</string>
     <!-- Log Viewer & Share Strings -->
     <string name="settings_view_log_btn">Xem nhật ký lỗi (Log)</string>
     <string name="settings_view_log_desc">Kiểm tra chi tiết lỗi upload &amp; kết nối máy chủ</string>

@@ -4,6 +4,39 @@
 
 ---
 
+## 22. ⚡ Tự Động Kích Hoạt Service Khi Vào App & Thiết Kế Lại UI Combobox Loại Chăm Sóc
+- **Luôn tự động kích hoạt Foreground Service ([TelesalesForegroundService.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/TelesalesForegroundService.kt), [MainActivity.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/MainActivity.kt), [MainScreen.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/ui/main/MainScreen.kt), [Navigation.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/Navigation.kt)):**
+  - **Vấn đề trước đó:** Khi vào app nếu quyền đã được cấp trước đó hoặc khi chuyển tiếp từ màn OTP sang Main, `startService` chưa được gọi tự động ở một số luồng khiến trạng thái hiển thị "ĐÃ TẮT" và switch bị tắt.
+  - **Khắc phục:** Bổ sung phương thức `TelesalesForegroundService.startService(context)` và kích hoạt đồng bộ ở tất cả các điểm khởi đầu: `MainActivity.onCreate` (khi quyền đã có), `MainActivity.onResume`, `MainScreen.LaunchedEffect(Unit)`, và `OtpVerifyScreen.onVerifySuccess`. Dịch vụ luôn ở trạng thái **HOẠT ĐỘNG (ACTIVE)** và sẵn sàng ghi nhận cuộc gọi GSM ngay khi nhân viên mở app.
+- **Thiết kế lại toàn diện UI Combobox / Dropdown Loại hình chăm sóc ([HomeScreenContent.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/ui/main/components/HomeScreenContent.kt)):**
+  - **Nâng cấp giao diện:** Thay thế `DropdownMenu` dạng popup nổi thô sơ trước đây bằng cơ chế **Accordion Expandable Selector** tích hợp mượt mà ngay trong thẻ Thao tác:
+    - **Trigger Card:** Hiển thị nhãn `"LOẠI HÌNH ĐANG CHỌN"`, tên loại chăm sóc nổi bật với font đậm, icon chuyên ngành nha khoa và mũi tên xoay 180° sinh động (`animateFloatAsState`).
+    - **Danh sách mở rộng (`AnimatedVisibility`):** Hiển thị danh sách thẻ lựa chọn bo góc tròn (`Space12`), phân định rõ ràng giữa mục đang chọn (viền Teal, nền `PrimaryTeal` 8% mờ, icon `CheckCircle`, gắn nhãn `"Đang áp dụng"`) và các mục khác (`RadioButtonUnchecked`, viền xám tinh tế).
+    - Khắc phục hoàn toàn hiện tượng lệch lề, tràn màn hình hoặc bị che khuất của dropdown menu cũ trên các thiết bị di động.
+- **Cấu hình định danh Release Build `NK_QuocTe` & Nâng Version ([build.gradle.kts](file:///d:/telesales/app/build.gradle.kts)):**
+  - Nâng `versionCode = 6` và `versionName = "1.5"`.
+  - Cấu hình `setProperty("archivesBaseName", "NK_QuocTe")` trong `defaultConfig` của `:app`, đảm bảo khi build release APK sẽ tự động sinh file `NK_QuocTe-release.apk` có chữ ký điện tử (`release-key.keystore`).
+
+---
+
+## 21. 🛠️ Khắc Phục Lỗi Mở Setting Quyền Đè Lên App Khi Khởi Động & Sửa Lỗi Crash Trên Bản Release
+- **Khắc phục lỗi tự động mở Setting "Cấp quyền xuất hiện trên cùng" làm che mất App ([MainActivity.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/MainActivity.kt)):**
+  - **Nguyên nhân:** Trong `MainActivity.kt` ở hàm `onResume()`, app gọi `checkNextPermissionsAndNavigate()` tự động kiểm tra `Settings.canDrawOverlays(this)` (quyền Vẽ trên ứng dụng khác / Hiển thị trên cùng / Overlay). Vì ứng dụng đã loại bỏ màn hình cảnh báo `WarningActivity` và không còn khai báo quyền `SYSTEM_ALERT_WINDOW`, hàm này luôn trả về `false` và tự động bắn `Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)` đè lên ứng dụng ngay khi vừa mở app, gây vòng lặp vô tận khiến người dùng không nhìn thấy giao diện app.
+  - **Khắc phục:** Loại bỏ hoàn toàn mã kiểm tra quyền overlay và tự động mở dialer settings trong `onResume()`. Ứng dụng chỉ khởi chạy `TelesalesForegroundService` một cách êm ái khi đã đăng nhập và được cấp các quyền runtime cần thiết (`READ_PHONE_STATE`, `READ_CALL_LOG`).
+  - Chuẩn hóa toàn bộ chuỗi thông báo sang `strings.xml` (`perm_missing_warning`).
+- **Khắc phục lỗi Crash trên bản Release Build do R8 / ProGuard ([proguard-rules.pro](file:///d:/telesales/app/proguard-rules.pro)):**
+  - **Nguyên nhân:** Trên bản Release (`isMinifyEnabled = true`), cấu hình cũ có dòng `-keep,allowobfuscation,allowshrinking @kotlinx.serialization.Serializable class *` khiến R8 xóa bỏ/thu gọn các lớp serializer nội bộ được sinh tự động (`Login$$serializer`, `OtpVerify$$serializer`, `Main$$serializer`) và các hàm `Companion.serializer()` của các `NavKey` Navigation 3. Khi `rememberNavBackStack` khởi chạy để lưu/khôi phục trạng thái điều hướng, `kotlinx.serialization` ném `SerializationException` dẫn đến Crash ngay khi khởi động app trên bản release.
+  - Ngoài ra, thiếu các quy tắc keep đầy đủ cho Room Database (`TelesalesDatabase_Impl`, DAO, Entity) và các Exception tuỳ biến (`TelesalesNonFatalException`).
+  - **Khắc phục:** Bổ sung bộ quy tắc ProGuard / R8 chuẩn, toàn diện cho:
+    1. **Kotlinx Serialization & Navigation 3:** Giữ lại các serializer (`KSerializer`, `*$$serializer`), companion methods, `@Serializable`, `androidx.navigation3.**` và các class kế thừa `NavKey`.
+    2. **Room Database:** Giữ lại `androidx.room.RoomDatabase`, `@Entity`, `@Dao` và package `com.nhakhoaquangninh.telesales.data.local.room.**`.
+    3. **Crashlytics & Exceptions:** Giữ lại `TelesalesNonFatalException`, `LineNumberTable`, `SourceFile` để hỗ trợ tra cứu stacktrace.
+- **Khắc phục lỗi Crash `IllegalArgumentException: Only VectorDrawables and rasterized asset types are supported` ([LoginScreen.kt](file:///d:/telesales/app/src/main/java/com/nhakhoaquangninh/telesales/ui/auth/LoginScreen.kt)):**
+  - **Nguyên nhân:** Trong `LoginScreen.kt`, hàm `painterResource(id = R.mipmap.ic_launcher_round)` được dùng để hiển thị logo. Trên Android 8.0+ (API 26+), `R.mipmap.ic_launcher_round` được hệ thống phân giải thành XML `<adaptive-icon>` trong `mipmap-anydpi-v26/ic_launcher_round.xml`. Jetpack Compose chỉ hỗ trợ `VectorDrawable` (`<vector>`) và raster assets (`PNG`, `JPG`, `WEBP`), do đó ném ra ngoại lệ `IllegalArgumentException` làm ứng dụng crash ngay khi mở màn hình đăng nhập.
+  - **Khắc phục:** Tạo tài nguyên ảnh `res/drawable/ic_app_logo.png` và cập nhật `LoginScreen.kt` sử dụng `painterResource(id = R.drawable.ic_app_logo)`, đảm bảo tương thích 100% với Jetpack Compose trên mọi phiên bản Android.
+
+---
+
 ## 7. 🛡️ Loại Bỏ Hoàn Toàn Màn Hình WarningActivity & Chuyển Sang Lưu Cache + Tự Động Upload Lại
 - **Loại bỏ Màn hình Cảnh báo ([WarningActivity.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/WarningActivity.kt) & [AndroidManifest.xml](file:///d:/New%20folder/TelesalesApp/app/src/main/AndroidManifest.xml)):**
   - Xóa bỏ hoàn toàn tệp `WarningActivity.kt` và thẻ `<activity android:name=".WarningActivity" .../>` trong AndroidManifest.

@@ -246,6 +246,7 @@ fun MainScreen(
     }
 
     LaunchedEffect(Unit) {
+        TelesalesForegroundService.startService(context)
         viewModel.loadFiles(context)
     }
 

@@ -34,6 +34,10 @@ tasks.matching { it.name == "preReleaseBuild" }.configureEach {
     dependsOn(verifyReleaseApiKey)
 }
 
+base {
+    archivesName.set("NK_QuocTe")
+}
+
 android {
     namespace = "com.nhakhoaquangninh.telesales"
     compileSdk = 36
@@ -41,8 +45,8 @@ android {
         applicationId = "com.nhakhoaquangninh.telesales"
         minSdk = 28
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
     }
 
     signingConfigs {
