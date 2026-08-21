@@ -64,7 +64,15 @@ class CallEventCoordinator(
 
     suspend fun process(snapshot: CallSessionSnapshot, missedIncoming: Boolean) {
         val callLog = awaitCallLog(snapshot, missedIncoming)
+        val otherPhoneNumberRaw = snapshot.otherPhoneNumber ?: callLog?.phoneNumber
+        val otherPhoneNumberNormalized = PhoneNumberNormalizer.normalize(otherPhoneNumberRaw)
+
         if (missedIncoming) {
+            com.nhakhoaquangninh.telesales.core.FileLogger.log(
+                appContext,
+                "CALL_COORDINATOR",
+                "Kết thúc xử lý cuộc gọi nhỡ đến (SĐT: $otherPhoneNumberNormalized, Chiều: ĐẾN, Thời lượng CallLog: 0s, Match: null) -> Quyết định: SaveNotConnected(MISSED)"
+            )
             saveFailedCall(
                 snapshot = snapshot,
                 callLog = callLog,
@@ -90,7 +98,7 @@ class CallEventCoordinator(
         com.nhakhoaquangninh.telesales.core.FileLogger.log(
             appContext,
             "CALL_COORDINATOR",
-            "Kết thúc xử lý cuộc gọi (SĐT: ${snapshot.otherPhoneNumber ?: callLog?.phoneNumber}, Chiều: ${if (snapshot.incoming) "ĐẾN" else "ĐI"}, Thời lượng CallLog: ${callLog?.durationSeconds ?: 0}s, Match: $match) -> Quyết định: $decision"
+            "Kết thúc xử lý cuộc gọi (SĐT: $otherPhoneNumberNormalized, Chiều: ${if (snapshot.incoming) "ĐẾN" else "ĐI"}, Thời lượng CallLog: ${callLog?.durationSeconds ?: 0}s, Match: $match) -> Quyết định: $decision"
         )
 
         when (decision) {
@@ -106,7 +114,7 @@ class CallEventCoordinator(
                 val metadata = CallMetadataMapper.create(
                     recordingUri = decision.recording.uri,
                     callType = decision.call.callType,
-                    otherPhoneNumber = decision.call.phoneNumber ?: snapshot.otherPhoneNumber,
+                    otherPhoneNumber = otherPhoneNumberNormalized,
                     ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
                     durationSeconds = decision.call.durationSeconds,
                     callAtFormatted = formatCallTime(decision.call.startedAtMillis),
@@ -185,10 +193,12 @@ class CallEventCoordinator(
             ?: snapshot.startedAtMillis.takeIf { it > 0L }
             ?: System.currentTimeMillis()
         val currentCareType = TokenManager.getInstance(appContext).getSelectedCareTypeValue()
+        val rawOtherPhone = callLog?.phoneNumber ?: snapshot.otherPhoneNumber
+        val normalizedOtherPhone = PhoneNumberNormalizer.normalize(rawOtherPhone)
         val metadata = CallMetadataMapper.create(
             recordingUri = null,
             callType = callType,
-            otherPhoneNumber = callLog?.phoneNumber ?: snapshot.otherPhoneNumber,
+            otherPhoneNumber = normalizedOtherPhone,
             ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
             durationSeconds = 0,
             callAtFormatted = formatCallTime(eventTime),

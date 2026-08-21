@@ -25,5 +25,14 @@ object CallMetadataMapper {
         )
     }
 
-    private fun String?.normalizePhoneNumber(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
+    private fun String?.normalizePhoneNumber(): String? {
+        if (this.isNullOrBlank()) return null
+        var cleaned = this.trim().replace(Regex("[\\s\\-\\.\\(\\)]"), "")
+        if (cleaned.startsWith("+84")) {
+            cleaned = "0" + cleaned.substring(3)
+        } else if (cleaned.startsWith("84") && cleaned.length >= 11) {
+            cleaned = "0" + cleaned.substring(2)
+        }
+        return cleaned.takeIf { it.isNotEmpty() }
+    }
 }

@@ -37,10 +37,12 @@ class UploadAudioWorker(
         val callType = CallType.fromWire(inputData.getString(KEY_CALL_TYPE))
         val duration = inputData.getInt(KEY_DURATION, 0)
         val careType = inputData.getInt(KEY_CARE_TYPE, -1).takeIf { it >= 0 }
+        val rawPhoneFrom = inputData.getString(KEY_PHONE_FROM)
+        val rawPhoneTo = inputData.getString(KEY_PHONE_TO)
         val metadata = CallRecordMetadata(
             recordingUri = if (isAnswered) (recordingUri ?: "") else recordingUri,
-            phoneNumberFrom = inputData.getString(KEY_PHONE_FROM),
-            phoneNumberTo = inputData.getString(KEY_PHONE_TO),
+            phoneNumberFrom = com.nhakhoaquangninh.telesales.call.PhoneNumberNormalizer.normalize(rawPhoneFrom) ?: rawPhoneFrom,
+            phoneNumberTo = com.nhakhoaquangninh.telesales.call.PhoneNumberNormalizer.normalize(rawPhoneTo) ?: rawPhoneTo,
             callType = callType ?: CallType.OUTGOING,
             durationSeconds = duration,
             callAtFormatted = inputData.getString(KEY_CALL_AT),

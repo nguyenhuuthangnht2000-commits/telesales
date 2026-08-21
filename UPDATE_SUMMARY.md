@@ -533,6 +533,21 @@
     1. Trong `SettingsViewModel.kt`, bổ sung `requestClearLogOtp(userId)` (gọi `requestOtpUseCase`) và `verifyClearLogOtp(userId, context)` (gọi `verifyOtpUseCase` -> `FileLogger.clearLog(context)`) được quản lý bằng `launchSafe`.
     2. Trong `SettingsScreenContent.kt`, bổ sung hàng tùy chọn "Xóa nhật ký lỗi" mang biểu tượng thùng rác trong nhóm Cài đặt & Hỗ trợ, đồng thời nâng cấp nút "Xóa log" trong Dialog Xem Log để kích hoạt luồng OTP.
     3. Thiết kế 2 Dialog chuẩn Material 3: Dialog Xác nhận gửi OTP và Dialog nhập mã OTP 6 chữ số (`OtpSixDigitInput`) với đầy đủ loading, validate số và thông báo Toast thành công.
-    4. Nâng dung lượng lưu trữ log cục bộ tối đa lên **10MB** (`FileLogger.MAX_LOG_SIZE_BYTES = 10MB`), lưu được ~20.000 cuộc gọi (~5 đến 6 tháng làm việc liên tục) và tối ưu phân đoạn hiển thị trên giao diện người dùng.
+## 46. 🚀 Tối Ưu Hóa & Chuẩn Hóa Dữ Liệu Cuộc Gọi Từ Phân Tích Log Chẩn Đoán (Log Audit & Normalization Fixes)
+- **Kiểm toán & Đánh giá Log Hệ thống ([1.md](file:///d:/New%20folder/TelesalesApp/1.md), [2.md](file:///d:/New%20folder/TelesalesApp/2.md), [3.md](file:///d:/New%20folder/TelesalesApp/3.md)):**
+  - Đã phân tích 275 cuộc gọi trên 3 thiết bị telesales (`user_id = 370`, `641`, `655`).
+  - Tỷ lệ upload API thành công đạt **100% (275/275 cuộc, HTTP 201 Created)**, không phát sinh crash hoặc lỗi mạng 4xx/5xx.
+  - Tỷ lệ quét khớp file ghi âm đạt **100% (159/159 cuộc có đàm thoại)** ngay tại lần quét đầu tiên với độ tin cậy `STRONG`.
+- **Chuẩn Hóa Số Điện Thoại Nâng Cao ([PhoneNumberNormalizer.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/call/PhoneNumberNormalizer.kt) & [CallMetadataMapper.kt](file:///d:/New%20folder/TelesalesApp/domain/src/main/java/com/nhakhoaquangninh/telesales/domain/model/CallMetadataMapper.kt)):**
+  - Tự động lọc bỏ các ký tự phân cách rác (khoảng trắng, dấu chấm, dấu gạch nối, dấu ngoặc).
+  - Tự động chuyển đổi tiền tố quốc tế `+84` và `84` về đầu số `0` chuẩn của mạng viễn thông Việt Nam, giúp Server Backend CRM dễ dàng đối soát khớp hồ sơ bệnh nhân (`id_bndl`), giảm thiểu tình trạng `id_bndl: null`.
+  - Cung cấp các hàm kiểm tra tính hợp lệ `isValid()` và `isLikelyIncomplete()` để phát hiện các số điện thoại bấm thiếu số.
+- **Đồng Bộ Log Chẩn Đoán Cuộc Gọi Đến Nhỡ ([CallEventCoordinator.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/call/CallEventCoordinator.kt)):**
+  - Bổ sung lệnh ghi log `[CALL_COORDINATOR]` cho nhánh `missedIncoming`, đảm bảo 100% cuộc gọi (cả đến, đi, đàm thoại và nhỡ) đều có nhật ký chẩn đoán thống nhất trước khi đẩy lên hàng đợi `UploadScheduler`.
+  - Chuẩn hóa số điện thoại trong cả luồng cuộc gọi thành công và cuộc gọi nhỡ/thất bại.
+- **Nâng Cấp Phiên Bản Ứng Dụng lên v1.7 (versionCode 8) ([build.gradle.kts](file:///d:/New%20folder/TelesalesApp/app/build.gradle.kts)):**
+  - Cập nhật `versionCode = 8` và `versionName = "1.7"` đóng gói bản phát hành mới tối ưu hóa xử lý cuộc gọi và chuẩn hóa dữ liệu.
+
+*Cập nhật lần cuối: 21/08/2026 23:15 bởi Antigravity AI Pair Programmer.*
 
 ---
