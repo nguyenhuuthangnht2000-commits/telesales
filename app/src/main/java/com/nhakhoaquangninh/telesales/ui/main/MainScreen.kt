@@ -421,11 +421,15 @@ fun MainScreen(
         ) {
             when (selectedTab) {
                 0 -> {
+                    val syncedCount = audioFiles.count { it.status == SyncStatus.SYNCED }
+                    val pendingCount = audioFiles.count { it.status == SyncStatus.PENDING || it.status == SyncStatus.FAILED || it.status == SyncStatus.NEEDS_REVIEW }
+                    val totalCount = audioFiles.size + failedCallEvents.size
+
                     HomeScreenContent(
                         isServiceRunning = isServiceRunning,
-                        totalCallsToday = audioFiles.size,
-                        syncedCalls = 0,
-                        pendingCalls = audioFiles.size,
+                        totalCallsToday = totalCount,
+                        syncedCalls = syncedCount,
+                        pendingCalls = pendingCount,
                         careTypeOptions = careTypeOptions,
                         selectedCareType = selectedCareType,
                         onCareTypeSelected = { option ->

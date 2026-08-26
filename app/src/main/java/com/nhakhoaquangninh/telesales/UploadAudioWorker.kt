@@ -25,10 +25,7 @@ class UploadAudioWorker(
         val recordingUri = inputData.getString(KEY_RECORDING_URI)
         val recordingId = inputData.getString(KEY_RECORDING_ID)
             ?: recordingUri
-            ?: (if (!isAnswered) "missed_${System.currentTimeMillis()}" else {
-                FileLogger.log(applicationContext, "WORKER_ERROR", "Thiếu ID hoặc URI ghi âm khi bắt đầu worker.")
-                return Result.failure()
-            })
+            ?: "call_${System.currentTimeMillis()}"
         val syncStatusManager = SyncStatusManager.getInstance(applicationContext)
         var terminalStatus = SyncStatus.FAILED
         var failureReason: String? = null
@@ -40,7 +37,7 @@ class UploadAudioWorker(
         val rawPhoneFrom = inputData.getString(KEY_PHONE_FROM)
         val rawPhoneTo = inputData.getString(KEY_PHONE_TO)
         val metadata = CallRecordMetadata(
-            recordingUri = if (isAnswered) (recordingUri ?: "") else recordingUri,
+            recordingUri = recordingUri,
             phoneNumberFrom = com.nhakhoaquangninh.telesales.call.PhoneNumberNormalizer.normalize(rawPhoneFrom) ?: rawPhoneFrom,
             phoneNumberTo = com.nhakhoaquangninh.telesales.call.PhoneNumberNormalizer.normalize(rawPhoneTo) ?: rawPhoneTo,
             callType = callType ?: CallType.OUTGOING,

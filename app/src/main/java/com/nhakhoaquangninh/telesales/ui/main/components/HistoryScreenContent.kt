@@ -249,10 +249,10 @@ private fun FailedCallCard(
     val isIncoming = event.callType == CallType.INCOMING
     val displayPhone = (if (isIncoming) event.phoneNumberFrom else event.phoneNumberTo)
         ?: stringResource(R.string.history_unknown_phone)
-    val statusText = if (event.failureReason == FailureReason.MISSED) {
-        stringResource(R.string.history_missed_call)
-    } else {
-        stringResource(R.string.history_call_not_connected)
+    val statusText = when {
+        event.failureReason == FailureReason.MISSED -> stringResource(R.string.history_missed_call)
+        event.failureReason == FailureReason.NO_RECORDING || event.durationSeconds > 0 -> stringResource(R.string.history_no_recording)
+        else -> stringResource(R.string.history_call_not_connected)
     }
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
 
@@ -295,8 +295,16 @@ private fun FailedCallCard(
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = OnSurfaceDark
                         )
+                        val formattedDate = dateFormatter.format(Date(event.callAtMillis))
+                        val durationInfo = if (event.durationSeconds > 0) {
+                            val m = event.durationSeconds / 60
+                            val s = event.durationSeconds % 60
+                            String.format(Locale.US, " • %02d:%02d", m, s)
+                        } else {
+                            ""
+                        }
                         Text(
-                            text = dateFormatter.format(Date(event.callAtMillis)),
+                            text = "$formattedDate$durationInfo",
                             style = MaterialTheme.typography.bodySmall,
                             color = OnSurfaceVariant
                         )

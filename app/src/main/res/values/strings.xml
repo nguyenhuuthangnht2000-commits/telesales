@@ -50,6 +50,7 @@
     <string name="manual_sync_all">Đồng bộ tất cả</string>
     <string name="history_call_not_connected">Cuộc gọi không kết nối</string>
     <string name="history_missed_call">Cuộc gọi nhỡ</string>
+    <string name="history_no_recording">Đã đàm thoại (Thiếu ghi âm)</string>
     <string name="history_delete_failed_call">Xóa lịch sử cuộc gọi</string>
     <string name="history_unknown_phone">Không xác định được số</string>
     <string name="history_empty_icon">📦</string>

@@ -548,6 +548,26 @@
 - **Nâng Cấp Phiên Bản Ứng Dụng lên v1.7 (versionCode 8) ([build.gradle.kts](file:///d:/New%20folder/TelesalesApp/app/build.gradle.kts)):**
   - Cập nhật `versionCode = 8` và `versionName = "1.7"` đóng gói bản phát hành mới tối ưu hóa xử lý cuộc gọi và chuẩn hóa dữ liệu.
 
-*Cập nhật lần cuối: 21/08/2026 23:15 bởi Antigravity AI Pair Programmer.*
+## 47. 🛡️ Khắc Phục Lỗi Reset Thời Lượng Cuộc Gọi Về 0s Khi Không Có File Ghi Âm & Mở Rộng Quét Thư Mục OEM
+- **Bảo Toàn Thời Lượng Thực Tế Khi Không Tìm Thấy File Ghi Âm (Zero Data Loss) ([CallEventCoordinator.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/call/CallEventCoordinator.kt)):**
+  - **Nguyên nhân sự cố từ log audit ([1.md](file:///d:/New%20folder/TelesalesApp/1.md) & [2.md](file:///d:/New%20folder/TelesalesApp/2.md)):** Khi thiết bị nhân viên chưa bật tính năng tự động ghi âm cuộc gọi trên máy hoặc thiếu quyền đọc tệp âm thanh, `RecordingLocator` trả về `Match: NotFound`. Hàm `saveFailedCall()` trước đó bị hardcode `durationSeconds = 0` và `isAnswered = false`, dẫn đến việc đẩy lên Server toàn bộ các cuộc gọi đàm thoại (dù nói chuyện 98s, 148s, 232s) thành "Cuộc gọi không kết nối / 0s", làm sai lệch thống kê KPI của nhân viên trên CRM.
+  - **Khắc phục:**
+    1. Trong `saveFailedCall()`, trích xuất chính xác thời lượng thực tế từ `callLog?.durationSeconds?.coerceAtLeast(0) ?: 0`.
+    2. Đặt `isAnswered = durationSeconds > 0`.
+    3. Phân loại `failureReason`: Nếu cuộc gọi nhỡ -> `FailureReason.MISSED`, nếu cuộc gọi không nghe máy -> `FailureReason.NOT_CONNECTED`, nếu có đàm thoại nhưng thiếu file âm thanh -> `FailureReason.NO_RECORDING`.
+    4. Server CRM nhận đúng thời lượng thực tế (`duration > 0`), `is_answered: true`, và `recording_file: null` mà không làm mất lịch sử cuộc gọi.
+- **Bổ Sung Enum `FailureReason.NO_RECORDING` & Cập Nhật Giao Diện Lịch Sử ([CallTypes.kt](file:///d:/New%20folder/TelesalesApp/domain/src/main/java/com/nhakhoaquangninh/telesales/domain/model/CallTypes.kt), [HistoryScreenContent.kt](file:///d:/New%20folder/TelesalesApp/app/src/main/java/com/nhakhoaquangninh/telesales/ui/main/components/HistoryScreenContent.kt), [strings.xml](file:///d:/New%20folder/TelesalesApp/app/src/main/res/values/strings.xml)):**
+  - Khai báo giá trị `NO_RECORDING("no_recording")` trong enum `FailureReason`.
+  - Trên giao diện `HistoryScreenContent`, hiển thị nhãn trạng thái "Đã đàm thoại (Thiếu ghi âm)" kèm thời lượng cuộc gọi (`mm:ss`) trong `FailedCallCard`.
+- **Sửa Lỗi Chặn Upload Null Recording Trong UseCase ([UploadCallRecordUseCase.kt](file:///d:/New%20folder/TelesalesApp/domain/src/main/java/com/nhakhoaquangninh/telesales/domain/usecase/UploadCallRecordUseCase.kt)):**
+  - Trước đây: `UploadCallRecordUseCase` yêu cầu `metadata.recordingUri != null && startsWith("content://")` khi `isAnswered = true`. Điều này vô tình chặn mọi request fallback (Zero Data Loss) và đẩy ra lỗi `APP_CLIENT`.
+  - Khắc phục: Cho phép `recordingUri` là `null` (chỉ validate URI nếu có chuỗi đường dẫn), giúp toàn bộ luồng fallback metadata tự động đi qua Repository và gửi lên máy chủ thành công.
+- **Mở Rộng Nhận Diện Thư Mục Ghi Âm Cuộc Gọi OEM ([RecordingMatch.kt](file:///d:/New%20folder/TelesalesApp/domain/src/main/java/com/nhakhoaquangninh/telesales/domain/model/RecordingMatch.kt)):**
+  - Mở rộng `approvedPathMarkers` bổ sung thêm các đường dẫn ghi âm phổ biến của các dòng máy Xiaomi, Vivo, Oppo, Realme, Samsung (như `sound_recorder/`, `recorder/call/`, `music/recordings/`, `sounds/callrecorder/`, `sounds/callrec/`, `voice/`, v.v.).
+- **Nâng Cấp Phiên Bản Ứng Dụng lên v1.8 (versionCode 9) ([build.gradle.kts](file:///d:/New%20folder/TelesalesApp/app/build.gradle.kts)):**
+  - Cập nhật `versionCode = 9` và `versionName = "1.8"` đóng gói bản phát hành bảo toàn thời lượng cuộc gọi (Zero Data Loss), mở rộng quét thư mục OEM và sửa logic UseCase / Worker.
+
+*Cập nhật lần cuối: 26/08/2026 22:15 bởi Antigravity AI Pair Programmer.*
 
 ---
+

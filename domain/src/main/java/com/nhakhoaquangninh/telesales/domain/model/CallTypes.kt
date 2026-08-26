@@ -12,7 +12,8 @@ enum class CallType(val wireValue: String) {
 
 enum class FailureReason(val wireValue: String) {
     MISSED("missed"),
-    NOT_CONNECTED("not_connected");
+    NOT_CONNECTED("not_connected"),
+    NO_RECORDING("no_recording");
 
     companion object {
         fun fromWire(value: String?): FailureReason? =

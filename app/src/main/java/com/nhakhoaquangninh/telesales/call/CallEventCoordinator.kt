@@ -126,21 +126,31 @@ class CallEventCoordinator(
             }
 
             is CallEventDecision.NeedsReview -> {
+                val reason = if (callLog != null && callLog.durationSeconds > 0) {
+                    FailureReason.NO_RECORDING
+                } else {
+                    FailureReason.NOT_CONNECTED
+                }
                 saveFailedCall(
                     snapshot = snapshot,
                     callLog = callLog,
                     callType = callLog?.callType ?: if (snapshot.incoming) CallType.INCOMING else CallType.OUTGOING,
-                    failureReason = FailureReason.NOT_CONNECTED
+                    failureReason = reason
                 )
                 notifier.notifyNeedsReview()
             }
             CallEventDecision.RecordingNotFound,
             CallEventDecision.RetryCallLog -> {
+                val reason = if (callLog != null && callLog.durationSeconds > 0) {
+                    FailureReason.NO_RECORDING
+                } else {
+                    FailureReason.NOT_CONNECTED
+                }
                 saveFailedCall(
                     snapshot = snapshot,
                     callLog = callLog,
                     callType = callLog?.callType ?: if (snapshot.incoming) CallType.INCOMING else CallType.OUTGOING,
-                    failureReason = FailureReason.NOT_CONNECTED
+                    failureReason = reason
                 )
                 notifier.notifyMissingRecording()
             }
@@ -195,14 +205,16 @@ class CallEventCoordinator(
         val currentCareType = TokenManager.getInstance(appContext).getSelectedCareTypeValue()
         val rawOtherPhone = callLog?.phoneNumber ?: snapshot.otherPhoneNumber
         val normalizedOtherPhone = PhoneNumberNormalizer.normalize(rawOtherPhone)
+        val durationSeconds = callLog?.durationSeconds?.coerceAtLeast(0) ?: 0
+        val isAnswered = durationSeconds > 0
         val metadata = CallMetadataMapper.create(
             recordingUri = null,
             callType = callType,
             otherPhoneNumber = normalizedOtherPhone,
             ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
-            durationSeconds = 0,
+            durationSeconds = durationSeconds,
             callAtFormatted = formatCallTime(eventTime),
-            isAnswered = false,
+            isAnswered = isAnswered,
             careType = currentCareType
         )
         val otherPhone = if (callType == CallType.INCOMING) {
@@ -218,6 +230,7 @@ class CallEventCoordinator(
                 callAtMillis = eventTime,
                 callAtFormatted = requireNotNull(metadata.callAtFormatted),
                 callType = callType,
+                durationSeconds = durationSeconds,
                 failureReason = failureReason
             )
         )

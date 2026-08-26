@@ -59,15 +59,24 @@ object RecordingMatchPolicy {
         "call records/",
         "miui/sound_recorder/call_rec/",
         "miui/sound_recorder/",
+        "sound_recorder/call_rec/",
+        "sound_recorder/",
         "vivo/callrecord/",
         "vivo/record/",
         "coloros/recorder/call/",
         "coloros/recorder/",
+        "recorder/call/",
+        "recorder/",
         "phonerecord/",
         "voice recorder/",
         "sounds/call/",
+        "sounds/callrecorder/",
+        "sounds/callrec/",
+        "sounds/",
         "audio/call/",
-        "audio/recordings/"
+        "audio/recordings/",
+        "music/recordings/",
+        "voice/"
     )
 
     fun match(
