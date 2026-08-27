@@ -22,6 +22,7 @@ enum class RecordingMatchConfidence { STRONG }
 
 enum class RecordingReviewReason {
     SOURCE_NOT_APPROVED,
+    AMBIGUOUS_SOURCE,
     MIME_NOT_AUDIO,
     DURATION_UNAVAILABLE,
     DURATION_MISMATCH,
@@ -49,7 +50,6 @@ object RecordingMatchPolicy {
     private val approvedPathMarkers = setOf(
         "recordings/call/",
         "recordings/call records/",
-        "recordings/",
         "record/call/",
         "record/callrec/",
         "callrecordings/",
@@ -58,22 +58,26 @@ object RecordingMatchPolicy {
         "call recording/",
         "call records/",
         "miui/sound_recorder/call_rec/",
-        "miui/sound_recorder/",
         "sound_recorder/call_rec/",
-        "sound_recorder/",
         "vivo/callrecord/",
-        "vivo/record/",
         "coloros/recorder/call/",
-        "coloros/recorder/",
         "recorder/call/",
-        "recorder/",
         "phonerecord/",
-        "voice recorder/",
         "sounds/call/",
         "sounds/callrecorder/",
         "sounds/callrec/",
+        "audio/call/"
+    )
+
+    private val ambiguousPathMarkers = setOf(
+        "recordings/",
+        "miui/sound_recorder/",
+        "sound_recorder/",
+        "vivo/record/",
+        "coloros/recorder/",
+        "recorder/",
+        "voice recorder/",
         "sounds/",
-        "audio/call/",
         "audio/recordings/",
         "music/recordings/",
         "voice/"
@@ -108,11 +112,19 @@ object RecordingMatchPolicy {
         return approvedPathMarkers.any(normalized::contains)
     }
 
+    fun isAmbiguousSource(relativePath: String?): Boolean {
+        val normalized = relativePath?.trim()?.replace('\\', '/')?.lowercase() ?: return false
+        return ambiguousPathMarkers.any(normalized::contains)
+    }
+
     private fun reviewReason(
         call: CallRecordingWindow,
         candidate: RecordingCandidate
     ): RecordingReviewReason? {
         if (!isApprovedSource(candidate.relativePath)) {
+            if (isAmbiguousSource(candidate.relativePath)) {
+                return RecordingReviewReason.AMBIGUOUS_SOURCE
+            }
             return RecordingReviewReason.SOURCE_NOT_APPROVED
         }
         if (candidate.mimeType?.lowercase()?.startsWith("audio/") != true) {

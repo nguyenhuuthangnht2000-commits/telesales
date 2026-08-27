@@ -18,7 +18,7 @@ object UploadWorkPolicy {
             resource.code == 401 ->
                 UploadWorkDecision(UploadWorkResult.UNAUTHORIZED, SyncStatus.FAILED)
 
-            resource.source == ErrorSource.NETWORK || resource.code in 500..599 ->
+            resource.source == ErrorSource.NETWORK || resource.code in 500..599 || resource.code == 408 || resource.code == 425 || resource.code == 429 ->
                 UploadWorkDecision(UploadWorkResult.RETRY, SyncStatus.PENDING)
 
             else -> UploadWorkDecision(UploadWorkResult.FAILURE, SyncStatus.FAILED)

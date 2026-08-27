@@ -20,6 +20,7 @@ class UploadAudioWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
+        if (runAttemptCount >= 6) return Result.failure()
         ServiceLocator.init(applicationContext)
         val isAnswered = inputData.getBoolean(KEY_IS_ANSWERED, true)
         val recordingUri = inputData.getString(KEY_RECORDING_URI)
@@ -147,6 +148,15 @@ class UploadAudioWorker(
             when (decision.result) {
                 UploadWorkResult.SUCCESS -> {
                     ServiceLocator.complianceNotifier.notifyUploadSuccess(metadata)
+                    
+                    if (callId.isNotBlank()) {
+                        val db = com.nhakhoaquangninh.telesales.data.local.room.TelesalesDatabase.getDatabase(applicationContext)
+                        val failedCall = db.failedCallDao().getByCallId(callId)
+                        if (failedCall != null) {
+                            db.failedCallDao().delete(failedCall.id)
+                        }
+                    }
+                    
                     Result.success()
                 }
                 UploadWorkResult.RETRY -> {

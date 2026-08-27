@@ -40,14 +40,19 @@ class CallEventCoordinator(
             CallTransition.None -> return
         }
         val missedIncoming = transition is CallTransition.MissedIncomingEnded
-        val input = Data.Builder()
+        val inputBuilder = Data.Builder()
             .putLong(ProcessCallWorker.KEY_SESSION_ID, snapshot.sessionId)
             .putBoolean(ProcessCallWorker.KEY_INCOMING, snapshot.incoming)
             .putString(ProcessCallWorker.KEY_OTHER_PHONE, snapshot.otherPhoneNumber)
             .putLong(ProcessCallWorker.KEY_STARTED_AT, snapshot.startedAtMillis)
             .putLong(ProcessCallWorker.KEY_ENDED_AT, snapshot.endedAtMillis)
             .putBoolean(ProcessCallWorker.KEY_MISSED_INCOMING, missedIncoming)
-            .build()
+            .putInt(ProcessCallWorker.KEY_OWNER_USER_ID, snapshot.ownerUserId)
+            .putString(ProcessCallWorker.KEY_OWN_PHONE_NUMBER, snapshot.ownPhoneNumber)
+            .putBoolean(ProcessCallWorker.KEY_ANSWERED, snapshot.answered)
+            
+        snapshot.careType?.let { inputBuilder.putInt(ProcessCallWorker.KEY_CARE_TYPE, it) }
+        val input = inputBuilder.build()
         val request = OneTimeWorkRequestBuilder<ProcessCallWorker>()
             .setInputData(input)
             .setInitialDelay(
