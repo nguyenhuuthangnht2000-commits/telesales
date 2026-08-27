@@ -20,7 +20,6 @@ class UploadAudioWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        if (runAttemptCount >= 6) return Result.failure()
         ServiceLocator.init(applicationContext)
         val isAnswered = inputData.getBoolean(KEY_IS_ANSWERED, true)
         val recordingUri = inputData.getString(KEY_RECORDING_URI)

@@ -1,9 +1,13 @@
 package com.nhakhoaquangninh.telesales.ui.auth
 
+import android.content.Context
 import com.nhakhoaquangninh.telesales.ServiceLocator
 import com.nhakhoaquangninh.telesales.core.BaseViewModel
+import com.nhakhoaquangninh.telesales.data.local.room.TelesalesDatabase
 import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
 import com.nhakhoaquangninh.telesales.domain.common.Resource
+import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
+import com.nhakhoaquangninh.telesales.domain.model.CallType
 import com.nhakhoaquangninh.telesales.domain.model.UserSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +36,7 @@ class OtpVerifyViewModel : BaseViewModel() {
         }
     }
 
-    fun verifyOtp(userId: Int) {
+    fun verifyOtp(userId: Int, context: Context) {
         val otp = _otpInput.value
         _uiState.value = Resource.Loading
 
@@ -43,8 +47,39 @@ class OtpVerifyViewModel : BaseViewModel() {
             }
             if (result is Resource.Success) {
                 clearInput()
+                withContext(Dispatchers.IO) {
+                    requeuePendingUploads(context.applicationContext)
+                }
             }
             _uiState.value = result
+        }
+    }
+
+    private fun requeuePendingUploads(context: Context) {
+        val ownerUserId = ServiceLocator.tokenManager?.getUserId() ?: return
+        if (ownerUserId == -1) return
+
+        val pendingRecords = TelesalesDatabase.getDatabase(context)
+            .callRecordDao()
+            .getPendingByOwner(ownerUserId)
+        val scheduler = ServiceLocator.uploadScheduler
+
+        pendingRecords.forEach { record ->
+            scheduler.enqueue(
+                CallRecordMetadata(
+                    phoneNumberFrom = record.phoneNumberFrom,
+                    phoneNumberTo = record.phoneNumberTo,
+                    callType = CallType.fromWire(record.callType) ?: CallType.OUTGOING,
+                    durationSeconds = record.durationSeconds,
+                    callAtFormatted = record.callAtFormatted,
+                    recordingUri = record.recordingUri,
+                    isAnswered = record.isAnswered,
+                    careType = record.careType,
+                    callId = record.callId ?: java.util.UUID.randomUUID().toString(),
+                    ownerUserId = record.ownerUserId,
+                    startedAtMillis = record.startedAtMillis
+                )
+            )
         }
     }
 

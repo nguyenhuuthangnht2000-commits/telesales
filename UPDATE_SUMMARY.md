@@ -620,3 +620,11 @@
 
 ---
 
+## 41. Điều chỉnh retry upload và re-enqueue sau đăng nhập (27/08/2026)
+
+- Bỏ giới hạn 6 lần thử trong `UploadAudioWorker`; các lỗi mạng và máy chủ tạm thời tiếp tục được WorkManager retry theo backoff hiện có để đồng bộ lại khi kết nối phục hồi.
+- Chuyển re-enqueue các bản ghi `PENDING` của nhân viên sau khi xác thực OTP từ `Thread` trong `Navigation.kt` vào `OtpVerifyViewModel`, sử dụng `launchSafe` kết hợp `Dispatchers.IO`.
+- Navigation chỉ còn xử lý khởi động foreground service và điều hướng; truy vấn Room/đăng ký upload không còn chạy trong Composable.
+
+*Cập nhật lần cuối: 27/08/2026 22:51.*
+

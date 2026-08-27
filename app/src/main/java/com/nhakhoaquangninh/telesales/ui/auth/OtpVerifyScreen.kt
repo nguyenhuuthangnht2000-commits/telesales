@@ -54,6 +54,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +90,7 @@ fun OtpVerifyScreen(
     val otpInput by viewModel.otpInput.collectAsStateWithLifecycle()
     val otpError by viewModel.otpError.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
@@ -268,7 +270,7 @@ fun OtpVerifyScreen(
                         focusRequester = focusRequester,
                         onDone = {
                             keyboardController?.hide()
-                            viewModel.verifyOtp(userId)
+                            viewModel.verifyOtp(userId, context.applicationContext)
                         }
                     )
 
@@ -290,7 +292,7 @@ fun OtpVerifyScreen(
                     Button(
                         onClick = {
                             keyboardController?.hide()
-                            viewModel.verifyOtp(userId)
+                            viewModel.verifyOtp(userId, context.applicationContext)
                         },
                         enabled = !isLoading && otpInput.length == 6,
                         modifier = Modifier
