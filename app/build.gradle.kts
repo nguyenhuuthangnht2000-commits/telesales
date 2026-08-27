@@ -140,6 +140,10 @@ dependencies {
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
 
+    // Room
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)

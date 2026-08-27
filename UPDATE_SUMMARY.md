@@ -609,8 +609,14 @@
 
 ### Task 5: Release
 - Bump `versionCode = 10`, `versionName = "1.9"`.
+- Cấu hình Room `api` dependency cho `:data` và bổ sung vào `:app` để đảm bảo biên dịch và chạy unit test/build APK thành công 100%.
 
-*Cập nhật lần cuối: 27/08/2026 15:30 bởi Antigravity AI Pair Programmer.*
+### Verification & Testing Pass (27/08/2026 16:25)
+- Unit Tests: `./gradlew :domain:test :app:testDebugUnitTest :data:testDebugUnitTest` -> **PASSED (100% Success)**.
+- Build Verify: `./gradlew assembleDebug` -> **BUILD SUCCESSFUL**.
+- Secrets Configuration: Đã tạo và cấu hình file `~/.gradle/gradle.properties` (`C:\Users\thangnh7\.gradle\gradle.properties`) tách biệt khỏi repo.
+
+*Cập nhật lần cuối: 27/08/2026 16:26 bởi Antigravity AI Pair Programmer.*
 
 ---
 
