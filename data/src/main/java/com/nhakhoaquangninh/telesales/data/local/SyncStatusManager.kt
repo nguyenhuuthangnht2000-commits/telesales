@@ -77,7 +77,11 @@ class SyncStatusManager private constructor(context: Context) {
             durationSeconds = metadata?.durationSeconds ?: existing?.durationSeconds ?: 0,
             callAtFormatted = metadata?.callAtFormatted ?: existing?.callAtFormatted,
             failureReason = existing?.failureReason,
-            isAnswered = metadata?.isAnswered ?: existing?.isAnswered ?: true
+            isAnswered = metadata?.isAnswered ?: existing?.isAnswered ?: true,
+            callId = metadata?.callId ?: existing?.callId,
+            ownerUserId = metadata?.ownerUserId ?: existing?.ownerUserId ?: -1,
+            careType = metadata?.careType ?: existing?.careType,
+            startedAtMillis = metadata?.startedAtMillis ?: existing?.startedAtMillis ?: 0L
         )
         dao.insert(entity)
     }
@@ -95,15 +99,20 @@ class SyncStatusManager private constructor(context: Context) {
         val callType = CallType.fromWire(callTypeStr) ?: return null
         val recordingUri = entity.recordingUri.takeIf { !it.isNullOrBlank() }
         if (entity.isAnswered && recordingUri == null) return null
+        val callId = entity.callId ?: return null
         
         return CallRecordMetadata(
+            callId = callId,
+            ownerUserId = entity.ownerUserId,
+            startedAtMillis = entity.startedAtMillis,
             recordingUri = recordingUri,
             phoneNumberFrom = entity.phoneNumberFrom,
             phoneNumberTo = entity.phoneNumberTo,
             callType = callType,
             durationSeconds = entity.durationSeconds,
             callAtFormatted = entity.callAtFormatted,
-            isAnswered = entity.isAnswered
+            isAnswered = entity.isAnswered,
+            careType = entity.careType
         )
     }
 
@@ -115,10 +124,4 @@ class SyncStatusManager private constructor(context: Context) {
     @Synchronized
     fun removeStatus(recordingId: String) {
         dao.delete(recordingId)
-    }
-
-    @Synchronized
-    fun clearAll() {
-        dao.clearAll()
-    }
 }

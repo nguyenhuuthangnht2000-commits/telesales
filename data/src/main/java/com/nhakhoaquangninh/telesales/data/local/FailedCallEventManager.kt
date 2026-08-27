@@ -18,7 +18,9 @@ data class FailedCallEvent(
     val durationSeconds: Int = 0,
     val callStatus: String = "failed",
     val failureReason: FailureReason = FailureReason.NOT_CONNECTED,
-    val syncStatus: String = "PENDING_SERVER_SUPPORT"
+    val syncStatus: String = "PENDING_SERVER_SUPPORT",
+    val callId: String = "",
+    val ownerUserId: Int = -1
 )
 
 class FailedCallEventManager private constructor(context: Context) {
@@ -49,11 +51,6 @@ class FailedCallEventManager private constructor(context: Context) {
         dao.delete(id)
     }
 
-    @Synchronized
-    fun clearAll() {
-        dao.clearAll()
-    }
-
     private fun FailedCallEvent.toEntity() = com.nhakhoaquangninh.telesales.data.local.room.FailedCallEntity(
         id = id,
         filePath = filePath,
@@ -65,7 +62,9 @@ class FailedCallEventManager private constructor(context: Context) {
         durationSeconds = durationSeconds,
         callStatus = callStatus,
         failureReason = failureReason.wireValue,
-        syncStatus = syncStatus
+        syncStatus = syncStatus,
+        callId = callId.takeIf { it.isNotBlank() },
+        ownerUserId = ownerUserId
     )
 
     private fun com.nhakhoaquangninh.telesales.data.local.room.FailedCallEntity.toEvent() = FailedCallEvent(
@@ -79,6 +78,8 @@ class FailedCallEventManager private constructor(context: Context) {
         durationSeconds = durationSeconds,
         callStatus = callStatus,
         failureReason = FailureReason.fromWire(failureReason) ?: FailureReason.NOT_CONNECTED,
-        syncStatus = syncStatus
+        syncStatus = syncStatus,
+        callId = callId ?: "",
+        ownerUserId = ownerUserId
     )
 }

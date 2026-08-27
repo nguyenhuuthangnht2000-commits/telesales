@@ -15,7 +15,10 @@ interface FailedCallDao {
 
     @Query("DELETE FROM failed_calls WHERE id = :id")
     fun delete(id: String)
-    
-    @Query("DELETE FROM failed_calls")
-    fun clearAll()
+
+    @Query("SELECT * FROM failed_calls WHERE ownerUserId = :ownerUserId ORDER BY callAtMillis DESC")
+    fun getByOwner(ownerUserId: Int): List<FailedCallEntity>
+
+    @Query("SELECT * FROM failed_calls WHERE callId = :callId")
+    fun getByCallId(callId: String): FailedCallEntity?
 }

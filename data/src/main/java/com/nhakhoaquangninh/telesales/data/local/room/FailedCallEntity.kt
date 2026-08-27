@@ -15,5 +15,7 @@ data class FailedCallEntity(
     val durationSeconds: Int,
     val callStatus: String,
     val failureReason: String,
-    val syncStatus: String
+    val syncStatus: String,
+    val callId: String? = null,
+    val ownerUserId: Int = -1
 )

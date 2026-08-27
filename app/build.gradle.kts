@@ -149,4 +149,11 @@ dependencies {
     implementation(firebaseBom)
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.truth)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.work.testing)
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

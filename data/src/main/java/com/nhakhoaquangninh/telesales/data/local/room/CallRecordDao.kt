@@ -15,7 +15,13 @@ interface CallRecordDao {
 
     @Query("DELETE FROM call_records WHERE id = :id")
     fun delete(id: String)
-    
-    @Query("DELETE FROM call_records")
-    fun clearAll()
+
+    @Query("SELECT * FROM call_records WHERE ownerUserId = :ownerUserId")
+    fun getByOwner(ownerUserId: Int): List<CallRecordEntity>
+
+    @Query("SELECT * FROM call_records WHERE ownerUserId = :ownerUserId AND status IN ('PENDING', 'RETRYABLE')")
+    fun getPendingByOwner(ownerUserId: Int): List<CallRecordEntity>
+
+    @Query("SELECT * FROM call_records WHERE callId = :callId")
+    fun getByCallId(callId: String): CallRecordEntity?
 }

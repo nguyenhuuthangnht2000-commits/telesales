@@ -37,10 +37,10 @@ class UploadScheduler(context: Context) {
             .putInt(UploadAudioWorker.KEY_DURATION, enrichedMetadata.durationSeconds)
             .putString(UploadAudioWorker.KEY_CALL_AT, enrichedMetadata.callAtFormatted)
             .putBoolean(UploadAudioWorker.KEY_IS_ANSWERED, enrichedMetadata.isAnswered)
+            .putString(UploadAudioWorker.KEY_CALL_ID, enrichedMetadata.callId)
+            .putInt(UploadAudioWorker.KEY_OWNER_USER_ID, enrichedMetadata.ownerUserId)
+            .putLong(UploadAudioWorker.KEY_STARTED_AT_MILLIS, enrichedMetadata.startedAtMillis)
             .apply {
-                if (startedAtMillis != null) {
-                    putLong(UploadAudioWorker.KEY_STARTED_AT_MILLIS, startedAtMillis)
-                }
                 if (effectiveCareType != null) {
                     putInt(UploadAudioWorker.KEY_CARE_TYPE, effectiveCareType)
                 }

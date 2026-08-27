@@ -54,8 +54,6 @@ fun MainNavigation() {
                     MainScreen(
                         onLogout = {
                             tokenManager.clearSession()
-                            SyncStatusManager.getInstance(context).clearAll()
-                            FailedCallEventManager.getInstance(context).clearAll()
                             backStack.clear()
                             backStack.add(Login)
                         },

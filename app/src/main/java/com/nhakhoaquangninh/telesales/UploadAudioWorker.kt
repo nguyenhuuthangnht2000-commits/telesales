@@ -36,7 +36,16 @@ class UploadAudioWorker(
         val careType = inputData.getInt(KEY_CARE_TYPE, -1).takeIf { it >= 0 }
         val rawPhoneFrom = inputData.getString(KEY_PHONE_FROM)
         val rawPhoneTo = inputData.getString(KEY_PHONE_TO)
+        
+        val callId = inputData.getString(KEY_CALL_ID) ?: ""
+        val ownerUserId = inputData.getInt(KEY_OWNER_USER_ID, -1)
+        val startedAtMillis = inputData.getLong(KEY_STARTED_AT_MILLIS, -1L).takeIf { it > 0 }
+            ?: parseCallAtMillis(inputData.getString(KEY_CALL_AT)) ?: System.currentTimeMillis()
+
         val metadata = CallRecordMetadata(
+            callId = callId,
+            ownerUserId = ownerUserId,
+            startedAtMillis = startedAtMillis,
             recordingUri = recordingUri,
             phoneNumberFrom = com.nhakhoaquangninh.telesales.call.PhoneNumberNormalizer.normalize(rawPhoneFrom) ?: rawPhoneFrom,
             phoneNumberTo = com.nhakhoaquangninh.telesales.call.PhoneNumberNormalizer.normalize(rawPhoneTo) ?: rawPhoneTo,
@@ -231,6 +240,8 @@ class UploadAudioWorker(
         const val KEY_STARTED_AT_MILLIS = "started_at_millis"
         const val KEY_IS_ANSWERED = "is_answered"
         const val KEY_CARE_TYPE = "care_type"
+        const val KEY_CALL_ID = "call_id"
+        const val KEY_OWNER_USER_ID = "owner_user_id"
 
         private const val TAG = "UploadAudioWorker"
     }

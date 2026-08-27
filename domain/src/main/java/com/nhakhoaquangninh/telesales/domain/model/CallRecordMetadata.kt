@@ -1,6 +1,9 @@
 package com.nhakhoaquangninh.telesales.domain.model
 
 data class CallRecordMetadata(
+    val callId: String,
+    val ownerUserId: Int,
+    val startedAtMillis: Long,
     val recordingUri: String?,
     val phoneNumberFrom: String? = null,
     val phoneNumberTo: String? = null,

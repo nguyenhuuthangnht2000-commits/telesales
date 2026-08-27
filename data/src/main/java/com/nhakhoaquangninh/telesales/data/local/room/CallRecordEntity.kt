@@ -16,5 +16,9 @@ data class CallRecordEntity(
     val durationSeconds: Int = 0,
     val callAtFormatted: String? = null,
     val failureReason: String? = null,
-    val isAnswered: Boolean = true
+    val isAnswered: Boolean = true,
+    val callId: String? = null,
+    val ownerUserId: Int = -1,
+    val careType: Int? = null,
+    val startedAtMillis: Long = 0
 )

@@ -84,7 +84,21 @@ object ServiceLocator {
     }
 
     val callSessionTracker: CallSessionTracker by lazy {
-        CallSessionTracker()
+        val prefs = requireContext().getSharedPreferences("call_session_prefs", Context.MODE_PRIVATE)
+        CallSessionTracker(
+            prefs = prefs,
+            getOwnerUserId = { requireTokenManager().getUserId() },
+            getOwnPhoneNumber = {
+                try {
+                    val telephonyManager = requireContext().getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
+                    telephonyManager.line1Number
+                } catch (e: SecurityException) {
+                    null
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        )
     }
 
     val callEventCoordinator: CallEventCoordinator by lazy {

@@ -2,6 +2,8 @@ package com.nhakhoaquangninh.telesales.domain.model
 
 object CallMetadataMapper {
     fun create(
+        ownerUserId: Int,
+        startedAtMillis: Long,
         recordingUri: String?,
         callType: CallType,
         otherPhoneNumber: String?,
@@ -13,7 +15,11 @@ object CallMetadataMapper {
     ): CallRecordMetadata {
         val otherNumber = otherPhoneNumber.normalizePhoneNumber()
         val ownNumber = ownPhoneNumber.normalizePhoneNumber()
+        val callId = CallIdentity.create(ownerUserId, startedAtMillis, callType, if (callType == CallType.INCOMING) otherNumber else ownNumber)
         return CallRecordMetadata(
+            callId = callId,
+            ownerUserId = ownerUserId,
+            startedAtMillis = startedAtMillis,
             recordingUri = recordingUri,
             phoneNumberFrom = if (callType == CallType.INCOMING) otherNumber else ownNumber,
             phoneNumberTo = if (callType == CallType.INCOMING) ownNumber else otherNumber,

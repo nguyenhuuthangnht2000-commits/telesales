@@ -112,10 +112,12 @@ class CallEventCoordinator(
             is CallEventDecision.ScheduleUpload -> {
                 val currentCareType = TokenManager.getInstance(appContext).getSelectedCareTypeValue()
                 val metadata = CallMetadataMapper.create(
+                    ownerUserId = snapshot.ownerUserId,
+                    startedAtMillis = decision.call.startedAtMillis,
                     recordingUri = decision.recording.uri,
                     callType = decision.call.callType,
                     otherPhoneNumber = otherPhoneNumberNormalized,
-                    ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
+                    ownPhoneNumber = snapshot.ownPhoneNumber ?: OwnPhoneNumberResolver.resolve(appContext),
                     durationSeconds = decision.call.durationSeconds,
                     callAtFormatted = formatCallTime(decision.call.startedAtMillis),
                     isAnswered = true,
@@ -208,10 +210,12 @@ class CallEventCoordinator(
         val durationSeconds = callLog?.durationSeconds?.coerceAtLeast(0) ?: 0
         val isAnswered = durationSeconds > 0
         val metadata = CallMetadataMapper.create(
+            ownerUserId = snapshot.ownerUserId,
+            startedAtMillis = eventTime,
             recordingUri = null,
             callType = callType,
             otherPhoneNumber = normalizedOtherPhone,
-            ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
+            ownPhoneNumber = snapshot.ownPhoneNumber ?: OwnPhoneNumberResolver.resolve(appContext),
             durationSeconds = durationSeconds,
             callAtFormatted = formatCallTime(eventTime),
             isAnswered = isAnswered,
@@ -231,7 +235,9 @@ class CallEventCoordinator(
                 callAtFormatted = requireNotNull(metadata.callAtFormatted),
                 callType = callType,
                 durationSeconds = durationSeconds,
-                failureReason = failureReason
+                failureReason = failureReason,
+                callId = metadata.callId,
+                ownerUserId = metadata.ownerUserId
             )
         )
         notifier.notifyHistoryChanged()
