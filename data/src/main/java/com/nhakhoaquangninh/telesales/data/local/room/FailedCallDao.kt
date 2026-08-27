@@ -21,4 +21,7 @@ interface FailedCallDao {
 
     @Query("SELECT * FROM failed_calls WHERE callId = :callId")
     fun getByCallId(callId: String): FailedCallEntity?
+
+    @Query("DELETE FROM failed_calls WHERE callAtMillis < :startOfTodayMillis")
+    fun deleteBefore(startOfTodayMillis: Long)
 }

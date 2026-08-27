@@ -24,4 +24,13 @@ interface CallRecordDao {
 
     @Query("SELECT * FROM call_records WHERE callId = :callId")
     fun getByCallId(callId: String): CallRecordEntity?
+
+    @Query(
+        """
+        DELETE FROM call_records
+        WHERE startedAtMillis < :startOfTodayMillis
+          AND status NOT IN ('PENDING', 'UPLOADING', 'RETRYABLE')
+    """
+    )
+    fun deleteTerminalRecordsBefore(startOfTodayMillis: Long)
 }

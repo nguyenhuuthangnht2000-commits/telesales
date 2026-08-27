@@ -8,6 +8,7 @@ class TelesalesApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         ServiceLocator.init(this)
+        DailyCallCleanupScheduler.schedule(this)
 
         val userId = TokenManager.getInstance(this).getUserId()
         if (userId > 0) {

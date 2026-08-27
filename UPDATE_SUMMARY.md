@@ -638,3 +638,15 @@
 
 *Cập nhật lần cuối: 27/08/2026 22:55.*
 
+---
+
+## 43. Tự động dọn dữ liệu cuộc gọi theo ngày (27/08/2026)
+
+- Thêm `DailyCallCleanupWorker` chạy qua WorkManager theo mốc nửa đêm `Asia/Ho_Chi_Minh`; sau mỗi lần chạy tác vụ tự lên lịch cho ngày kế tiếp.
+- Xóa Room cache cuộc gọi cũ của toàn bộ tài khoản: `call_records` ở trạng thái `SYNCED`, `FAILED`, `NEEDS_REVIEW` và toàn bộ `failed_calls` cũ hơn đầu ngày.
+- Giữ nguyên bản ghi `PENDING`, `UPLOADING`, `RETRYABLE` để tiếp tục upload khi mạng phục hồi; không xóa file ghi âm MediaStore, token hay log chẩn đoán.
+- Lưu ngày dọn thành công trong SharedPreferences. Khi ứng dụng mở lại sau khi tác vụ đêm bị Android bỏ lỡ, worker được enqueue ngay để dọn dữ liệu cũ trong ngày hiện tại.
+- Thêm `DailyCallCleanupPolicyTest` kiểm tra mốc ngày Việt Nam, delay tới nửa đêm, key ngày và các trạng thái được giữ lại.
+
+*Cập nhật lần cuối: 27/08/2026 23:51.*
+
