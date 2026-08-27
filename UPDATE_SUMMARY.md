@@ -571,3 +571,46 @@
 
 ---
 
+
+## 40. Nâng cấp v1.9 — Ổn định hóa (Stabilization) (27/08/2026)
+
+### Task 1: Test foundation và ownership
+- Thêm test dependencies: JUnit4, Truth, coroutine-test, Room testing, WorkManager testing, Compose UI test vào version catalog.
+- Tạo `CallIdentity.create()` — sinh stable call ID bằng SHA-256 rút gọn (16 hex), không chứa PII.
+- Mở rộng `CallRecordMetadata` thêm `callId`, `ownerUserId`, `startedAtMillis` (bắt buộc, không default).
+- Mở rộng `CallSessionSnapshot` thêm `ownerUserId`, `ownPhoneNumber`, `careType`, `answered` + persist qua SharedPreferences.
+- Nâng Room lên version 3: `MIGRATION_2_3` thêm cột `callId`, `ownerUserId`, `careType`, `startedAtMillis` cho `call_records` và `failed_calls`.
+- Xóa `fallbackToDestructiveMigration()` — chỉ dùng migration tường minh.
+- Thêm owner-scoped DAO queries: `getByOwner`, `getPendingByOwner`, `getByCallId`. Xóa `clearAll()`.
+- Unit tests: `CallIdentityTest`, `CallMetadataMapperTest`, `CallSessionTrackerTest`.
+
+### Task 2: Monitoring và call lifecycle
+- Thêm `monitoringEnabled` flag vào `SecureSessionStore` / `TokenManager`.
+- Login tự động bật monitoring. Logout tắt monitoring, dừng FGS, cancel upload theo owner.
+- `CallStateReceiver` và `MainActivity` gate check: login + monitoring enabled.
+- `TelesalesForegroundService` thêm `isMonitoring` StateFlow.
+- CallLog matcher ưu tiên normalized phone + direction + time; fallback time-only khi không có số.
+- Login re-enqueue PENDING/RETRYABLE rows cho owner hiện tại.
+
+### Task 3: Recording và upload
+- `ProcessCallWorker` rethrow `CancellationException` (trước đó bị `runCatching` nuốt).
+- Truyền `ownerUserId`, `ownPhoneNumber`, `careType`, `answered` qua WorkManager Data.
+- `UploadWorkPolicy` mở rộng retry: thêm HTTP 408, 425, 429.
+- `UploadAudioWorker` giới hạn tối đa 6 lần retry (`runAttemptCount >= 6`).
+- Upload thành công xóa failed-call row tương ứng theo `callId`.
+- `RecordingMatchPolicy` tách generic paths thành AMBIGUOUS_SOURCE.
+
+### Task 4: UI, rule và bảo mật
+- Fix resend OTP: gọi API thật qua `requestOtpUseCase`, hiển thị loading/error, chỉ reset timer sau success.
+- Main screen tính metrics theo owner + ngày hiện tại, hiển thị cuộc gọi gần đây thật, bỏ `+12%` giả.
+- Mask số điện thoại/URI trong FileLogger và Crashlytics (`maskPhone`, `maskUri`).
+- Xóa API key và signing passwords khỏi tracked `gradle.properties`, thay bằng template hướng dẫn.
+- Touch target tối thiểu 48dp cho nút resend OTP.
+
+### Task 5: Release
+- Bump `versionCode = 10`, `versionName = "1.9"`.
+
+*Cập nhật lần cuối: 27/08/2026 15:30 bởi Antigravity AI Pair Programmer.*
+
+---
+
