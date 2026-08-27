@@ -614,9 +614,9 @@
 ### Verification & Testing Pass (27/08/2026 16:25)
 - Unit Tests: `./gradlew :domain:test :app:testDebugUnitTest :data:testDebugUnitTest` -> **PASSED (100% Success)**.
 - Build Verify: `./gradlew assembleDebug` -> **BUILD SUCCESSFUL**.
-- Secrets Configuration: Đã tạo và cấu hình file `~/.gradle/gradle.properties` (`C:\Users\thangnh7\.gradle\gradle.properties`) tách biệt khỏi repo.
+- Secrets Configuration: Đã cấu hình và hỗ trợ đọc trực tiếp từ `local.properties` (gitignored) và `~/.gradle/gradle.properties` (`C:\Users\thangnh7\.gradle\gradle.properties`) tách biệt an toàn khỏi repo.
 
-*Cập nhật lần cuối: 27/08/2026 16:26 bởi Antigravity AI Pair Programmer.*
+*Cập nhật lần cuối: 27/08/2026 16:45 bởi Antigravity AI Pair Programmer.*
 
 ---
 

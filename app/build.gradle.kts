@@ -1,7 +1,21 @@
-val releaseStoreFile = providers.gradleProperty("TELESALES_RELEASE_STORE_FILE").orNull
-val releaseStorePassword = providers.gradleProperty("TELESALES_RELEASE_STORE_PASSWORD").orNull
-val releaseKeyAlias = providers.gradleProperty("TELESALES_RELEASE_KEY_ALIAS").orNull
-val releaseKeyPassword = providers.gradleProperty("TELESALES_RELEASE_KEY_PASSWORD").orNull
+import java.util.Properties
+
+val localProps = Properties().apply {
+    val localFile = rootProject.file("local.properties")
+    if (localFile.exists()) {
+        localFile.inputStream().use { load(it) }
+    }
+}
+
+fun findProperty(key: String): String? =
+    providers.gradleProperty(key).orNull
+        ?: providers.environmentVariable(key).orNull
+        ?: localProps.getProperty(key)
+
+val releaseStoreFile = findProperty("TELESALES_RELEASE_STORE_FILE")
+val releaseStorePassword = findProperty("TELESALES_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = findProperty("TELESALES_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = findProperty("TELESALES_RELEASE_KEY_PASSWORD")
 val hasReleaseSigning = listOf(
     releaseStoreFile,
     releaseStorePassword,
@@ -16,9 +30,7 @@ plugins {
     alias(libs.plugins.firebase.crashlytics)
 }
 
-val configuredApiKey = providers.gradleProperty("TELESALES_API_KEY")
-    .orElse(providers.environmentVariable("TELESALES_API_KEY"))
-    .getOrElse("")
+val configuredApiKey = findProperty("TELESALES_API_KEY") ?: ""
 
 val verifyReleaseApiKey by tasks.registering {
     inputs.property("apiKeyConfigured", configuredApiKey.isNotBlank())

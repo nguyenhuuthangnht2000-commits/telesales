@@ -1,5 +1,15 @@
+import java.util.Properties
+
+val localProps = Properties().apply {
+    val localFile = rootProject.file("local.properties")
+    if (localFile.exists()) {
+        localFile.inputStream().use { load(it) }
+    }
+}
+
 val telesalesApiKey = providers.gradleProperty("TELESALES_API_KEY")
     .orElse(providers.environmentVariable("TELESALES_API_KEY"))
+    .orElse(provider { localProps.getProperty("TELESALES_API_KEY") })
     .getOrElse("")
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
