@@ -46,7 +46,8 @@ object FileLogger {
      * Lấy con trỏ File tới tệp log chẩn đoán cục bộ.
      */
     fun getLogFile(context: Context): File? {
-        val dir = context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: return null
+        val dir = context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+            ?: return null
         if (!dir.exists()) dir.mkdirs()
         return File(dir, FILE_NAME)
     }
@@ -62,7 +63,9 @@ object FileLogger {
             } else {
                 val text = file.readText()
                 if (text.length > 200_000) {
-                    "... [Đã ẩn các bản ghi cũ hơn để tối ưu hiển thị, hãy bấm 'Chia sẻ file' để nhận toàn bộ file 10MB] ...\n\n" + text.takeLast(200_000)
+                    "... [Đã ẩn các bản ghi cũ hơn để tối ưu hiển thị, hãy bấm 'Chia sẻ file' để nhận toàn bộ file 10MB] ...\n\n" + text.takeLast(
+                        200_000
+                    )
                 } else {
                     text
                 }
@@ -132,7 +135,8 @@ object FileLogger {
         val entry = "[$timestamp] [$tag] $message\n----------------------------------------\n"
         // 1. Ghi vào file cục bộ
         try {
-            val dir = context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+            val dir =
+                context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
             if (dir != null) {
                 if (!dir.exists()) dir.mkdirs()
                 val file = File(dir, FILE_NAME)

@@ -65,7 +65,11 @@ class CallRecordRepositoryImpl(
                     mediaType = payload.mimeType.toMediaType(),
                     contentLength = payload.sizeBytes
                 )
-                bodyPart = MultipartBody.Part.createFormData("recording", payload.displayName, recordingBody)
+                bodyPart = MultipartBody.Part.createFormData(
+                    "recording",
+                    payload.displayName,
+                    recordingBody
+                )
             } else {
                 FileLogger.logNonFatalError(
                     context = appContext,
@@ -113,7 +117,12 @@ class CallRecordRepositoryImpl(
                     source = ErrorSource.APP_CLIENT
                 )
             }
-            FileLogger.logException(appContext, "NETWORK_ERROR", "Mất kết nối máy chủ khi upload (IOException): ${ioe.message}", ioe)
+            FileLogger.logException(
+                appContext,
+                "NETWORK_ERROR",
+                "Mất kết nối máy chủ khi upload (IOException): ${ioe.message}",
+                ioe
+            )
             return Resource.Error(
                 message = "Không thể kết nối máy chủ",
                 source = ErrorSource.NETWORK
@@ -124,7 +133,11 @@ class CallRecordRepositoryImpl(
         return if (response.isSuccessful && code in setOf(200, 201)) {
             val responseBody = response.body()?.string()
             android.util.Log.d("API_LOG", "Upload File Success - Code: $code, Body: $responseBody")
-            FileLogger.log(appContext, "API_SUCCESS", "Upload thành công (HTTP $code) | Server phản hồi: $responseBody")
+            FileLogger.log(
+                appContext,
+                "API_SUCCESS",
+                "Upload thành công (HTTP $code) | Server phản hồi: $responseBody"
+            )
             Resource.Success(data = true, message = messageProvider.getUploadSuccessMessage())
         } else {
             val errorBody = response.errorBody()?.string()

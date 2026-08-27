@@ -2,9 +2,10 @@ package com.nhakhoaquangninh.telesales.data.local
 
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 import android.security.keystore.KeyPermanentlyInvalidatedException
+import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
 import com.nhakhoaquangninh.telesales.domain.model.CareTypeOption
 import com.nhakhoaquangninh.telesales.domain.model.UserSession
 import org.json.JSONArray
@@ -16,7 +17,6 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import androidx.core.content.edit
 
 internal interface SessionCipher {
     fun encrypt(plainText: ByteArray): ByteArray
@@ -135,13 +135,15 @@ internal class SecureSessionStore(
         val encoded = Base64.encodeToString(encrypted, Base64.NO_WRAP)
         check(securePrefs.edit().putString(KEY_ENCRYPTED_SESSION, encoded).commit())
     }
+
     fun clear() {
         securePrefs.edit(commit = true) { clear() }
         legacyPrefs.edit(commit = true) { clear() }
     }
 
     private fun readLegacy(): UserSession? {
-        val token = legacyPrefs.getString(KEY_TOKEN, null)?.takeIf { it.isNotBlank() } ?: return null
+        val token =
+            legacyPrefs.getString(KEY_TOKEN, null)?.takeIf { it.isNotBlank() } ?: return null
         val userId = legacyPrefs.getInt(KEY_USER_ID, -1).takeIf { it > 0 } ?: return null
         return UserSession(
             userId = userId,

@@ -13,7 +13,9 @@ enum class SyncStatus {
 }
 
 class SyncStatusManager private constructor(context: Context) {
-    private val dao = com.nhakhoaquangninh.telesales.data.local.room.TelesalesDatabase.getDatabase(context).callRecordDao()
+    private val dao =
+        com.nhakhoaquangninh.telesales.data.local.room.TelesalesDatabase.getDatabase(context)
+            .callRecordDao()
 
     companion object {
         @Volatile
@@ -96,7 +98,7 @@ class SyncStatusManager private constructor(context: Context) {
         val recordingUri = entity.recordingUri.takeIf { !it.isNullOrBlank() }
         if (entity.isAnswered && recordingUri == null) return null
         val callId = entity.callId ?: return null
-        
+
         return CallRecordMetadata(
             callId = callId,
             ownerUserId = entity.ownerUserId,

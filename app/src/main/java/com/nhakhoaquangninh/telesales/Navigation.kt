@@ -7,8 +7,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import com.nhakhoaquangninh.telesales.data.local.FailedCallEventManager
-import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
 import com.nhakhoaquangninh.telesales.data.local.TokenManager
 import com.nhakhoaquangninh.telesales.ui.auth.LoginScreen
 import com.nhakhoaquangninh.telesales.ui.auth.OtpVerifyScreen
@@ -55,10 +53,14 @@ fun MainNavigation() {
                         onLogout = {
                             val userId = tokenManager.getUserId()
                             tokenManager.clearSession()
-                            val intent = android.content.Intent(context, TelesalesForegroundService::class.java)
+                            val intent = android.content.Intent(
+                                context,
+                                TelesalesForegroundService::class.java
+                            )
                             context.stopService(intent)
                             if (userId != -1) {
-                                androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("owner_$userId")
+                                androidx.work.WorkManager.getInstance(context)
+                                    .cancelAllWorkByTag("owner_$userId")
                             }
                             backStack.clear()
                             backStack.add(Login)

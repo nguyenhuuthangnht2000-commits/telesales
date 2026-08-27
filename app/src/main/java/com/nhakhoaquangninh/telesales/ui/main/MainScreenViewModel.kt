@@ -150,11 +150,7 @@ class MainScreenViewModel : BaseViewModel() {
                 
                 val currentUserId = TokenManager.getInstance(appContext).getUserId()
                 val db = com.nhakhoaquangninh.telesales.data.local.room.TelesalesDatabase.getDatabase(appContext)
-                val userRecords = if (currentUserId != null) {
-                    db.callRecordDao().getByOwner(currentUserId)
-                } else {
-                    emptyList()
-                }
+                val userRecords = db.callRecordDao().getByOwner(currentUserId)
 
                 Triple(states, FailedCallEventManager.getInstance(appContext).getAll(), userRecords)
             }

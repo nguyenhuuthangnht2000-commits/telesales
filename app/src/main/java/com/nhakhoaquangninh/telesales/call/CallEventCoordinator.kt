@@ -128,7 +128,7 @@ class CallEventCoordinator(
                     isAnswered = true,
                     careType = currentCareType
                 )
-                uploadScheduler.enqueue(metadata, startedAtMillis = decision.call.startedAtMillis)
+                uploadScheduler.enqueue(metadata)
                 notifier.notifyRecordingQueued()
             }
 
@@ -174,7 +174,7 @@ class CallEventCoordinator(
             val waitingForOutgoingDuration =
                 !missedIncoming && latest?.callType == CallType.OUTGOING && latest.durationSeconds == 0
             if (latest != null && !waitingForOutgoingDuration) return latest
-            if (attempt < MAX_CALL_LOG_ATTEMPTS) delay(CALL_LOG_RETRY_DELAY_MILLIS)
+            if (attempt < MAX_CALL_LOG_ATTEMPTS) delay(CALL_LOG_RETRY_DELAY_MILLIS.milliseconds)
         }
         return latest
     }
@@ -192,7 +192,11 @@ class CallEventCoordinator(
                 com.nhakhoaquangninh.telesales.core.FileLogger.log(
                     appContext,
                     "RECORDING_LOCATOR",
-                    "Tìm thấy file ghi âm thành công ở lần thử ${index + 1}: ${match.recording.displayName} (${com.nhakhoaquangninh.telesales.core.FileLogger.maskUri(match.recording.uri.toString())})"
+                    "Tìm thấy file ghi âm thành công ở lần thử ${index + 1}: ${match.recording.displayName} (${
+                        com.nhakhoaquangninh.telesales.core.FileLogger.maskUri(
+                            match.recording.uri
+                        )
+                    })"
                 )
                 return match
             }
@@ -248,7 +252,7 @@ class CallEventCoordinator(
         notifier.notifyHistoryChanged()
         
         // Mới: Gửi tự động lên server
-        uploadScheduler.enqueue(metadata, startedAtMillis = eventTime)
+        uploadScheduler.enqueue(metadata)
     }
 
     private fun formatCallTime(timestamp: Long): String =

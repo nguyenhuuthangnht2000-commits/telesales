@@ -7,7 +7,11 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [CallRecordEntity::class, FailedCallEntity::class], version = 3, exportSchema = false)
+@Database(
+    entities = [CallRecordEntity::class, FailedCallEntity::class],
+    version = 3,
+    exportSchema = false
+)
 abstract class TelesalesDatabase : RoomDatabase() {
     abstract fun callRecordDao(): CallRecordDao
     abstract fun failedCallDao(): FailedCallDao
@@ -28,7 +32,7 @@ abstract class TelesalesDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE call_records ADD COLUMN ownerUserId INTEGER NOT NULL DEFAULT -1")
                 db.execSQL("ALTER TABLE call_records ADD COLUMN careType INTEGER")
                 db.execSQL("ALTER TABLE call_records ADD COLUMN startedAtMillis INTEGER NOT NULL DEFAULT 0")
-                
+
                 db.execSQL("ALTER TABLE failed_calls ADD COLUMN callId TEXT")
                 db.execSQL("ALTER TABLE failed_calls ADD COLUMN ownerUserId INTEGER NOT NULL DEFAULT -1")
             }
@@ -41,11 +45,11 @@ abstract class TelesalesDatabase : RoomDatabase() {
                     TelesalesDatabase::class.java,
                     "telesales_database"
                 )
-                // allowMainThreadQueries is used safely because the legacy API was synchronous via SharedPreferences.
-                // We preserve this to avoid massive refactoring of callers.
-                .allowMainThreadQueries()
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                .build()
+                    // allowMainThreadQueries is used safely because the legacy API was synchronous via SharedPreferences.
+                    // We preserve this to avoid massive refactoring of callers.
+                    .allowMainThreadQueries()
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .build()
                 INSTANCE = instance
                 instance
             }

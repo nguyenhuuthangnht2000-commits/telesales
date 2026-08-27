@@ -3,7 +3,12 @@ package com.nhakhoaquangninh.telesales.domain.model
 import java.security.MessageDigest
 
 object CallIdentity {
-    fun create(ownerUserId: Int, startedAtMillis: Long, callType: CallType, normalizedPhone: String?): String {
+    fun create(
+        ownerUserId: Int,
+        startedAtMillis: Long,
+        callType: CallType,
+        normalizedPhone: String?
+    ): String {
         val input = "${ownerUserId}_${startedAtMillis}_${callType.name}_${normalizedPhone ?: ""}"
         val digest = MessageDigest.getInstance("SHA-256")
         val hashBytes = digest.digest(input.toByteArray(Charsets.UTF_8))

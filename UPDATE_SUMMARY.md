@@ -628,3 +628,13 @@
 
 *Cập nhật lần cuối: 27/08/2026 22:51.*
 
+---
+
+## 42. Dọn dẹp luồng upload và chuẩn hóa mã nguồn (27/08/2026)
+
+- Loại bỏ tham số `startedAtMillis` dư thừa khỏi `UploadScheduler.enqueue()`; thời điểm cuộc gọi được lấy từ `CallRecordMetadata`.
+- Chuẩn hóa delay trong `CallEventCoordinator` bằng `Duration.milliseconds` và cập nhật các điểm gọi scheduler tương ứng.
+- Cập nhật kiểm thử mapper metadata, cùng các chỉnh sửa format/import để mã nguồn nhất quán.
+
+*Cập nhật lần cuối: 27/08/2026 22:55.*
+

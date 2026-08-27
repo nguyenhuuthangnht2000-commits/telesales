@@ -89,7 +89,7 @@ object RecordingMatchPolicy {
     ): RecordingMatchResult {
         val temporalCandidates = candidates.filter {
             it.modifiedAtMillis in
-                (call.endedAtMillis - EARLY_TOLERANCE_MILLIS)..
+                    (call.endedAtMillis - EARLY_TOLERANCE_MILLIS)..
                     (call.endedAtMillis + LATE_TOLERANCE_MILLIS)
         }
         if (temporalCandidates.isEmpty()) return RecordingMatchResult.NotFound

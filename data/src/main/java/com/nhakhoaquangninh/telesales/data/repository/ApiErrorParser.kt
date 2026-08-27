@@ -1,7 +1,7 @@
 package com.nhakhoaquangninh.telesales.data.repository
 
-import com.nhakhoaquangninh.telesales.data.remote.dto.ApiErrorBody
 import com.google.gson.Gson
+import com.nhakhoaquangninh.telesales.data.remote.dto.ApiErrorBody
 
 /**
  * Parses the server error response body JSON to extract the "message" field.

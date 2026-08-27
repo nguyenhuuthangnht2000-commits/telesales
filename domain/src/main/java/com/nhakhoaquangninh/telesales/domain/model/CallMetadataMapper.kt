@@ -15,7 +15,12 @@ object CallMetadataMapper {
     ): CallRecordMetadata {
         val otherNumber = otherPhoneNumber.normalizePhoneNumber()
         val ownNumber = ownPhoneNumber.normalizePhoneNumber()
-        val callId = CallIdentity.create(ownerUserId, startedAtMillis, callType, if (callType == CallType.INCOMING) otherNumber else ownNumber)
+        val callId = CallIdentity.create(
+            ownerUserId,
+            startedAtMillis,
+            callType,
+            if (callType == CallType.INCOMING) otherNumber else ownNumber
+        )
         return CallRecordMetadata(
             callId = callId,
             ownerUserId = ownerUserId,

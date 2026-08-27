@@ -18,7 +18,7 @@ class UploadScheduler(context: Context) {
     private val workManager = WorkManager.getInstance(appContext)
     private val syncStatusManager = SyncStatusManager.getInstance(appContext)
 
-    fun enqueue(metadata: CallRecordMetadata, startedAtMillis: Long? = null) {
+    fun enqueue(metadata: CallRecordMetadata) {
         val recordingId = metadata.recordingUri ?: "missed_${System.currentTimeMillis()}"
         val effectiveCareType = metadata.careType
             ?: TokenManager.getInstance(appContext).getSelectedCareTypeValue()

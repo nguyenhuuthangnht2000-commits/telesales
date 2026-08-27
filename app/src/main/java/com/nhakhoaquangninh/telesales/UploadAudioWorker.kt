@@ -90,7 +90,11 @@ class UploadAudioWorker(
                                 FileLogger.log(
                                     applicationContext,
                                     "RECORDING_RELOCATED",
-                                    "Đã tìm thấy lại file ghi âm sau khi rename/move: ${newCandidate.displayName} (${FileLogger.maskUri(newCandidate.uri.toString())})"
+                                    "Đã tìm thấy lại file ghi âm sau khi rename/move: ${newCandidate.displayName} (${
+                                        FileLogger.maskUri(
+                                            newCandidate.uri
+                                        )
+                                    })"
                                 )
                             }
                         }
