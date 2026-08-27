@@ -86,6 +86,7 @@ fun HomeScreenContent(
     totalCallsToday: Int,
     syncedCalls: Int,
     pendingCalls: Int,
+    recentCalls: List<com.nhakhoaquangninh.telesales.data.local.room.CallRecordEntity> = emptyList(),
     careTypeOptions: List<CareTypeOption> = emptyList(),
     selectedCareType: CareTypeOption? = null,
     onCareTypeSelected: (CareTypeOption) -> Unit = {},
@@ -466,13 +467,6 @@ fun HomeScreenContent(
                     Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(text = "$totalCallsToday", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold), color = OnSurfaceDark)
-                        Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-                        Text(
-                            text = stringResource(R.string.home_growth_placeholder),
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = ActiveEmerald,
-                            modifier = Modifier.padding(bottom = Dimens.Space4)
-                        )
                     }
                 }
             }
@@ -578,19 +572,49 @@ fun HomeScreenContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
-                        contentDescription = null,
-                        modifier = Modifier.size(Dimens.IconSizeExtraLarge),
-                        tint = OnSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                    Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
-                    Text(
-                        text = stringResource(R.string.recent_calls_empty_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = OnSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+                    if (recentCalls.isEmpty()) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
+                            contentDescription = null,
+                            modifier = Modifier.size(Dimens.IconSizeExtraLarge),
+                            tint = OnSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
+                        Text(
+                            text = stringResource(R.string.recent_calls_empty_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = OnSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        recentCalls.forEach { record ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = Dimens.PaddingSmall),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = record.phoneNumberFrom ?: record.phoneNumberTo ?: stringResource(R.string.history_unknown_phone),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = OnSurfaceDark
+                                )
+                                val statusText = when (record.status) {
+                                    "SYNCED" -> stringResource(R.string.sync_status_synced)
+                                    "PENDING" -> stringResource(R.string.sync_status_pending)
+                                    "UPLOADING" -> stringResource(R.string.sync_status_uploading)
+                                    "FAILED" -> stringResource(R.string.sync_status_failed)
+                                    "NEEDS_REVIEW" -> stringResource(R.string.sync_status_needs_review)
+                                    else -> record.status
+                                }
+                                Text(
+                                    text = statusText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (record.status == "SYNCED") ActiveEmerald else WarningAmber
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -48,6 +48,23 @@ class OtpVerifyViewModel : BaseViewModel() {
         }
     }
 
+    private val requestOtpUseCase = ServiceLocator.requestOtpUseCase
+
+    private val _resendState = MutableStateFlow<Resource<String>>(Resource.Idle)
+    val resendState: StateFlow<Resource<String>> = _resendState
+
+    fun resendOtp(userId: Int) {
+        _resendState.value = Resource.Loading
+        launchSafe(onError = { error -> _resendState.value = error }) {
+            val result = withContext(Dispatchers.IO) { requestOtpUseCase(userId.toString()) }
+            _resendState.value = result
+        }
+    }
+
+    fun resetResendState() {
+        _resendState.value = Resource.Idle
+    }
+
     fun clearInput() {
         _otpInput.value = ""
         _otpError.value = null
@@ -55,6 +72,7 @@ class OtpVerifyViewModel : BaseViewModel() {
 
     fun resetState() {
         _uiState.value = Resource.Idle
+        _resendState.value = Resource.Idle
         clearInput()
     }
 }

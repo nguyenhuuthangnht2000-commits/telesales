@@ -58,8 +58,8 @@ class UploadAudioWorker(
         )
 
         return try {
-            FileLogger.setCustomKey("call_phone_from", metadata.phoneNumberFrom ?: "")
-            FileLogger.setCustomKey("call_phone_to", metadata.phoneNumberTo ?: "")
+            FileLogger.setCustomKey("call_phone_from", FileLogger.maskPhone(metadata.phoneNumberFrom))
+            FileLogger.setCustomKey("call_phone_to", FileLogger.maskPhone(metadata.phoneNumberTo))
             FileLogger.setCustomKey("call_type", metadata.callType.wireValue)
             FileLogger.setCustomKey("call_duration", metadata.durationSeconds)
             FileLogger.setCustomKey("call_is_answered", metadata.isAnswered)
@@ -91,7 +91,7 @@ class UploadAudioWorker(
                                 FileLogger.log(
                                     applicationContext,
                                     "RECORDING_RELOCATED",
-                                    "Đã tìm thấy lại file ghi âm sau khi rename/move: ${newCandidate.displayName} (${newCandidate.uri})"
+                                    "Đã tìm thấy lại file ghi âm sau khi rename/move: ${newCandidate.displayName} (${FileLogger.maskUri(newCandidate.uri.toString())})"
                                 )
                             }
                         }
@@ -103,11 +103,11 @@ class UploadAudioWorker(
                         FileLogger.logNonFatalError(
                             context = applicationContext,
                             tag = "RECORDING_LOST_FALLBACK",
-                            message = "Không tìm thấy file ghi âm (${validation.reason}) cho cuộc gọi tới $otherPhone (${duration}s). Tự động fallback upload metadata.",
+                            message = "Không tìm thấy file ghi âm (${validation.reason}) cho cuộc gọi tới ${FileLogger.maskPhone(otherPhone)} (${duration}s). Tự động fallback upload metadata.",
                             customKeys = mapOf(
-                                "original_uri" to (recordingUri ?: ""),
+                                "original_uri" to FileLogger.maskUri(recordingUri),
                                 "validation_reason" to validation.reason,
-                                "phone" to (otherPhone ?: "")
+                                "phone" to FileLogger.maskPhone(otherPhone)
                             )
                         )
                         effectiveRecordingUri = null
@@ -119,7 +119,7 @@ class UploadAudioWorker(
                     FileLogger.logNonFatalError(
                         context = applicationContext,
                         tag = "METADATA_ERROR",
-                        message = "Metadata không hợp lệ (callType=$callType, duration=$duration) - URI: $recordingUri",
+                        message = "Metadata không hợp lệ (callType=$callType, duration=$duration) - URI: ${FileLogger.maskUri(recordingUri)}",
                         customKeys = mapOf("callType" to (callType?.wireValue ?: "null"), "duration" to duration)
                     )
                     ServiceLocator.complianceNotifier.notifyUploadFailed(metadata, failureReason)
@@ -140,7 +140,7 @@ class UploadAudioWorker(
             }
 
             val finalMetadata = metadata.copy(recordingUri = effectiveRecordingUri)
-            Log.d("API_LOG", "Bắt đầu Upload File (isAnswered=$isAnswered, careType=${finalMetadata.careType}, uri=${finalMetadata.recordingUri}) - Từ: ${finalMetadata.phoneNumberFrom} | Tới: ${finalMetadata.phoneNumberTo} | Loại: ${finalMetadata.callType} | Thời lượng: ${finalMetadata.durationSeconds}s | Lúc: ${finalMetadata.callAtFormatted}")
+            Log.d("API_LOG", "Bắt đầu Upload File (isAnswered=$isAnswered, careType=${finalMetadata.careType}, uri=${FileLogger.maskUri(finalMetadata.recordingUri)}) - Từ: ${FileLogger.maskPhone(finalMetadata.phoneNumberFrom)} | Tới: ${FileLogger.maskPhone(finalMetadata.phoneNumberTo)} | Loại: ${finalMetadata.callType} | Thời lượng: ${finalMetadata.durationSeconds}s | Lúc: ${finalMetadata.callAtFormatted}")
             
             val uploadResource = ServiceLocator.uploadCallRecordUseCase(finalMetadata)
             val decision = UploadWorkPolicy.decide(uploadResource)

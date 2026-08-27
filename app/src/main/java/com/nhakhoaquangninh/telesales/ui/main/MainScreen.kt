@@ -421,15 +421,27 @@ fun MainScreen(
         ) {
             when (selectedTab) {
                 0 -> {
-                    val syncedCount = audioFiles.count { it.status == SyncStatus.SYNCED }
-                    val pendingCount = audioFiles.count { it.status == SyncStatus.PENDING || it.status == SyncStatus.FAILED || it.status == SyncStatus.NEEDS_REVIEW }
-                    val totalCount = audioFiles.size + failedCallEvents.size
+                    val callRecords by viewModel.callRecords.collectAsStateWithLifecycle()
+                    
+                    val todayStart = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh")).apply {
+                        set(java.util.Calendar.HOUR_OF_DAY, 0)
+                        set(java.util.Calendar.MINUTE, 0)
+                        set(java.util.Calendar.SECOND, 0)
+                        set(java.util.Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+
+                    val todayRecords = callRecords.filter { it.startedAtMillis >= todayStart }
+
+                    val totalCount = todayRecords.size
+                    val syncedCount = todayRecords.count { it.status == "SYNCED" }
+                    val pendingCount = todayRecords.count { it.status == "PENDING" || it.status == "FAILED" || it.status == "RETRYABLE" }
 
                     HomeScreenContent(
                         isServiceRunning = isServiceRunning,
                         totalCallsToday = totalCount,
                         syncedCalls = syncedCount,
                         pendingCalls = pendingCount,
+                        recentCalls = todayRecords.take(10), // Passed to HomeScreenContent
                         careTypeOptions = careTypeOptions,
                         selectedCareType = selectedCareType,
                         onCareTypeSelected = { option ->

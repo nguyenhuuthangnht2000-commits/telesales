@@ -76,7 +76,7 @@ class CallEventCoordinator(
             com.nhakhoaquangninh.telesales.core.FileLogger.log(
                 appContext,
                 "CALL_COORDINATOR",
-                "Kết thúc xử lý cuộc gọi nhỡ đến (SĐT: $otherPhoneNumberNormalized, Chiều: ĐẾN, Thời lượng CallLog: 0s, Match: null) -> Quyết định: SaveNotConnected(MISSED)"
+                "Kết thúc xử lý cuộc gọi nhỡ đến (SĐT: ${com.nhakhoaquangninh.telesales.core.FileLogger.maskPhone(otherPhoneNumberNormalized)}, Chiều: ĐẾN, Thời lượng CallLog: 0s, Match: null) -> Quyết định: SaveNotConnected(MISSED)"
             )
             saveFailedCall(
                 snapshot = snapshot,
@@ -103,7 +103,7 @@ class CallEventCoordinator(
         com.nhakhoaquangninh.telesales.core.FileLogger.log(
             appContext,
             "CALL_COORDINATOR",
-            "Kết thúc xử lý cuộc gọi (SĐT: $otherPhoneNumberNormalized, Chiều: ${if (snapshot.incoming) "ĐẾN" else "ĐI"}, Thời lượng CallLog: ${callLog?.durationSeconds ?: 0}s, Match: $match) -> Quyết định: $decision"
+            "Kết thúc xử lý cuộc gọi (SĐT: ${com.nhakhoaquangninh.telesales.core.FileLogger.maskPhone(otherPhoneNumberNormalized)}, Chiều: ${if (snapshot.incoming) "ĐẾN" else "ĐI"}, Thời lượng CallLog: ${callLog?.durationSeconds ?: 0}s, Match: $match) -> Quyết định: $decision"
         )
 
         when (decision) {
@@ -192,7 +192,7 @@ class CallEventCoordinator(
                 com.nhakhoaquangninh.telesales.core.FileLogger.log(
                     appContext,
                     "RECORDING_LOCATOR",
-                    "Tìm thấy file ghi âm thành công ở lần thử ${index + 1}: ${match.recording.displayName} (${match.recording.uri})"
+                    "Tìm thấy file ghi âm thành công ở lần thử ${index + 1}: ${match.recording.displayName} (${com.nhakhoaquangninh.telesales.core.FileLogger.maskUri(match.recording.uri.toString())})"
                 )
                 return match
             }

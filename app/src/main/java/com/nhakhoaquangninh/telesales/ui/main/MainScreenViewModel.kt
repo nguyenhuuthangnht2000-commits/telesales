@@ -43,6 +43,9 @@ class MainScreenViewModel : BaseViewModel() {
     private val _failedCallEvents = MutableStateFlow<List<FailedCallEvent>>(emptyList())
     val failedCallEvents: StateFlow<List<FailedCallEvent>> = _failedCallEvents
 
+    private val _callRecords = MutableStateFlow<List<com.nhakhoaquangninh.telesales.data.local.room.CallRecordEntity>>(emptyList())
+    val callRecords: StateFlow<List<com.nhakhoaquangninh.telesales.data.local.room.CallRecordEntity>> = _callRecords
+
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing
 
@@ -144,10 +147,20 @@ class MainScreenViewModel : BaseViewModel() {
                         null
                     }
                 }
-                states to FailedCallEventManager.getInstance(appContext).getAll()
+                
+                val currentUserId = TokenManager.getInstance(appContext).getUserId()
+                val db = com.nhakhoaquangninh.telesales.data.local.room.TelesalesDatabase.getDatabase(appContext)
+                val userRecords = if (currentUserId != null) {
+                    db.callRecordDao().getByOwner(currentUserId)
+                } else {
+                    emptyList()
+                }
+
+                Triple(states, FailedCallEventManager.getInstance(appContext).getAll(), userRecords)
             }
             _audioFiles.value = result.first
             _failedCallEvents.value = result.second
+            _callRecords.value = result.third
         }
     }
 

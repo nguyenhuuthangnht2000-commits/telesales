@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -91,6 +92,8 @@ fun OtpVerifyScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
+    val resendState by viewModel.resendState.collectAsStateWithLifecycle()
+
     LaunchedEffect(Unit) {
         viewModel.clearInput()
     }
@@ -112,6 +115,13 @@ fun OtpVerifyScreen(
         }
     }
 
+    LaunchedEffect(resendState) {
+        if (resendState is Resource.Success) {
+            timeLeft = 45
+            viewModel.resetResendState()
+        }
+    }
+
     // Error Dialog
     if (uiState is Resource.Error) {
         ErrorDialog(
@@ -120,6 +130,15 @@ fun OtpVerifyScreen(
                 viewModel.resetState() 
                 focusRequester.requestFocus()
                 keyboardController?.show()
+            }
+        )
+    }
+
+    if (resendState is Resource.Error) {
+        ErrorDialog(
+            error = resendState as Resource.Error,
+            onDismiss = {
+                viewModel.resetResendState()
             }
         )
     }
@@ -327,15 +346,23 @@ fun OtpVerifyScreen(
                                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                                 color = OnSurfaceVariant
                             )
+                        } else if (resendState is Resource.Loading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(Dimens.Space24),
+                                color = PrimaryTeal,
+                                strokeWidth = Dimens.ProgressStrokeWidth
+                            )
                         } else {
                             Text(
                                 text = stringResource(R.string.otp_resend_now),
                                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                                 color = PrimaryTeal,
-                                modifier = Modifier.clickable {
-                                    timeLeft = 45
-                                    // Could trigger resend action here
-                                }
+                                modifier = Modifier
+                                    .minimumInteractiveComponentSize()
+                                    .clickable {
+                                        viewModel.resendOtp(userId)
+                                    }
+                                    .padding(Dimens.Space12)
                             )
                         }
                     }

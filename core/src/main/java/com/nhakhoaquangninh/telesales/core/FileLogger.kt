@@ -21,6 +21,28 @@ object FileLogger {
     private const val MAX_LOG_SIZE_BYTES = 10L * 1024L * 1024L // Giới hạn 10MB (~20.000 cuộc gọi)
 
     /**
+     * Tiện ích che giấu số điện thoại (VD: 0912***678)
+     */
+    fun maskPhone(phone: String?): String {
+        if (phone == null || phone.length < 7) return phone ?: "null"
+        val start = phone.substring(0, 4)
+        val end = phone.substring(phone.length - 3)
+        return "$start***$end"
+    }
+
+    /**
+     * Tiện ích che giấu URI/Path
+     */
+    fun maskUri(uri: String?): String {
+        if (uri == null) return "null"
+        val lastSlash = uri.lastIndexOf("/")
+        if (lastSlash != -1 && lastSlash < uri.length - 1) {
+            return ".../" + uri.substring(lastSlash + 1)
+        }
+        return uri
+    }
+
+    /**
      * Lấy con trỏ File tới tệp log chẩn đoán cục bộ.
      */
     fun getLogFile(context: Context): File? {
