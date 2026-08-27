@@ -76,6 +76,7 @@ class AuthRepositoryImpl(
                     } ?: emptyList()
                 )
                 tokenManager.saveSession(session)
+                tokenManager.setMonitoringEnabled(true)
                 if (session.careTypeOptions.isNotEmpty() && tokenManager.getSelectedCareTypeValue() == null) {
                     tokenManager.saveSelectedCareTypeValue(session.careTypeOptions.first().value)
                 }

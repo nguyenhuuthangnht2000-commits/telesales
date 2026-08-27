@@ -37,12 +37,14 @@ class TelesalesForegroundService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
         _isRunning.value = true
+        _isMonitoring.value = com.nhakhoaquangninh.telesales.data.local.TokenManager.getInstance(this).isMonitoringEnabled()
         return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
         _isRunning.value = false
+        _isMonitoring.value = false
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -65,6 +67,13 @@ class TelesalesForegroundService : Service() {
 
         private val _isRunning = MutableStateFlow(false)
         val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
+
+        private val _isMonitoring = MutableStateFlow(false)
+        val isMonitoring: StateFlow<Boolean> = _isMonitoring.asStateFlow()
+
+        fun setMonitoring(enabled: Boolean) {
+            _isMonitoring.value = enabled
+        }
 
         fun startService(context: android.content.Context) {
             try {

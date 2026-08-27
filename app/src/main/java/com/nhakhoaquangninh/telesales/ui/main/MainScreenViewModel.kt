@@ -93,7 +93,7 @@ class MainScreenViewModel : BaseViewModel() {
         }
     }
 
-    fun verifyStopServiceOtp(userId: Int, onSuccess: () -> Unit) {
+    fun verifyStopServiceOtp(userId: Int, context: Context, onSuccess: () -> Unit) {
         val otp = _stopServiceOtpInput.value
         _verifyStopServiceOtpState.value = Resource.Loading
         launchSafe(onError = { error -> _verifyStopServiceOtpState.value = error }) {
@@ -101,6 +101,7 @@ class MainScreenViewModel : BaseViewModel() {
             if (result is Resource.Error && result.source == ErrorSource.APP_CLIENT) {
                 _stopServiceOtpError.value = result.message
             } else if (result is Resource.Success) {
+                TokenManager.getInstance(context).setMonitoringEnabled(false)
                 onSuccess()
             }
             _verifyStopServiceOtpState.value = result

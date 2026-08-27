@@ -1,12 +1,8 @@
 package com.nhakhoaquangninh.telesales.data.local
 
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.core.content.edit
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
 import com.nhakhoaquangninh.telesales.domain.model.CallType
-import java.util.concurrent.TimeUnit
-import org.json.JSONObject
 
 enum class SyncStatus {
     PENDING,
@@ -124,4 +120,5 @@ class SyncStatusManager private constructor(context: Context) {
     @Synchronized
     fun removeStatus(recordingId: String) {
         dao.delete(recordingId)
+    }
 }

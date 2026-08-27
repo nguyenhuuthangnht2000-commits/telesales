@@ -99,8 +99,8 @@ class MainActivity : BaseActivity() {
             Manifest.permission.READ_CALL_LOG
         ) == PackageManager.PERMISSION_GRANTED
 
-        // Chỉ tự động khởi chạy service nếu đã đăng nhập và đã được cấp các quyền cần thiết
-        if (tokenManager.isLoggedIn() && hasPhoneState && hasCallLog) {
+        // Chỉ tự động khởi chạy service nếu đã đăng nhập, monitoring enabled và đã được cấp các quyền cần thiết
+        if (tokenManager.isLoggedIn() && tokenManager.isMonitoringEnabled() && hasPhoneState && hasCallLog) {
             val serviceIntent = Intent(this, TelesalesForegroundService::class.java)
             ContextCompat.startForegroundService(this, serviceIntent)
         }

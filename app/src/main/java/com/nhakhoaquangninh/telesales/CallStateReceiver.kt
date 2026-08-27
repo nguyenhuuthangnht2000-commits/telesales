@@ -18,6 +18,10 @@ class CallStateReceiver : BroadcastReceiver() {
         }
         val phoneNumber = PhoneNumberNormalizer.normalize(getIncomingNumberCompat(intent))
         ServiceLocator.init(context.applicationContext)
+        val tokenManager = ServiceLocator.tokenManager
+        if (tokenManager == null || !tokenManager.isLoggedIn() || !tokenManager.isMonitoringEnabled()) {
+            return
+        }
         val transition = ServiceLocator.callSessionTracker.onState(state, phoneNumber)
         ServiceLocator.callEventCoordinator.enqueue(transition)
     }

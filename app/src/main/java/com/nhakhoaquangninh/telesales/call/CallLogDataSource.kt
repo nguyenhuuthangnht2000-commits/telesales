@@ -43,27 +43,42 @@ class CallLogDataSource(context: Context) {
                 val typeIndex = cursor.getColumnIndexOrThrow(CallLog.Calls.TYPE)
                 val durationIndex = cursor.getColumnIndexOrThrow(CallLog.Calls.DURATION)
                 val dateIndex = cursor.getColumnIndexOrThrow(CallLog.Calls.DATE)
-                var best: CallLogEntry? = null
-                var bestDifference = Long.MAX_VALUE
+                var bestNumberMatch: CallLogEntry? = null
+                var bestNumberMatchDifference = Long.MAX_VALUE
+                var bestTimeMatch: CallLogEntry? = null
+                var bestTimeMatchDifference = Long.MAX_VALUE
+                val expectedNumber = PhoneNumberNormalizer.normalize(snapshot.otherPhoneNumber)
+
                 while (cursor.moveToNext()) {
                     val startedAt = cursor.getLong(dateIndex)
                     val difference = abs(startedAt - reference)
-                    if (difference < bestDifference) {
-                        bestDifference = difference
-                        val androidType = cursor.getInt(typeIndex)
-                        best = CallLogEntry(
-                            phoneNumber = PhoneNumberNormalizer.normalize(cursor.getString(numberIndex)),
-                            callType = if (androidType == CallLog.Calls.OUTGOING_TYPE) {
-                                CallType.OUTGOING
-                            } else {
-                                CallType.INCOMING
-                            },
-                            startedAtMillis = startedAt,
-                            durationSeconds = cursor.getInt(durationIndex).coerceAtLeast(0)
-                        )
+                    val androidType = cursor.getInt(typeIndex)
+                    val logNumber = PhoneNumberNormalizer.normalize(cursor.getString(numberIndex))
+                    
+                    val entry = CallLogEntry(
+                        phoneNumber = logNumber,
+                        callType = if (androidType == CallLog.Calls.OUTGOING_TYPE) CallType.OUTGOING else CallType.INCOMING,
+                        startedAtMillis = startedAt,
+                        durationSeconds = cursor.getInt(durationIndex).coerceAtLeast(0)
+                    )
+                    
+                    if (difference < bestTimeMatchDifference) {
+                        bestTimeMatchDifference = difference
+                        bestTimeMatch = entry
+                    }
+                    
+                    if (!expectedNumber.isNullOrEmpty() && expectedNumber == logNumber) {
+                        if (difference < bestNumberMatchDifference) {
+                            bestNumberMatchDifference = difference
+                            bestNumberMatch = entry
+                        }
                     }
                 }
-                best
+                if (!expectedNumber.isNullOrEmpty()) {
+                    bestNumberMatch
+                } else {
+                    bestTimeMatch
+                }
             }
         } catch (_: SecurityException) {
             Log.w(TAG, "Không có quyền đọc CallLog")

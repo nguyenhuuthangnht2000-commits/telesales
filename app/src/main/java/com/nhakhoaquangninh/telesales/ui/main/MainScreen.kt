@@ -607,7 +607,7 @@ fun MainScreen(
                         onDone = {
                             keyboardController?.hide()
                             session?.userId?.let { userId ->
-                                viewModel.verifyStopServiceOtp(userId) {
+                                viewModel.verifyStopServiceOtp(userId, context) {
                                     val intent = Intent(context, TelesalesForegroundService::class.java)
                                     context.stopService(intent)
                                     showStopServiceOtpDialog = false
@@ -638,7 +638,7 @@ fun MainScreen(
                     onClick = {
                         keyboardController?.hide()
                         session?.userId?.let { userId ->
-                            viewModel.verifyStopServiceOtp(userId) {
+                            viewModel.verifyStopServiceOtp(userId, context) {
                                 val intent = Intent(context, TelesalesForegroundService::class.java)
                                 context.stopService(intent)
                                 showStopServiceOtpDialog = false

@@ -41,6 +41,31 @@ fun MainNavigation() {
                         userId = key.userId,
                         onVerifySuccess = {
                             TelesalesForegroundService.startService(context)
+                            // Login re-enqueue
+                            val userId = tokenManager.getUserId()
+                            if (userId != -1) {
+                                Thread {
+                                    val db = com.nhakhoaquangninh.telesales.data.local.room.TelesalesDatabase.getDatabase(context)
+                                    val pendings = db.callRecordDao().getPendingByOwner(userId)
+                                    val scheduler = com.nhakhoaquangninh.telesales.ServiceLocator.uploadScheduler
+                                    for (p in pendings) {
+                                        val metadata = com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata(
+                                            phoneNumberFrom = p.phoneNumberFrom,
+                                            phoneNumberTo = p.phoneNumberTo,
+                                            callType = com.nhakhoaquangninh.telesales.domain.model.CallType.fromWire(p.callType) ?: com.nhakhoaquangninh.telesales.domain.model.CallType.OUTGOING,
+                                            durationSeconds = p.durationSeconds,
+                                            callAtFormatted = p.callAtFormatted,
+                                            recordingUri = p.recordingUri,
+                                            isAnswered = p.isAnswered,
+                                            careType = p.careType,
+                                            callId = p.callId ?: java.util.UUID.randomUUID().toString(),
+                                            ownerUserId = p.ownerUserId,
+                                            startedAtMillis = p.startedAtMillis
+                                        )
+                                        scheduler.enqueue(metadata)
+                                    }
+                                }.start()
+                            }
                             backStack.clear()   // Clear auth stack (Login & OtpVerify)
                             backStack.add(Main) // Set Main as root
                         },
@@ -53,7 +78,13 @@ fun MainNavigation() {
                 entry<Main> {
                     MainScreen(
                         onLogout = {
+                            val userId = tokenManager.getUserId()
                             tokenManager.clearSession()
+                            val intent = android.content.Intent(context, TelesalesForegroundService::class.java)
+                            context.stopService(intent)
+                            if (userId != -1) {
+                                androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("owner_$userId")
+                            }
                             backStack.clear()
                             backStack.add(Login)
                         },

@@ -227,6 +227,14 @@ internal class SecureSessionStore(
         return read()?.careTypeOptions?.firstOrNull()?.value
     }
 
+    fun setMonitoringEnabled(enabled: Boolean) {
+        securePrefs.edit { putBoolean(KEY_MONITORING_ENABLED, enabled) }
+    }
+
+    fun isMonitoringEnabled(): Boolean {
+        return securePrefs.getBoolean(KEY_MONITORING_ENABLED, false)
+    }
+
     private companion object {
         const val SECURE_PREF_NAME = "TelesalesSecureSession"
         const val LEGACY_PREF_NAME = "TelesalesSession"
@@ -237,5 +245,6 @@ internal class SecureSessionStore(
         const val KEY_USER_EMAIL = "user_email"
         const val KEY_USER_PHONE = "user_phone"
         const val KEY_SELECTED_CARE_TYPE = "selected_care_type_value"
+        const val KEY_MONITORING_ENABLED = "monitoring_enabled"
     }
 }

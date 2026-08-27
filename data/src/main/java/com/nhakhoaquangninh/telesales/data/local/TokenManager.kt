@@ -37,5 +37,9 @@ class TokenManager private constructor(private val secureStore: SecureSessionSto
 
     fun getSelectedCareTypeValue(): Int? = secureStore.getSelectedCareTypeValue()
 
+    fun setMonitoringEnabled(enabled: Boolean) = secureStore.setMonitoringEnabled(enabled)
+
+    fun isMonitoringEnabled(): Boolean = secureStore.isMonitoringEnabled()
+
     fun clearSession() = secureStore.clear()
 }

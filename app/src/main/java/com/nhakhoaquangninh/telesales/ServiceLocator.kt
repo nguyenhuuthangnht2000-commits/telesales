@@ -27,7 +27,7 @@ object ServiceLocator {
     private var applicationContext: Context? = null
 
     @Volatile
-    private var tokenManager: TokenManager? = null
+    internal var tokenManager: TokenManager? = null
 
     @Volatile
     private var messageProvider: MessageProvider? = null
