@@ -103,4 +103,58 @@ class CallMetadataMapperTest {
         assertThat(call.ownerUserId).isEqualTo(1)
         assertThat(call.startedAtMillis).isEqualTo(1000L)
     }
+
+    @Test
+    fun applyOwnPhoneNumber_outgoing_replacesSimNumberWithSessionNumber() {
+        val metadata = CallMetadataMapper.create(
+            1,
+            1L,
+            null,
+            CallType.OUTGOING,
+            "0399607496",
+            "0969584386",
+            2,
+            null
+        )
+
+        val result = CallMetadataMapper.applyOwnPhoneNumber(metadata, "0962219228")
+
+        assertThat(result.phoneNumberFrom).isEqualTo("0962219228")
+        assertThat(result.phoneNumberTo).isEqualTo("0399607496")
+    }
+
+    @Test
+    fun applyOwnPhoneNumber_incoming_fillsMissingRecipientNumber() {
+        val metadata = CallMetadataMapper.create(
+            1,
+            1L,
+            null,
+            CallType.INCOMING,
+            "0776417708",
+            null,
+            21,
+            null
+        )
+
+        val result = CallMetadataMapper.applyOwnPhoneNumber(metadata, "0962219228")
+
+        assertThat(result.phoneNumberFrom).isEqualTo("0776417708")
+        assertThat(result.phoneNumberTo).isEqualTo("0962219228")
+    }
+
+    @Test
+    fun hasOwnPhoneNumber_returnsFalseWhenEmployeeSideIsMissing() {
+        val metadata = CallMetadataMapper.create(
+            1,
+            1L,
+            null,
+            CallType.OUTGOING,
+            "0399607496",
+            null,
+            2,
+            null
+        )
+
+        assertThat(CallMetadataMapper.hasOwnPhoneNumber(metadata)).isFalse()
+    }
 }

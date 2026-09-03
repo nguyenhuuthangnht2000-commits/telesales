@@ -11,6 +11,7 @@ import com.nhakhoaquangninh.telesales.data.local.SyncStatus
 import com.nhakhoaquangninh.telesales.data.local.SyncStatusManager
 import com.nhakhoaquangninh.telesales.domain.common.Resource
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
+import com.nhakhoaquangninh.telesales.domain.model.CallMetadataMapper
 import com.nhakhoaquangninh.telesales.domain.model.CallType
 import kotlinx.coroutines.CancellationException
 
@@ -42,7 +43,7 @@ class UploadAudioWorker(
         val startedAtMillis = inputData.getLong(KEY_STARTED_AT_MILLIS, -1L).takeIf { it > 0 }
             ?: parseCallAtMillis(inputData.getString(KEY_CALL_AT)) ?: System.currentTimeMillis()
 
-        val metadata = CallRecordMetadata(
+        val queuedMetadata = CallRecordMetadata(
             callId = callId,
             ownerUserId = ownerUserId,
             startedAtMillis = startedAtMillis,
@@ -55,6 +56,10 @@ class UploadAudioWorker(
             isAnswered = isAnswered,
             careType = careType
         )
+        val metadata = CallMetadataMapper.applyOwnPhoneNumber(
+            queuedMetadata,
+            OwnPhoneNumberResolver.resolve(applicationContext)
+        )
 
         return try {
             FileLogger.setCustomKey("call_phone_from", FileLogger.maskPhone(metadata.phoneNumberFrom))
@@ -63,6 +68,20 @@ class UploadAudioWorker(
             FileLogger.setCustomKey("call_duration", metadata.durationSeconds)
             FileLogger.setCustomKey("call_is_answered", metadata.isAnswered)
             FileLogger.setCustomKey("call_care_type", metadata.careType ?: -1)
+
+            if (!CallMetadataMapper.hasOwnPhoneNumber(metadata)) {
+                terminalStatus = SyncStatus.PENDING
+                FileLogger.logNonFatalError(
+                    context = applicationContext,
+                    tag = "EMPLOYEE_PHONE_MISSING",
+                    message = "Chưa xác định được số điện thoại nhân viên. Giữ bản ghi chờ đồng bộ lại sau.",
+                    customKeys = mapOf(
+                        "call_type" to metadata.callType.wireValue,
+                        "call_id" to metadata.callId
+                    )
+                )
+                return Result.retry()
+            }
 
             var effectiveRecordingUri = recordingUri
             if (isAnswered) {

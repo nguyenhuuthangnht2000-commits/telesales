@@ -650,3 +650,16 @@
 
 *Cập nhật lần cuối: 27/08/2026 23:51.*
 
+---
+
+## 44. Sửa nguồn số điện thoại nhân viên khi đồng bộ cuộc gọi (03/09/2026)
+
+- Nâng phiên bản ứng dụng lên `versionCode = 11`, `versionName = "2.0"`.
+- Ưu tiên số điện thoại nhân viên từ phiên xác thực OTP (`user.phone`); chỉ lấy số SIM làm phương án dự phòng.
+- Áp dụng cùng quy tắc cho cuộc gọi đến, cuộc gọi đi, cuộc gọi nhỡ và trường hợp không tìm thấy tệp ghi âm.
+- Khi xác thực lại, các bản ghi đang chờ được bổ sung/cập nhật số điện thoại nhân viên trước khi gửi lên server.
+- Không upload bản ghi thiếu số điện thoại nhân viên; worker giữ bản ghi ở trạng thái chờ và tự thử lại sau.
+- Bổ sung kiểm thử mapper cho việc ưu tiên số từ session và xử lý metadata thiếu số nhân viên.
+
+*Cập nhật lần cuối: 03/09/2026.*
+

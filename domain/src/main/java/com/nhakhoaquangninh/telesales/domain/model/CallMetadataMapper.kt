@@ -1,6 +1,25 @@
 package com.nhakhoaquangninh.telesales.domain.model
 
 object CallMetadataMapper {
+    fun applyOwnPhoneNumber(
+        metadata: CallRecordMetadata,
+        ownPhoneNumber: String?
+    ): CallRecordMetadata {
+        val ownNumber = ownPhoneNumber.normalizePhoneNumber() ?: return metadata
+        return if (metadata.callType == CallType.INCOMING) {
+            metadata.copy(phoneNumberTo = ownNumber)
+        } else {
+            metadata.copy(phoneNumberFrom = ownNumber)
+        }
+    }
+
+    fun hasOwnPhoneNumber(metadata: CallRecordMetadata): Boolean =
+        if (metadata.callType == CallType.INCOMING) {
+            !metadata.phoneNumberTo.isNullOrBlank()
+        } else {
+            !metadata.phoneNumberFrom.isNullOrBlank()
+        }
+
     fun create(
         ownerUserId: Int,
         startedAtMillis: Long,

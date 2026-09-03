@@ -88,16 +88,7 @@ object ServiceLocator {
         CallSessionTracker(
             prefs = prefs,
             getOwnerUserId = { requireTokenManager().getUserId() },
-            getOwnPhoneNumber = {
-                try {
-                    val telephonyManager = requireContext().getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
-                    telephonyManager.line1Number
-                } catch (e: SecurityException) {
-                    null
-                } catch (e: Exception) {
-                    null
-                }
-            }
+            getOwnPhoneNumber = { OwnPhoneNumberResolver.resolve(requireContext()) }
         )
     }
 

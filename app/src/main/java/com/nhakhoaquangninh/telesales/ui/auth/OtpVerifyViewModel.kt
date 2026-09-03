@@ -1,11 +1,13 @@
 package com.nhakhoaquangninh.telesales.ui.auth
 
 import android.content.Context
+import com.nhakhoaquangninh.telesales.OwnPhoneNumberResolver
 import com.nhakhoaquangninh.telesales.ServiceLocator
 import com.nhakhoaquangninh.telesales.core.BaseViewModel
 import com.nhakhoaquangninh.telesales.data.local.room.TelesalesDatabase
 import com.nhakhoaquangninh.telesales.domain.common.ErrorSource
 import com.nhakhoaquangninh.telesales.domain.common.Resource
+import com.nhakhoaquangninh.telesales.domain.model.CallMetadataMapper
 import com.nhakhoaquangninh.telesales.domain.model.CallRecordMetadata
 import com.nhakhoaquangninh.telesales.domain.model.CallType
 import com.nhakhoaquangninh.telesales.domain.model.UserSession
@@ -63,10 +65,10 @@ class OtpVerifyViewModel : BaseViewModel() {
             .callRecordDao()
             .getPendingByOwner(ownerUserId)
         val scheduler = ServiceLocator.uploadScheduler
+        val ownPhoneNumber = OwnPhoneNumberResolver.resolve(context)
 
         pendingRecords.forEach { record ->
-            scheduler.enqueue(
-                CallRecordMetadata(
+            val metadata = CallRecordMetadata(
                     phoneNumberFrom = record.phoneNumberFrom,
                     phoneNumberTo = record.phoneNumberTo,
                     callType = CallType.fromWire(record.callType) ?: CallType.OUTGOING,
@@ -79,7 +81,7 @@ class OtpVerifyViewModel : BaseViewModel() {
                     ownerUserId = record.ownerUserId,
                     startedAtMillis = record.startedAtMillis
                 )
-            )
+            scheduler.enqueue(CallMetadataMapper.applyOwnPhoneNumber(metadata, ownPhoneNumber))
         }
     }
 
