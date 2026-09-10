@@ -54,6 +54,8 @@ interface ApiService {
         @Part("duration") duration: RequestBody? = null,
         @Part("call_at") callAt: RequestBody? = null,
         @Part("is_answered") isAnswered: RequestBody? = null,
-        @Part("care_type") careType: RequestBody? = null
+        @Part("care_type") careType: RequestBody? = null,
+        @Part("latitude") latitude: RequestBody? = null,
+        @Part("longitude") longitude: RequestBody? = null
     ): Response<ResponseBody>
 }

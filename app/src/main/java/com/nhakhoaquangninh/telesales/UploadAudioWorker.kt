@@ -54,6 +54,8 @@ class UploadAudioWorker(
             durationSeconds = duration,
             callAtFormatted = inputData.getString(KEY_CALL_AT),
             isAnswered = isAnswered,
+            latitude = inputData.getDouble(KEY_LATITUDE, Double.NaN).takeIf { it.isFinite() },
+            longitude = inputData.getDouble(KEY_LONGITUDE, Double.NaN).takeIf { it.isFinite() },
             careType = careType
         )
         val metadata = CallMetadataMapper.applyOwnPhoneNumber(
@@ -183,7 +185,7 @@ class UploadAudioWorker(
                 }
                 UploadWorkResult.RETRY -> {
                     if (uploadResource is Resource.Error) {
-                        FileLogger.log(applicationContext, "WORKER_RETRY", "Upload cần retry (HTTP ${uploadResource.code}): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}")
+                        FileLogger.log(applicationContext, "WORKER_RETRY", "Upload cần retry (HTTP ${uploadResource.code})")
                     }
                     Result.retry()
                 }
@@ -192,10 +194,9 @@ class UploadAudioWorker(
                         FileLogger.logNonFatalError(
                             context = applicationContext,
                             tag = "WORKER_UNAUTHORIZED",
-                            message = "Upload bị từ chối xác thực (HTTP 401): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}",
+                            message = "Upload bị từ chối xác thực (HTTP 401)",
                             customKeys = mapOf(
                                 "http_code" to 401,
-                                "server_body" to (uploadResource.rawDetails ?: ""),
                                 "care_type" to (metadata.careType ?: -1)
                             )
                         )
@@ -211,10 +212,9 @@ class UploadAudioWorker(
                         FileLogger.logNonFatalError(
                             context = applicationContext,
                             tag = "WORKER_REJECTED",
-                            message = "Upload bị Server từ chối (HTTP ${uploadResource.code}): ${uploadResource.message} | Server body: ${uploadResource.rawDetails}",
+                            message = "Upload bị Server từ chối (HTTP ${uploadResource.code})",
                             customKeys = mapOf(
                                 "http_code" to (uploadResource.code ?: -1),
-                                "server_body" to (uploadResource.rawDetails ?: ""),
                                 "care_type" to (metadata.careType ?: -1)
                             )
                         )
@@ -262,6 +262,8 @@ class UploadAudioWorker(
     }
 
     companion object {
+        const val KEY_LATITUDE = "latitude"
+        const val KEY_LONGITUDE = "longitude"
         const val KEY_RECORDING_URI = "recording_uri"
         const val KEY_RECORDING_ID = "recording_id"
         const val KEY_PHONE_FROM = "phone_from"

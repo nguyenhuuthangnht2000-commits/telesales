@@ -56,7 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Color
+import com.nhakhoaquangninh.telesales.theme.SyncOverlay
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -95,6 +95,8 @@ import com.nhakhoaquangninh.telesales.ui.main.components.SettingsScreenContent
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
+    needsLocationSetup: Boolean,
+    onRequestLocationSetup: () -> Unit,
     modifier: Modifier = Modifier,
     onLogout: () -> Unit = {},
     viewModel: MainScreenViewModel = viewModel()
@@ -404,7 +406,7 @@ fun MainScreen(
                         }
                     },
                     containerColor = PrimaryTeal,
-                    contentColor = Color.White
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
                     Icon(
                         Icons.Default.Sync,
@@ -419,83 +421,89 @@ fun MainScreen(
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
-            when (selectedTab) {
-                0 -> {
-                    val callRecords by viewModel.callRecords.collectAsStateWithLifecycle()
+            Column(Modifier.fillMaxSize()) {
+                com.nhakhoaquangninh.telesales.ui.main.components.LocationPermissionNotice(needsLocationSetup, onRequestLocationSetup)
+                Box(Modifier.weight(1f)) {
+                    when (selectedTab) {
+                        0 -> {
+                            val callRecords by viewModel.callRecords.collectAsStateWithLifecycle()
                     
-                    val todayStart = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh")).apply {
-                        set(java.util.Calendar.HOUR_OF_DAY, 0)
-                        set(java.util.Calendar.MINUTE, 0)
-                        set(java.util.Calendar.SECOND, 0)
-                        set(java.util.Calendar.MILLISECOND, 0)
-                    }.timeInMillis
+                            val todayStart = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh")).apply {
+                                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                set(java.util.Calendar.MINUTE, 0)
+                                set(java.util.Calendar.SECOND, 0)
+                                set(java.util.Calendar.MILLISECOND, 0)
+                            }.timeInMillis
 
-                    val todayRecords = callRecords.filter { it.startedAtMillis >= todayStart }
+                            val todayRecords = callRecords.filter { it.startedAtMillis >= todayStart }
 
-                    val totalCount = todayRecords.size
-                    val syncedCount = todayRecords.count { it.status == "SYNCED" }
-                    val pendingCount = todayRecords.count { it.status == "PENDING" || it.status == "FAILED" || it.status == "RETRYABLE" }
+                            val totalCount = todayRecords.size
+                            val syncedCount = todayRecords.count { it.status == "SYNCED" }
+                            val pendingCount = todayRecords.count { it.status == "PENDING" || it.status == "FAILED" || it.status == "RETRYABLE" }
 
-                    HomeScreenContent(
-                        isServiceRunning = isServiceRunning,
-                        totalCallsToday = totalCount,
-                        syncedCalls = syncedCount,
-                        pendingCalls = pendingCount,
-                        recentCalls = todayRecords.take(10), // Passed to HomeScreenContent
-                        careTypeOptions = careTypeOptions,
-                        selectedCareType = selectedCareType,
-                        onCareTypeSelected = { option ->
-                            viewModel.onCareTypeSelected(option, context)
-                        },
-                        onToggleService = { enable ->
-                            if (enable) {
-                                val intent = Intent(context, TelesalesForegroundService::class.java)
-                                ContextCompat.startForegroundService(context, intent)
-                                Toast.makeText(context, resources.getString(R.string.home_service_start_success), Toast.LENGTH_SHORT).show()
-                            } else {
-                                showConfirmStopServiceDialog = true
-                            }
-                        },
-                        onSyncNowClick = {
-                            val filesToSync =
-                                audioFiles.filter { it.status == SyncStatus.PENDING || it.status == SyncStatus.FAILED }
-                            if (filesToSync.isEmpty()) {
-                                Toast.makeText(
-                                    context,
-                                    resources.getString(R.string.msg_no_file_to_sync),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } else {
-                                viewModel.syncFiles(context, filesToSync) { msg, _ ->
-                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            HomeScreenContent(
+                                isServiceRunning = isServiceRunning,
+                                totalCallsToday = totalCount,
+                                syncedCalls = syncedCount,
+                                pendingCalls = pendingCount,
+                                recentCalls = todayRecords.take(10), // Passed to HomeScreenContent
+                                careTypeOptions = careTypeOptions,
+                                selectedCareType = selectedCareType,
+                                onCareTypeSelected = { option ->
+                                    viewModel.onCareTypeSelected(option, context)
+                                },
+                                onToggleService = { enable ->
+                                    if (enable) {
+                                        val intent = Intent(context, TelesalesForegroundService::class.java)
+                                        ContextCompat.startForegroundService(context, intent)
+                                        Toast.makeText(context, resources.getString(R.string.home_service_start_success), Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        showConfirmStopServiceDialog = true
+                                    }
+                                },
+                                onSyncNowClick = {
+                                    val filesToSync =
+                                        audioFiles.filter { it.status == SyncStatus.PENDING || it.status == SyncStatus.FAILED }
+                                    if (filesToSync.isEmpty()) {
+                                        Toast.makeText(
+                                            context,
+                                            resources.getString(R.string.msg_no_file_to_sync),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        viewModel.syncFiles(context, filesToSync) { msg, _ ->
+                                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                        }
+                                    }
                                 }
-                            }
+                            )
                         }
-                    )
-                }
 
-                1 -> {
-                    HistoryScreenContent(
-                        audioFiles = audioFiles,
-                        failedCallEvents = failedCallEvents,
-                        currentlyPlayingPath = currentlyPlayingPath,
-                        onPlayClick = { filePath -> playOrStop(filePath) },
-                        onSyncClick = { item ->
-                            viewModel.syncFiles(context, listOf(item)) { msg, _ ->
-                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                            }
-                        },
-                        onDeleteFailedCall = { eventId ->
-                            viewModel.deleteFailedCallEvent(context, eventId)
+                        1 -> {
+                            HistoryScreenContent(
+                                audioFiles = audioFiles,
+                                failedCallEvents = failedCallEvents,
+                                currentlyPlayingPath = currentlyPlayingPath,
+                                onPlayClick = { filePath -> playOrStop(filePath) },
+                                onSyncClick = { item ->
+                                    viewModel.syncFiles(context, listOf(item)) { msg, _ ->
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                    }
+                                },
+                                onDeleteFailedCall = { eventId ->
+                                    viewModel.deleteFailedCallEvent(context, eventId)
+                                }
+                            )
                         }
-                    )
-                }
 
-                2 -> {
-                    SettingsScreenContent(
-                        context = context,
-                        onLogoutClick = onLogout
-                    )
+                        2 -> {
+                            SettingsScreenContent(
+                                context = context,
+                                onLogoutClick = onLogout
+                            )
+                        }
+                    }
+
                 }
             }
 
@@ -504,7 +512,7 @@ fun MainScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .background(SyncOverlay)
                         .clickable(enabled = false) {},
                     contentAlignment = Alignment.Center
                 ) {
@@ -553,14 +561,14 @@ fun MainScreen(
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(Dimens.Size20),
                             strokeWidth = Dimens.Space2
                         )
                     } else {
                         Text(
                             stringResource(R.string.home_service_stop_confirm_btn),
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -667,14 +675,14 @@ fun MainScreen(
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(Dimens.Size20),
                             strokeWidth = Dimens.Space2
                         )
                     } else {
                         Text(
                             text = stringResource(R.string.home_service_stop_otp_confirm),
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontWeight = FontWeight.Bold
                         )
                     }

@@ -83,13 +83,30 @@ class CallRecordRepositoryImpl(
         FileLogger.log(
             appContext,
             "UPLOAD_START",
-            "Bắt đầu gửi request POST /call-records | careType=$careTypeValue | isAnswered=$isAnsweredString | Từ: ${metadata.phoneNumberFrom} | Tới: ${metadata.phoneNumberTo} | Loại: ${metadata.callType.wireValue} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted} | File đính kèm: ${if (bodyPart != null) "Có" else "Không (null)"}"
+            "Bắt đầu gửi request POST /call-records | careType=$careTypeValue | isAnswered=$isAnsweredString | Từ: ${FileLogger.maskPhone(metadata.phoneNumberFrom)} | Tới: ${FileLogger.maskPhone(metadata.phoneNumberTo)} | Loại: ${metadata.callType.wireValue} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted} | File đính kèm: ${if (bodyPart != null) "Có" else "Không (null)"}"
         )
         android.util.Log.d(
             "API_LOG",
-            "--> Gửi Multipart POST /call-records | care_type=$careTypeValue | is_answered=$isAnsweredString | from=${metadata.phoneNumberFrom} | to=${metadata.phoneNumberTo} | type=${metadata.callType.wireValue} | duration=${metadata.durationSeconds}s | call_at=${metadata.callAtFormatted} | file=${if (bodyPart != null) "Có" else "Không"}"
+            "--> Gửi Multipart POST /call-records | care_type=$careTypeValue | is_answered=$isAnsweredString | from=${FileLogger.maskPhone(metadata.phoneNumberFrom)} | to=${FileLogger.maskPhone(metadata.phoneNumberTo)} | type=${metadata.callType.wireValue} | duration=${metadata.durationSeconds}s | call_at=${metadata.callAtFormatted} | file=${if (bodyPart != null) "Có" else "Không"}"
         )
 
+        val latitude = metadata.latitude
+        val longitude = metadata.longitude
+        val hasLocation = latitude != null && longitude != null &&
+            latitude.isFinite() && longitude.isFinite() &&
+            latitude in -90.0..90.0 && longitude in -180.0..180.0
+        val latitudePart = if (hasLocation) latitude.toString().toRequestBody(textMediaType) else null
+        val longitudePart = if (hasLocation) longitude.toString().toRequestBody(textMediaType) else null
+        val locationReason = when {
+            hasLocation -> "attached"
+            latitude == null && longitude == null -> "missing_coordinates"
+            else -> "invalid_or_incomplete_coordinates"
+        }
+        FileLogger.logLocal(
+            appContext,
+            "API_LOG",
+            "location_upload call_id=${metadata.callId} latitude=${latitude.takeIf { hasLocation }} longitude=${longitude.takeIf { hasLocation }} latitude_present=${latitudePart != null} longitude_present=${longitudePart != null} location_attached=${latitudePart != null && longitudePart != null} reason=$locationReason"
+        )
         val response = try {
             apiService.uploadCallRecord(
                 apiKey = RetrofitClient.DEFAULT_API_KEY,
@@ -101,7 +118,9 @@ class CallRecordRepositoryImpl(
                 duration = metadata.durationSeconds.toString().toRequestBody(textMediaType),
                 callAt = metadata.callAtFormatted?.toRequestBody(textMediaType),
                 isAnswered = isAnsweredString.toRequestBody(textMediaType),
-                careType = careTypeValue?.toString()?.toRequestBody(textMediaType)
+                careType = careTypeValue?.toString()?.toRequestBody(textMediaType),
+                latitude = latitudePart,
+                longitude = longitudePart
             )
         } catch (ioe: IOException) {
             val isFileNotFound = ioe is FileNotFoundException || ioe.cause is FileNotFoundException
@@ -113,7 +132,7 @@ class CallRecordRepositoryImpl(
                     customKeys = mapOf("error" to (ioe.message ?: ""))
                 )
                 return Resource.Error(
-                    message = "Tệp ghi âm không tồn tại hoặc đã bị xóa trên thiết bị",
+                    message = messageProvider.getRecordingMissingMessage(),
                     source = ErrorSource.APP_CLIENT
                 )
             }
@@ -124,31 +143,30 @@ class CallRecordRepositoryImpl(
                 ioe
             )
             return Resource.Error(
-                message = "Không thể kết nối máy chủ",
+                message = messageProvider.getConnectionFailedMessage(),
                 source = ErrorSource.NETWORK
             )
         }
 
         val code = response.code()
         return if (response.isSuccessful && code in setOf(200, 201)) {
-            val responseBody = response.body()?.string()
-            android.util.Log.d("API_LOG", "Upload File Success - Code: $code, Body: $responseBody")
+            response.body()?.close()
+            android.util.Log.d("API_LOG", "Upload thành công - HTTP $code")
             FileLogger.log(
                 appContext,
                 "API_SUCCESS",
-                "Upload thành công (HTTP $code) | Server phản hồi: $responseBody"
+                "Upload thành công (HTTP $code)"
             )
             Resource.Success(data = true, message = messageProvider.getUploadSuccessMessage())
         } else {
             val errorBody = response.errorBody()?.string()
-            android.util.Log.d("API_LOG", "Upload File Failed - Code: $code, Body: $errorBody")
+            android.util.Log.d("API_LOG", "Upload thất bại - HTTP $code")
             FileLogger.logNonFatalError(
                 context = appContext,
                 tag = "API_FAILURE",
-                message = "Upload bị từ chối (HTTP $code) | Chi tiết lỗi Server: $errorBody",
+                message = "Upload bị từ chối (HTTP $code)",
                 customKeys = mapOf(
                     "http_code" to code,
-                    "server_error_body" to (errorBody ?: ""),
                     "care_type" to (careTypeValue ?: -1)
                 )
             )

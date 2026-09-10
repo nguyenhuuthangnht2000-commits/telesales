@@ -663,3 +663,57 @@
 
 *Cập nhật lần cuối: 03/09/2026.*
 
+
+
+## 09/09/2026 — Vị trí tại thời điểm kết thúc cuộc gọi
+
+- Lấy một lần vị trí bằng LocationManagerCompat khi nhận sự kiện kết thúc cuộc gọi; BroadcastReceiver dùng goAsync, chờ tối đa 5 giây và hủy các yêu cầu còn lại. Chỉ nhận vị trí không quá 60 giây; không theo dõi liên tục.
+- Truyền latitude/longitude qua snapshot, ProcessCallWorker, metadata, lịch sử lỗi, WorkManager upload và luồng gửi lại sau đăng nhập. Retry giữ nguyên tọa độ; bản ghi cũ mặc định thiếu vị trí.
+- Room nâng từ 3 lên 4, migration thêm hai cột REAL nullable vào call_records và failed_calls, không xóa dữ liệu.
+- POST call-records bổ sung hai multipart part tùy chọn latitude/longitude; chỉ gửi cả cặp hợp lệ. Thiếu vị trí không chặn đồng bộ.
+- Bổ sung thông báo thiết lập vị trí trên màn hình chính, giải thích mục đích và xin quyền khi sử dụng trước quyền nền. Hỗ trợ vị trí gần đúng, từ chối quyền và tắt định vị; toàn bộ chuỗi nằm trong strings.xml.
+- Không ghi tọa độ vào log/Crashlytics. Backend cần hỗ trợ nhận và lưu hai trường mới.
+- Chưa chạy unit test, integration test, lint, build/assemble hoặc kiểm tra trên thiết bị theo yêu cầu dự án. Chưa xác nhận lưu dữ liệu ở server; chỉ rà soát mã nguồn và diff.
+
+
+### Rà soát bổ sung tính năng vị trí — 09/09/2026
+
+- Receiver chờ kết quả lưu tác vụ WorkManager trước khi kết thúc goAsync, với giới hạn bảo vệ tổng 8 giây (lấy vị trí vẫn tối đa 5 giây). Không chặn luồng chính để chờ future; có đường xử lý lỗi khởi tạo/lưu hàng đợi.
+- Kiểm tra lại quyền và dịch vụ vị trí khi nhận kết quả; nếu phiên đăng nhập/chủ sở hữu hoặc trạng thái giám sát thay đổi trong lúc chờ, bỏ tọa độ nhưng vẫn chuyển sự kiện cuộc gọi gốc vào luồng xử lý cũ.
+- Tách callback của bên gọi khỏi khối bắt lỗi LocationManager để lỗi enqueue không bị nuốt như lỗi định vị.
+- Bỏ log nguyên response/message server trong repository upload và worker để tránh ghi tọa độ do server trả lại vào log/Crashlytics. Giữ nguyên phân loại HTTP, retry, xác thực và nội dung Resource.Error cho bên sử dụng.
+- Chuẩn hóa trạng thái thiết lập vị trí bằng enum; lỗi mở quyền/cài đặt dùng ErrorDialog và chuỗi tài nguyên tiếng Việt; nội dung giải thích có thể cuộn khi chữ lớn.
+- Đưa màu trắng/lớp phủ đồng bộ trong MainScreen về theme; thông báo thiếu file/mất kết nối dùng MessageProvider và strings.xml; AppMessageProvider giữ applicationContext.
+- Rà soát chỉ bằng đọc mã và git diff; chưa chạy test, lint, build/assemble, Gradle hoặc kiểm tra thiết bị/server theo yêu cầu dự án.
+
+### Xác nhận build Debug — 09/09/2026
+
+- Theo yêu cầu người dùng, đã chạy `:app:assembleDebug --console=plain --no-daemon --stacktrace` với quyền truy cập Android SDK.
+- Kết quả: BUILD SUCCESSFUL trong 3 phút 33 giây; 79 tác vụ (31 thực thi, 48 up-to-date). Không phát hiện lỗi biên dịch; không cần sửa thêm mã nguồn trong lần build này.
+- Còn cảnh báo SDK XML phiên bản 4 trong khi công cụ chỉ hiểu đến phiên bản 3; cảnh báo không chặn build.
+- Chưa chạy unit test, integration test, lint hoặc kiểm tra trên thiết bị/server. Build thành công không xác nhận chức năng định vị và backend hoạt động thực tế.
+
+
+## 10/09/2026 — Xin quyền vị trí lần đầu và log chẩn đoán
+
+- MainActivity điều phối hoàn tất quyền hiện có trước khi LocationPermissionHost tự hiện giải thích vị trí. Hoạt động trước đăng nhập; lưu cờ giới thiệu một lần cho cả cài mới/nâng cấp, giữ trạng thái qua tái tạo Activity.
+- Quyền foreground và background được xin tuần tự. Nút Thiết lập vị trí chỉ phát yêu cầu tới host chung, không còn tự đăng ký launcher/hộp thoại riêng trong MainScreen. Bỏ qua/từ chối không chặn luồng cũ.
+- API_LOG bổ sung location_capture theo session_id, location_link nối tới call_id, và location_upload với latitude_present/longitude_present/location_attached/reason dựa trên đúng multipart part. Không log tọa độ thực, token hoặc body server.
+- Không đổi endpoint, Room/migration, thời gian lấy vị trí 5 giây, tuổi cache 60 giây hoặc dữ liệu vị trí lưu để retry. Tài liệu sử dụng và API được cập nhật.
+- Xác minh cuối: `:app:assembleDebug --console=plain --no-daemon` BUILD SUCCESSFUL trong 52 giây, 79 tác vụ (4 thực thi, 75 up-to-date). APK: app/build/outputs/apk/debug/NK_QuocTe-debug.apk. Còn cảnh báo SDK XML không chặn build. Chưa kiểm tra trên thiết bị/server hoặc chạy test/lint.
+
+
+### 10/09/2026 — Hiện tọa độ thật trong Logcat cho cả Release
+
+- Theo yêu cầu mới của người dùng, dòng API_LOG location_upload bổ sung latitude/longitude thực tế trên cả Debug và Release, không có điều kiện BuildConfig.DEBUG.
+- Khi không có cặp tọa độ hợp lệ để gửi, log hiển thị latitude=null longitude=null; giữ các cờ present/attached và reason hiện có. Không thay đổi payload hoặc logic upload.
+- Chính sách này thay thế yêu cầu ẩn giá trị tọa độ trong Logcat trước đó; không thêm giá trị thật vào FileLogger hoặc Crashlytics.
+- Đã rà soát diff và cấu hình ProGuard của dự án; chưa chạy build Release, test hoặc lint cho thay đổi này.
+
+
+### 10/09/2026 — Ghi chẩn đoán vị trí vào file log
+
+- Theo yêu cầu người dùng, location_capture, location_link và location_upload nay được ghi vào file telesales_upload_error_log.txt hiện có và Logcat trên cả Debug/Release; location_upload chứa latitude/longitude thực tế của payload (hoặc null nếu không gửi).
+- Thêm FileLogger.logLocal: ghi file bằng executor một luồng, giữ applicationContext và thời điểm phát sinh log; không gửi message/tọa độ qua Crashlytics. Dùng chung hàm ghi file có khóa đồng bộ và giới hạn 10MB với log cũ.
+- Giữ nguyên đường đọc/xuất file trong app, log lỗi cũ và payload upload. Các dòng mới chỉ xuất hiện sau khi cài bản build có thay đổi và phát sinh cuộc gọi mới.
+- Chưa chạy build, test hoặc lint cho thay đổi này; đã rà soát mã/diff.

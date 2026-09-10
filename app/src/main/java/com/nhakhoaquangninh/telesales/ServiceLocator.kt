@@ -43,6 +43,10 @@ object ServiceLocator {
         }
     }
 
+    val callLocationProvider by lazy {
+        com.nhakhoaquangninh.telesales.call.CallLocationProvider(requireContext())
+    }
+
     private fun requireContext(): Context = applicationContext
         ?: error("ServiceLocator chưa được khởi tạo")
 

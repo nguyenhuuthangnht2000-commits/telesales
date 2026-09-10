@@ -17,7 +17,9 @@ data class FailedCallEvent(
     val failureReason: FailureReason = FailureReason.NOT_CONNECTED,
     val syncStatus: String = "PENDING_SERVER_SUPPORT",
     val callId: String = "",
-    val ownerUserId: Int = -1
+    val ownerUserId: Int = -1,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )
 
 class FailedCallEventManager private constructor(context: Context) {
@@ -66,7 +68,9 @@ class FailedCallEventManager private constructor(context: Context) {
             failureReason = failureReason.wireValue,
             syncStatus = syncStatus,
             callId = callId.takeIf { it.isNotBlank() },
-            ownerUserId = ownerUserId
+            ownerUserId = ownerUserId,
+            latitude = latitude,
+            longitude = longitude
         )
 
     private fun com.nhakhoaquangninh.telesales.data.local.room.FailedCallEntity.toEvent() =
@@ -83,6 +87,8 @@ class FailedCallEventManager private constructor(context: Context) {
             failureReason = FailureReason.fromWire(failureReason) ?: FailureReason.NOT_CONNECTED,
             syncStatus = syncStatus,
             callId = callId ?: "",
-            ownerUserId = ownerUserId
+            ownerUserId = ownerUserId,
+            latitude = latitude,
+            longitude = longitude
         )
 }

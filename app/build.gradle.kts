@@ -57,8 +57,8 @@ android {
         applicationId = "com.nhakhoaquangninh.telesales"
         minSdk = 28
         targetSdk = 36
-        versionCode = 11
-        versionName = "2.0"
+        versionCode = 12
+        versionName = "2.1"
     }
 
     signingConfigs {

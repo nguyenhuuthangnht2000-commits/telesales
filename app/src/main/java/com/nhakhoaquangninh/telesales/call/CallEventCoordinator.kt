@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Operation
 import androidx.work.WorkManager
 import com.nhakhoaquangninh.telesales.OwnPhoneNumberResolver
 import com.nhakhoaquangninh.telesales.ProcessCallWorker
@@ -33,11 +34,11 @@ class CallEventCoordinator(
     private val workManager = WorkManager.getInstance(appContext)
     private val failedCallEvents = FailedCallEventManager.getInstance(appContext)
 
-    fun enqueue(transition: CallTransition) {
+    fun enqueue(transition: CallTransition): Operation? {
         val snapshot = when (transition) {
             is CallTransition.ConnectedEnded -> transition.snapshot
             is CallTransition.MissedIncomingEnded -> transition.snapshot
-            CallTransition.None -> return
+            CallTransition.None -> return null
         }
         val missedIncoming = transition is CallTransition.MissedIncomingEnded
         val inputBuilder = Data.Builder()
@@ -52,6 +53,8 @@ class CallEventCoordinator(
             .putBoolean(ProcessCallWorker.KEY_ANSWERED, snapshot.answered)
             
         snapshot.careType?.let { inputBuilder.putInt(ProcessCallWorker.KEY_CARE_TYPE, it) }
+        snapshot.latitude?.let { inputBuilder.putDouble(ProcessCallWorker.KEY_LATITUDE, it) }
+        snapshot.longitude?.let { inputBuilder.putDouble(ProcessCallWorker.KEY_LONGITUDE, it) }
         val input = inputBuilder.build()
         val request = OneTimeWorkRequestBuilder<ProcessCallWorker>()
             .setInputData(input)
@@ -60,7 +63,7 @@ class CallEventCoordinator(
                 TimeUnit.MILLISECONDS
             )
             .build()
-        workManager.enqueueUniqueWork(
+        return workManager.enqueueUniqueWork(
             "Telesales_ProcessCall_${snapshot.sessionId}",
             ExistingWorkPolicy.KEEP,
             request
@@ -127,7 +130,8 @@ class CallEventCoordinator(
                     callAtFormatted = formatCallTime(decision.call.startedAtMillis),
                     isAnswered = true,
                     careType = currentCareType
-                )
+                ).copy(latitude = snapshot.latitude, longitude = snapshot.longitude)
+                com.nhakhoaquangninh.telesales.core.FileLogger.logLocal(appContext, "API_LOG", "location_link session_id=${snapshot.sessionId} call_id=${metadata.callId}")
                 uploadScheduler.enqueue(metadata)
                 notifier.notifyRecordingQueued()
             }
@@ -229,7 +233,7 @@ class CallEventCoordinator(
             callAtFormatted = formatCallTime(eventTime),
             isAnswered = isAnswered,
             careType = currentCareType
-        )
+        ).copy(latitude = snapshot.latitude, longitude = snapshot.longitude)
         val otherPhone = if (callType == CallType.INCOMING) {
             metadata.phoneNumberFrom
         } else {
@@ -246,12 +250,15 @@ class CallEventCoordinator(
                 durationSeconds = durationSeconds,
                 failureReason = failureReason,
                 callId = metadata.callId,
+                latitude = metadata.latitude,
+                longitude = metadata.longitude,
                 ownerUserId = metadata.ownerUserId
             )
         )
         notifier.notifyHistoryChanged()
         
         // Mới: Gửi tự động lên server
+        com.nhakhoaquangninh.telesales.core.FileLogger.logLocal(appContext, "API_LOG", "location_link session_id=${snapshot.sessionId} call_id=${metadata.callId}")
         uploadScheduler.enqueue(metadata)
     }
 

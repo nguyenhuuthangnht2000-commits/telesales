@@ -14,7 +14,9 @@ data class CallSessionSnapshot(
     val ownerUserId: Int,
     val ownPhoneNumber: String?,
     val careType: Int?,
-    val answered: Boolean
+    val answered: Boolean,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )
 
 sealed interface CallTransition {

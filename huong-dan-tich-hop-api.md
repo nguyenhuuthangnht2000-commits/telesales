@@ -437,3 +437,52 @@ curl -X POST https://<domain>/api/mobile/call-records \
 5. **Retry logic:** Nếu upload thất bại (timeout, 500), retry tối đa 3 lần với khoảng cách tăng dần (5s, 15s, 30s).
 6. **File ghi âm tối đa 50MB:** Nếu cuộc gọi quá dài, cân nhắc nén file trước khi gửi.
 7. **Format thời gian `call_at`:** Dùng `YYYY-MM-DD HH:mm:ss` theo timezone `Asia/Ho_Chi_Minh`.
+
+
+## Bổ sung vị trí cuộc gọi (09/09/2026)
+
+`POST /api/mobile/call-records` nhận thêm hai phần multipart tùy chọn:
+
+| Trường | Kiểu | Ý nghĩa |
+| --- | --- | --- |
+| `latitude` | Số thập phân, từ -90 đến 90 | Vĩ độ thiết bị gần lúc kết thúc cuộc gọi |
+| `longitude` | Số thập phân, từ -180 đến 180 | Kinh độ thiết bị gần lúc kết thúc cuộc gọi |
+
+Ví dụ các phần bổ sung: `-F "latitude=20.9501" -F "longitude=107.0734"`.
+App gửi cả cặp bằng `text/plain`, dấu thập phân là dấu chấm. Nếu thiếu quyền,
+tắt vị trí hoặc không lấy được vị trí trong 5 giây, app bỏ cả hai phần và vẫn
+upload cuộc gọi. Không thay dữ liệu thiếu bằng `0,0`; cặp `0,0` thực sự vẫn hợp lệ.
+Chỉ chấp nhận vị trí có tuổi tối đa 60 giây tính bằng đồng hồ đơn điệu của thiết bị.
+Độ chính xác tùy thuộc quyền người dùng cấp và tín hiệu định vị.
+
+Tọa độ được lưu tại sự kiện kết thúc cuộc gọi, trước bước tìm file ghi âm.
+Upload lại, gửi sau khi có mạng và gửi lại sau đăng nhập giữ nguyên tọa độ.
+Bản ghi cũ không có tọa độ không được lấy vị trí hiện tại để điền bù.
+Backend cần nhận, xác thực và lưu cả hai trường tùy chọn; thay đổi Android này
+không tự triển khai phần backend. Cần xác minh dữ liệu được lưu trên môi trường tích hợp.
+
+
+### Log chẩn đoán vị trí (10/09/2026)
+
+Trong Logcat, lọc `API_LOG`: `location_capture` ghi kết quả thu thập theo `session_id`,
+`location_link` ánh xạ `session_id` sang `call_id`, và `location_upload` ghi
+`latitude_present`, `longitude_present`, `location_attached` theo chính hai
+RequestBody truyền cho Retrofit, kèm `reason`. Không ghi giá trị tọa độ, token
+hoặc toàn bộ multipart. `location_attached=true` chỉ xác nhận payload chuẩn bị
+gửi có hai phần; kết quả nhận/lưu cần kiểm chứng ở server.
+
+
+**Cập nhật theo yêu cầu ngày 10/09/2026:** Dòng Logcat `API_LOG` →
+`location_upload` nay hiển thị cả `latitude=<giá trị>` và `longitude=<giá trị>`
+trên Debug lẫn Release. Nếu không gửi tọa độ, cả hai giá trị là `null`.
+Cập nhật này thay thế mô tả ẩn giá trị tọa độ trong Logcat ở trên; các cờ
+`latitude_present`, `longitude_present`, `location_attached` và `reason` vẫn giữ nguyên.
+
+
+**Cập nhật ghi file log (10/09/2026):** Các dòng `location_capture`,
+`location_link`, `location_upload` có mặt trong cả Logcat và file
+`telesales_upload_error_log.txt` hiện có. Mở hoặc chia sẻ file log trong app để
+xem trạng thái thu thập, mã đối chiếu cuộc gọi và `latitude`/`longitude` thực tế
+của payload trên cả Debug/Release. Không có tọa độ hợp lệ thì giá trị là `null`.
+Các dòng này được ghi nền, không gửi sang Crashlytics; không tự bổ sung dữ liệu
+cho các log cũ. Cần cài bản build mới và phát sinh cuộc gọi mới để thấy thay đổi.

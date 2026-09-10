@@ -2,6 +2,8 @@ package com.nhakhoaquangninh.telesales.domain.common
 
 interface MessageProvider {
     fun getTokenMissingMessage(): String
+    fun getRecordingMissingMessage(): String
+    fun getConnectionFailedMessage(): String
     fun getUploadSuccessMessage(): String
     fun getTokenExpiredMessage(): String
     fun getUploadFailedMessage(): String

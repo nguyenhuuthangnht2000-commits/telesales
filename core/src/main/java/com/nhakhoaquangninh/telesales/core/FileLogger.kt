@@ -8,6 +8,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.Executors
 
 /**
  * Tiện ích ghi log chẩn đoán sự cố hỗ trợ cơ chế Ghi Log Kép (Dual Logging):
@@ -17,6 +18,9 @@ import java.util.Locale
  */
 object FileLogger {
     private const val TAG = "FileLogger"
+    private val localLogExecutor = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "telesales-local-log").apply { isDaemon = true }
+    }
     private const val FILE_NAME = "telesales_upload_error_log.txt"
     private const val MAX_LOG_SIZE_BYTES = 10L * 1024L * 1024L // Giới hạn 10MB (~20.000 cuộc gọi)
 
@@ -131,7 +135,32 @@ object FileLogger {
      */
     @Synchronized
     fun log(context: Context, tag: String, message: String) {
-        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        appendLocalEntry(context.applicationContext, tag, message, System.currentTimeMillis())
+
+        // 2. Gửi log lên Firebase Crashlytics timeline
+        try {
+            FirebaseCrashlytics.getInstance().log("[$tag] $message")
+        } catch (e: Exception) {
+            Log.w(TAG, "Không thể gửi log lên Crashlytics: ${e.message}")
+        }
+    }
+
+    /** Ghi Logcat và file hiện có, không gửi nội dung lên Crashlytics. */
+    fun logLocal(context: Context, tag: String, message: String) {
+        val appContext = context.applicationContext
+        val timestampMillis = System.currentTimeMillis()
+        Log.d(tag, message)
+        try {
+            // Location callbacks run on main; disk writes must not delay call processing.
+            localLogExecutor.execute { appendLocalEntry(appContext, tag, message, timestampMillis) }
+        } catch (_: RuntimeException) {
+            Log.e(TAG, "Không thể lên lịch ghi file log cục bộ")
+        }
+    }
+
+    @Synchronized
+    private fun appendLocalEntry(context: Context, tag: String, message: String, timestampMillis: Long) {
+        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(timestampMillis))
         val entry = "[$timestamp] [$tag] $message\n----------------------------------------\n"
         // 1. Ghi vào file cục bộ
         try {
@@ -140,7 +169,7 @@ object FileLogger {
             if (dir != null) {
                 if (!dir.exists()) dir.mkdirs()
                 val file = File(dir, FILE_NAME)
-                // Nếu file quá 5MB, giữ lại 1 nửa gần nhất để giải phóng
+                // Nếu file quá giới hạn 10MB, giữ lại nửa gần nhất
                 if (file.exists() && file.length() > MAX_LOG_SIZE_BYTES) {
                     val lines = file.readLines()
                     if (lines.size > 200) {
@@ -155,12 +184,6 @@ object FileLogger {
             Log.e(TAG, "Lỗi khi ghi file log: ${e.message}")
         }
 
-        // 2. Gửi log lên Firebase Crashlytics timeline
-        try {
-            FirebaseCrashlytics.getInstance().log("[$tag] $message")
-        } catch (e: Exception) {
-            Log.w(TAG, "Không thể gửi log lên Crashlytics: ${e.message}")
-        }
     }
 
     /**

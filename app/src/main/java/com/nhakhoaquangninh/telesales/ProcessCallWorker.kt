@@ -24,6 +24,8 @@ class ProcessCallWorker(
             ownerUserId = inputData.getInt(KEY_OWNER_USER_ID, -1),
             ownPhoneNumber = inputData.getString(KEY_OWN_PHONE_NUMBER),
             careType = if (inputData.keyValueMap.containsKey(KEY_CARE_TYPE)) inputData.getInt(KEY_CARE_TYPE, -1) else null,
+            latitude = inputData.getDouble(KEY_LATITUDE, Double.NaN).takeIf { it.isFinite() },
+            longitude = inputData.getDouble(KEY_LONGITUDE, Double.NaN).takeIf { it.isFinite() },
             answered = inputData.getBoolean(KEY_ANSWERED, false)
         )
         return try {
@@ -43,6 +45,8 @@ class ProcessCallWorker(
     }
 
     companion object {
+        const val KEY_LATITUDE = "latitude"
+        const val KEY_LONGITUDE = "longitude"
         const val KEY_SESSION_ID = "session_id"
         const val KEY_INCOMING = "incoming"
         const val KEY_OTHER_PHONE = "other_phone"

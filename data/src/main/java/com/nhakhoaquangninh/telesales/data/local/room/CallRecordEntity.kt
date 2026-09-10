@@ -20,5 +20,7 @@ data class CallRecordEntity(
     val callId: String? = null,
     val ownerUserId: Int = -1,
     val careType: Int? = null,
-    val startedAtMillis: Long = 0
+    val startedAtMillis: Long = 0,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )

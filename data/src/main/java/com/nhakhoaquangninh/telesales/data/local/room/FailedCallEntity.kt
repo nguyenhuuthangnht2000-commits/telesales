@@ -17,5 +17,7 @@ data class FailedCallEntity(
     val failureReason: String,
     val syncStatus: String,
     val callId: String? = null,
-    val ownerUserId: Int = -1
+    val ownerUserId: Int = -1,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )

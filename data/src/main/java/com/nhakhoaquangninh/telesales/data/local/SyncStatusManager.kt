@@ -79,6 +79,8 @@ class SyncStatusManager private constructor(context: Context) {
             callId = metadata?.callId ?: existing?.callId,
             ownerUserId = metadata?.ownerUserId ?: existing?.ownerUserId ?: -1,
             careType = metadata?.careType ?: existing?.careType,
+            latitude = metadata?.latitude ?: existing?.latitude,
+            longitude = metadata?.longitude ?: existing?.longitude,
             startedAtMillis = metadata?.startedAtMillis ?: existing?.startedAtMillis ?: 0L
         )
         dao.insert(entity)
@@ -110,6 +112,8 @@ class SyncStatusManager private constructor(context: Context) {
             durationSeconds = entity.durationSeconds,
             callAtFormatted = entity.callAtFormatted,
             isAnswered = entity.isAnswered,
+            latitude = entity.latitude,
+            longitude = entity.longitude,
             careType = entity.careType
         )
     }

@@ -12,4 +12,6 @@ data class CallRecordMetadata(
     val callAtFormatted: String? = null,
     val isAnswered: Boolean = true,
     val careType: Int? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )

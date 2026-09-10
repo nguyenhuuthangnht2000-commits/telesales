@@ -77,6 +77,8 @@ class OtpVerifyViewModel : BaseViewModel() {
                     recordingUri = record.recordingUri,
                     isAnswered = record.isAnswered,
                     careType = record.careType,
+                    latitude = record.latitude,
+                    longitude = record.longitude,
                     callId = record.callId ?: java.util.UUID.randomUUID().toString(),
                     ownerUserId = record.ownerUserId,
                     startedAtMillis = record.startedAtMillis

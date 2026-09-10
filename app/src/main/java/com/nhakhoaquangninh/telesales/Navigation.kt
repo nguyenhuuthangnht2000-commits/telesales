@@ -13,7 +13,7 @@ import com.nhakhoaquangninh.telesales.ui.auth.OtpVerifyScreen
 import com.nhakhoaquangninh.telesales.ui.main.MainScreen
 
 @Composable
-fun MainNavigation() {
+fun MainNavigation(needsLocationSetup: Boolean, onRequestLocationSetup: () -> Unit) {
     val context = LocalContext.current
     val tokenManager = TokenManager.getInstance(context)
 
@@ -50,6 +50,8 @@ fun MainNavigation() {
                 }
                 entry<Main> {
                     MainScreen(
+                        needsLocationSetup = needsLocationSetup,
+                        onRequestLocationSetup = onRequestLocationSetup,
                         onLogout = {
                             val userId = tokenManager.getUserId()
                             tokenManager.clearSession()

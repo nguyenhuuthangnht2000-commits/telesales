@@ -41,6 +41,8 @@ class UploadScheduler(context: Context) {
             .putInt(UploadAudioWorker.KEY_OWNER_USER_ID, enrichedMetadata.ownerUserId)
             .putLong(UploadAudioWorker.KEY_STARTED_AT_MILLIS, enrichedMetadata.startedAtMillis)
             .apply {
+                enrichedMetadata.latitude?.let { putDouble(UploadAudioWorker.KEY_LATITUDE, it) }
+                enrichedMetadata.longitude?.let { putDouble(UploadAudioWorker.KEY_LONGITUDE, it) }
                 if (effectiveCareType != null) {
                     putInt(UploadAudioWorker.KEY_CARE_TYPE, effectiveCareType)
                 }

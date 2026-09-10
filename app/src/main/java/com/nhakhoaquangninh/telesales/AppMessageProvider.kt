@@ -3,7 +3,11 @@ package com.nhakhoaquangninh.telesales
 import android.content.Context
 import com.nhakhoaquangninh.telesales.domain.common.MessageProvider
 
-class AppMessageProvider(private val context: Context) : MessageProvider {
+class AppMessageProvider(context: Context) : MessageProvider {
+    private val context = context.applicationContext
+
+    override fun getRecordingMissingMessage(): String = context.getString(R.string.msg_recording_missing)
+    override fun getConnectionFailedMessage(): String = context.getString(R.string.msg_connection_failed)
     override fun getTokenMissingMessage(): String = context.getString(R.string.msg_token_missing)
     override fun getUploadSuccessMessage(): String = context.getString(R.string.msg_upload_success)
     override fun getTokenExpiredMessage(): String = context.getString(R.string.msg_token_expired)
