@@ -717,3 +717,11 @@
 - Thêm FileLogger.logLocal: ghi file bằng executor một luồng, giữ applicationContext và thời điểm phát sinh log; không gửi message/tọa độ qua Crashlytics. Dùng chung hàm ghi file có khóa đồng bộ và giới hạn 10MB với log cũ.
 - Giữ nguyên đường đọc/xuất file trong app, log lỗi cũ và payload upload. Các dòng mới chỉ xuất hiện sau khi cài bản build có thay đổi và phát sinh cuộc gọi mới.
 - Chưa chạy build, test hoặc lint cho thay đổi này; đã rà soát mã/diff.
+
+
+### 11/09/2026 — Lọc tổng cuộc gọi trên màn hình chính theo thời lượng đàm thoại
+
+- Theo yêu cầu của người dùng, tại tab Trang chủ của `MainScreen.kt`, danh sách cuộc gọi trong ngày (`todayRecords`) được cập nhật điều kiện lọc: chỉ tính các cuộc gọi có thời lượng đàm thoại thực tế (`durationSeconds > 0`).
+- Do toàn bộ cuộc gọi trong hệ thống đều đã là cuộc gọi đến hoặc đi (GSM), chỉ cần điều kiện `durationSeconds > 0` là đã đủ để loại bỏ 100% cuộc gọi nhỡ (missed call) và cuộc gọi không kết nối (thời lượng = 0), đồng thời tránh được việc parse enum `CallType` dư thừa.
+- Các chỉ số Tổng cuộc gọi (`totalCallsToday`), Đã đồng bộ (`syncedCalls`), Chờ tải lên (`pendingCalls`) và danh sách Cuộc gọi gần đây (`recentCalls`) trên `HomeScreenContent` đều sử dụng tập dữ liệu đã lọc này để đảm bảo tính nhất quán.
+- Chưa chạy unit test, integration test, lint, build hoặc assemble theo Quy tắc kiểm thử dự án (Rule #13 trong `AGENTS.md`).

@@ -435,7 +435,9 @@ fun MainScreen(
                                 set(java.util.Calendar.MILLISECOND, 0)
                             }.timeInMillis
 
-                            val todayRecords = callRecords.filter { it.startedAtMillis >= todayStart }
+                            val todayRecords = callRecords.filter {
+                                it.startedAtMillis >= todayStart && it.durationSeconds > 0
+                            }
 
                             val totalCount = todayRecords.size
                             val syncedCount = todayRecords.count { it.status == "SYNCED" }
