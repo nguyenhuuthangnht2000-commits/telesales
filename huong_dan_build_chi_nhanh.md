@@ -58,6 +58,9 @@ của cả hai chi nhánh.
 
 ## Trạng thái xác minh
 
-Chưa chạy Gradle sync, unit test, integration test, lint, build hoặc assemble.
-Chưa xác minh trên thiết bị thật hoặc server mới. Khi kiểm thử được yêu cầu,
-cần build từng variant release và xác minh OTP/upload đến đúng server.
+Ngày 12/10/2026, theo yêu cầu người dùng, đã build thành công cả hai variants
+release; lintVital trong luồng assemble đã qua. Đã kiểm tra chữ ký APK hợp lệ,
+cùng application ID và chứng chỉ ký bản release cũ; BuildConfig sinh đúng base URL
+cho từng chi nhánh. Hai APK có versionName `2.1.1` / versionCode `13`.
+Chưa chạy unit test hoặc integration test; chưa xác minh OTP/upload trên thiết bị
+thật hoặc server mới.

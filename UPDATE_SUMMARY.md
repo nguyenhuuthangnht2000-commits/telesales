@@ -1,5 +1,15 @@
 # 📌 TÓM TẮT CẬP NHẬT TÍNH NĂNG VÀ KIẾN TRÚC DỰ ÁN (PROJECT UPDATE SUMMARY)
 
+## 12/10/2026 — Build thành công hai APK release
+- Đã commit mã nguồn `020b097` và push lên `origin/NK_QuocTe_v2.2` theo yêu cầu người dùng.
+- Chạy `:app:assembleQuocTeRelease :app:assembleQuangNinhRelease --console=plain --no-daemon`: `BUILD SUCCESSFUL` trong 3 phút 19 giây; cả hai tác vụ lintVital release đã qua.
+- APK Quốc Tế: `app/build/outputs/apk/quocTe/release/NK_Telesales-quocTe-release.apk`.
+- APK Quảng Ninh: `app/build/outputs/apk/quangNinh/release/NK_Telesales-quangNinh-release.apk`.
+- Kiểm tra `apksigner` và `aapt`: hai APK có chữ ký hợp lệ, cùng chứng chỉ bản release cũ, cùng application ID `com.nhakhoaquangninh.telesales`, versionName `2.1.1` / versionCode `13`. Kiểm tra BuildConfig sinh ra: base URL đúng theo từng chi nhánh.
+- Không chạy unit test hoặc integration test; chưa kiểm thử OTP/upload trên thiết bị/server thật. Build có cảnh báo SDK XML và không strip được `libandroidx.graphics.path.so`, không chặn đóng gói APK.
+
+---
+
 ## 12/10/2026 — Chuẩn bị phát hành nhánh NK_QuocTe_v2.2
 - Theo yêu cầu người dùng, tạo nhánh `NK_QuocTe_v2.2` từ nhánh hiện tại và đưa vào commit toàn bộ thay đổi đang có: phục hồi file ghi âm, retry upload, log validation, cấu hình hai chi nhánh và tài liệu hướng dẫn.
 - Giữ phiên bản APK hiện tại `2.1.1` / versionCode `13`; tên nhánh không tự động thay đổi phiên bản ứng dụng.
