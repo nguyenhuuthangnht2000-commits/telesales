@@ -9,7 +9,8 @@ data class RecordingCandidate(
     val relativePath: String?,
     val modifiedAtMillis: Long,
     val durationMillis: Long?,
-    val sizeBytes: Long
+    val sizeBytes: Long,
+    val addedAtMillis: Long? = null
 )
 
 data class CallRecordingWindow(
@@ -46,6 +47,8 @@ object RecordingMatchPolicy {
     private const val LATE_TOLERANCE_MILLIS = 75_000L
     private const val MIN_DURATION_TOLERANCE_MILLIS = 10_000L
     private const val DURATION_TOLERANCE_RATIO = 0.25
+    const val FALLBACK_LATE_MILLIS = 90_000L
+    const val FALLBACK_EARLY_MILLIS = 15_000L
 
     private val approvedPathMarkers = setOf(
         "recordings/call/",
@@ -105,6 +108,44 @@ object RecordingMatchPolicy {
         return RecordingMatchResult.NeedsReview(
             assessed.firstNotNullOf { it.second }
         )
+    }
+
+    // Invoked only after the original end-time matcher returns NotFound.
+    // Require a full phone token as extra evidence before considering other timestamps.
+    fun matchFallback(
+        call: CallRecordingWindow,
+        phoneNumber: String?,
+        candidates: List<RecordingCandidate>
+    ): RecordingMatchResult {
+        val phone = normalizePhoneToken(phoneNumber.orEmpty()) ?: return RecordingMatchResult.NotFound
+        val eligible = candidates.distinctBy { it.uri }.filter { candidate ->
+            val nameMatches = Regex("\\+?\\d{10,13}").findAll(candidate.displayName).any {
+                val before = candidate.displayName.getOrNull(it.range.first - 1)
+                val after = candidate.displayName.getOrNull(it.range.last + 1)
+                before?.isDigit() != true && after?.isDigit() != true &&
+                    normalizePhoneToken(it.value) == phone
+            }
+            val modifiedNearStart = candidate.modifiedAtMillis in
+                (call.startedAtMillis - FALLBACK_EARLY_MILLIS)..(call.startedAtMillis + FALLBACK_EARLY_MILLIS)
+            // A delayed index timestamp alone is not enough: it could belong to
+            // another call to the same customer. Require it near a call boundary.
+            val addedInWindow = candidate.addedAtMillis?.let {
+                it in (call.startedAtMillis - FALLBACK_EARLY_MILLIS)..(call.startedAtMillis + FALLBACK_EARLY_MILLIS) ||
+                    it in (call.endedAtMillis - EARLY_TOLERANCE_MILLIS)..(call.endedAtMillis + LATE_TOLERANCE_MILLIS)
+            } == true
+            nameMatches && (modifiedNearStart || addedInWindow) && reviewReason(call, candidate) == null
+        }
+        return when (eligible.size) {
+            0 -> RecordingMatchResult.NotFound
+            1 -> RecordingMatchResult.Matched(eligible.single(), RecordingMatchConfidence.STRONG)
+            else -> RecordingMatchResult.NeedsReview(RecordingReviewReason.AMBIGUOUS_MATCH)
+        }
+    }
+
+    private fun normalizePhoneToken(value: String): String? {
+        val digits = value.filter(Char::isDigit)
+        val local = if (digits.startsWith("84") && digits.length == 11) "0" + digits.drop(2) else digits
+        return local.takeIf { it.length in 10..11 && it.startsWith("0") }
     }
 
     fun isApprovedSource(relativePath: String?): Boolean {

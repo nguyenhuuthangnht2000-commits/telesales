@@ -160,6 +160,18 @@ class CallRecordRepositoryImpl(
             Resource.Success(data = true, message = messageProvider.getUploadSuccessMessage())
         } else {
             val errorBody = response.errorBody()?.string()
+            if (code == 422) {
+                // Log field names only: server messages may echo phone numbers or credentials.
+                val allowedFields = setOf("recording", "is_answered", "duration", "call_type",
+                    "phone_number_from", "phone_number_to", "call_at", "care_type", "latitude", "longitude")
+                val rejectedFields = runCatching {
+                    val errors = org.json.JSONObject(errorBody.orEmpty()).optJSONObject("errors")
+                    errors?.keys()?.asSequence()?.filter { it in allowedFields }?.toList().orEmpty()
+                }.getOrDefault(emptyList())
+                FileLogger.logLocal(appContext, "API_VALIDATION",
+                    "http_code=422 call_id=${metadata.callId} rejected_fields=${rejectedFields.joinToString(",").ifEmpty { "unknown" }} " +
+                        "recording_attached=${bodyPart != null} is_answered=$isAnsweredString")
+            }
             android.util.Log.d("API_LOG", "Upload thất bại - HTTP $code")
             FileLogger.logNonFatalError(
                 context = appContext,

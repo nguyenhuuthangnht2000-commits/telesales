@@ -1,5 +1,41 @@
 # 📌 TÓM TẮT CẬP NHẬT TÍNH NĂNG VÀ KIẾN TRÚC DỰ ÁN (PROJECT UPDATE SUMMARY)
 
+## 12/10/2026 — Chuẩn bị phát hành nhánh NK_QuocTe_v2.2
+- Theo yêu cầu người dùng, tạo nhánh `NK_QuocTe_v2.2` từ nhánh hiện tại và đưa vào commit toàn bộ thay đổi đang có: phục hồi file ghi âm, retry upload, log validation, cấu hình hai chi nhánh và tài liệu hướng dẫn.
+- Giữ phiên bản APK hiện tại `2.1.1` / versionCode `13`; tên nhánh không tự động thay đổi phiên bản ứng dụng.
+- Người dùng yêu cầu commit/push trước, sau đó build `:app:assembleQuocTeRelease` và `:app:assembleQuangNinhRelease` bằng cấu hình ký release hiện có.
+- Tại thời điểm chuẩn bị commit, chưa chạy build hai flavors; sẽ ghi nhận kết quả sau khi build. Không chạy unit test hoặc integration test.
+
+---
+
+## 12/10/2026 — Chọn chi nhánh khi build APK
+- Thêm dimension `branch` và flavors `quocTe`, `quangNinh` đồng bộ ở `:app` và `:data`; sinh variants `quocTeRelease` và `quangNinhRelease` (kèm debug tương ứng).
+- `RetrofitClient.BASE_URL` lấy từ `data.BuildConfig.BASE_URL`: Quốc Tế dùng `https://quanly.thanhtoannoibo.com/api/mobile/`, Quảng Ninh dùng `https://quanly.nhakhoaquangninh.vn/api/mobile/`.
+- Giữ chung application ID, API key `TELESALES_API_KEY` và cấu hình ký release; cập nhật hook kiểm tra API key cho tất cả tác vụ `pre*ReleaseBuild`. Giữ `useLegacyPackaging = true`.
+- Đổi tiền tố APK sang `NK_Telesales` để dùng chung cho hai chi nhánh. Thêm `huong_dan_build_chi_nhanh.md` hướng dẫn chọn variant, lệnh build và chuyển chi nhánh.
+- Cài đè giữa hai chi nhánh giữ dữ liệu cũ; chưa có cơ chế tự động tách token/cache/hàng đợi. Khi chuyển chi nhánh phải đồng bộ hết dữ liệu cũ rồi xóa dữ liệu ứng dụng và đăng nhập lại theo hướng dẫn.
+- Chưa chạy Gradle sync, unit test, integration test, lint, build hoặc assemble theo quy định dự án. Chưa kiểm thử thiết bị/server mới.
+
+---
+
+## 10/10/2026 — Bản release thử nghiệm 2.1.1
+- Tăng `versionCode` từ 12 lên 13 và `versionName` từ 2.1 lên 2.1.1 để phát hành bản thử nghiệm phục hồi ghi âm.
+- Build `:app:assembleRelease` theo yêu cầu người dùng, dùng cấu hình ký release hiện có; giữ `useLegacyPackaging = true`.
+- Kết quả: `BUILD SUCCESSFUL`; lintVital trong luồng assembleRelease đã qua. Kiểm tra APK bằng `apksigner` và `aapt`: version 2.1.1/code 13, chữ ký hợp lệ và trùng chứng chỉ bản release cũ trong workspace. Bản gửi thử: `app/build/outputs/apk/release/NK_QuocTe-2.1.1-release.apk`.
+- Không chạy unit test hoặc integration test; chưa kiểm tra trực tiếp trên thiết bị Samsung/Xiaomi.
+
+---
+
+## 10/10/2026 — Bổ sung phục hồi ghi âm khi nhánh hiện tại không tìm thấy file
+- Giữ nguyên thuật toán khớp thời gian kết thúc, xử lý `NeedsReview`, nguồn ghi âm hợp lệ và upload có URI hợp lệ; chỉ thêm tìm kiếm dự phòng khi kết quả cũ là `NotFound`.
+- Nhánh dự phòng đọc thêm `DATE_ADDED` (thời điểm thêm vào MediaStore, không phải thời điểm tạo file). Yêu cầu số điện thoại đầy đủ trong tên file, thời gian gần đầu/cuối cuộc gọi, MIME audio, nguồn hợp lệ, thời lượng và kích thước hợp lệ; từ chối khi nhiều ứng viên khớp.
+- Với cuộc gọi đã nghe có metadata hợp lệ nhưng không phục hồi được URI, worker giữ `PENDING` và retry tối đa 4 lượt theo backoff WorkManager hiện tại. Sau giới hạn này mới dùng fallback gửi metadata cũ; không thay đổi cuộc gọi 0 giây/không nghe máy.
+- Khi phục hồi được URI, lưu URI mới vào metadata cache của bản ghi trước khi upload.
+- Bổ sung log `RECORDING_SEARCH` (quyền đọc âm thanh, số ứng viên, nguyên nhân cần kiểm tra, thiết bị), `RECORDING_WAIT` và `API_VALIDATION` (chỉ tên trường validation cho phép, không lưu raw response chứa thông tin cá nhân).
+- Thêm 9 ca unit test cho nhánh dự phòng và hành vi khớp cũ. Chưa chạy unit/integration test, lint, Gradle sync, build hoặc assemble theo quy định dự án. Chưa xác nhận trên Samsung/Xiaomi thực tế; file không xuất hiện trong MediaStore hoặc không có số điện thoại trong tên có thể vẫn không phục hồi được bằng nhánh này.
+
+---
+
 > **Mục đích:** File này lưu trữ lại toàn bộ các tính năng, refactor và cải tiến của dự án Telesales App theo thứ tự tăng dần từ ban đầu đến phiên bản mới nhất. Khi pull code ở máy khác hoặc mở phiên làm việc mới, AI/Dev chỉ cần đọc tệp này là hiểu ngay toàn bộ lộ trình và trạng thái hiện tại mà không cần quét lại toàn bộ codebase.
 
 ---

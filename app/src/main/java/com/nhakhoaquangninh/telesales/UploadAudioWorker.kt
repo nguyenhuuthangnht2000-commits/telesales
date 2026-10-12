@@ -122,6 +122,15 @@ class UploadAudioWorker(
                     }
 
                     if (reMatchedUri == null) {
+                        // Keep existing successful uploads untouched. Only wait for a missing
+                        // recording when the queued call metadata is valid.
+                        if (callType != null && duration > 0 && runAttemptCount < MAX_RECORDING_RECOVERY_RETRIES) {
+                            terminalStatus = SyncStatus.PENDING
+                            FileLogger.logLocal(applicationContext, "RECORDING_WAIT",
+                                "call_id=$callId reason=${validation.reason} attempt=${runAttemptCount + 1} " +
+                                    "max_retries=$MAX_RECORDING_RECOVERY_RETRIES outcome=pending")
+                            return Result.retry()
+                        }
                         // File could not be recovered on local storage.
                         // Fallback: Upload metadata without audio file to preserve call records on CRM (Zero Data Loss)
                         FileLogger.logNonFatalError(
@@ -164,6 +173,9 @@ class UploadAudioWorker(
             }
 
             val finalMetadata = metadata.copy(recordingUri = effectiveRecordingUri)
+            if (effectiveRecordingUri != null && effectiveRecordingUri != recordingUri) {
+                syncStatusManager.setMetadata(recordingId, SyncStatus.UPLOADING, finalMetadata)
+            }
             Log.d("API_LOG", "Bắt đầu Upload File (isAnswered=$isAnswered, careType=${finalMetadata.careType}, uri=${FileLogger.maskUri(finalMetadata.recordingUri)}) - Từ: ${FileLogger.maskPhone(finalMetadata.phoneNumberFrom)} | Tới: ${FileLogger.maskPhone(finalMetadata.phoneNumberTo)} | Loại: ${finalMetadata.callType} | Thời lượng: ${finalMetadata.durationSeconds}s | Lúc: ${finalMetadata.callAtFormatted}")
             
             val uploadResource = ServiceLocator.uploadCallRecordUseCase(finalMetadata)
@@ -278,5 +290,6 @@ class UploadAudioWorker(
         const val KEY_OWNER_USER_ID = "owner_user_id"
 
         private const val TAG = "UploadAudioWorker"
+        private const val MAX_RECORDING_RECOVERY_RETRIES = 4
     }
 }

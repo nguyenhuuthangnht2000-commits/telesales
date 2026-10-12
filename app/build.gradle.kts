@@ -42,12 +42,12 @@ val verifyReleaseApiKey by tasks.registering {
     }
 }
 
-tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+tasks.matching { it.name.startsWith("pre") && it.name.endsWith("ReleaseBuild") }.configureEach {
     dependsOn(verifyReleaseApiKey)
 }
 
 base {
-    archivesName.set("NK_QuocTe")
+    archivesName.set("NK_Telesales")
 }
 
 android {
@@ -57,8 +57,18 @@ android {
         applicationId = "com.nhakhoaquangninh.telesales"
         minSdk = 28
         targetSdk = 36
-        versionCode = 12
-        versionName = "2.1"
+        versionCode = 13
+        versionName = "2.1.1"
+    }
+
+    flavorDimensions += "branch"
+    productFlavors {
+        create("quocTe") {
+            dimension = "branch"
+        }
+        create("quangNinh") {
+            dimension = "branch"
+        }
     }
 
     signingConfigs {

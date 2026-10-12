@@ -28,6 +28,18 @@ android {
         buildConfigField("String", "TELESALES_API_KEY", "\"$telesalesApiKey\"")
     }
 
+    flavorDimensions += "branch"
+    productFlavors {
+        create("quocTe") {
+            dimension = "branch"
+            buildConfigField("String", "BASE_URL", "\"https://quanly.thanhtoannoibo.com/api/mobile/\"")
+        }
+        create("quangNinh") {
+            dimension = "branch"
+            buildConfigField("String", "BASE_URL", "\"https://quanly.nhakhoaquangninh.vn/api/mobile/\"")
+        }
+    }
+
     buildFeatures {
         buildConfig = true
     }

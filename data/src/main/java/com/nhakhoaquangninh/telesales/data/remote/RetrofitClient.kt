@@ -8,7 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    const val BASE_URL = "https://quanly.thanhtoannoibo.com/api/mobile/"
+    const val BASE_URL = BuildConfig.BASE_URL
     val DEFAULT_API_KEY: String
         get() = BuildConfig.TELESALES_API_KEY.trim()
 
