@@ -64,6 +64,12 @@ của cả hai chi nhánh.
 
 ## Trạng thái xác minh
 
+Ngày 13/10/2026, đã build thành công cả hai variants release phiên bản `2.1.2`
+/ versionCode `14`; lintVital đã qua. Hai APK có chữ ký hợp lệ, cùng chứng chỉ.
+Đối chiếu tài nguyên trong APK xác nhận Quảng Ninh dùng đủ 15 ảnh launcher riêng,
+Quốc Tế dùng đủ 15 ảnh launcher cũ. Chưa chạy unit/integration test hoặc thử launcher
+trên thiết bị thật.
+
 Ngày 12/10/2026, theo yêu cầu người dùng, đã build thành công cả hai variants
 release; lintVital trong luồng assemble đã qua. Đã kiểm tra chữ ký APK hợp lệ,
 cùng application ID và chứng chỉ ký bản release cũ; BuildConfig sinh đúng base URL

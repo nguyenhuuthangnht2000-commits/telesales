@@ -10,4 +10,4 @@ Các tài nguyên Android nằm trong `app/src/quangNinh/res/`, chỉ áp dụng
 - Foreground adaptive icon: 108/162/216/324/432 px, ảnh vuông được thu xuống 68% khung và căn giữa để biểu tượng nằm trong vùng an toàn. Nền trắng khai báo tại `res/values/colors.xml` của flavor.
 - Ảnh cửa hàng: `app/src/quangNinh/ic_launcher-playstore.png`, 512 × 512 px. Ảnh này dùng khi đăng cửa hàng, không tự đóng gói như tài nguyên launcher.
 
-Chưa chạy Gradle sync, build/assemble, lint, unit test, integration test hoặc kiểm tra trên thiết bị. Khi được yêu cầu kiểm thử, build variant Quảng Ninh và xem icon ở launcher tròn/bo góc; kiểm tra bản Quốc Tế vẫn dùng icon cũ.
+Ngày 13/10/2026, đã build thành công cả hai variants release phiên bản 2.1.2 / code 14 theo yêu cầu người dùng; lintVital đã qua. Đã đối chiếu SHA-256 tài nguyên trong APK: Quảng Ninh có đủ 15/15 ảnh launcher riêng, Quốc Tế có đủ 15/15 ảnh launcher cũ. Chưa chạy unit test, integration test hoặc kiểm tra launcher tròn/bo góc trên thiết bị.

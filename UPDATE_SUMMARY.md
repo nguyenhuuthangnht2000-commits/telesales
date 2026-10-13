@@ -1,5 +1,13 @@
 # 📌 TÓM TẮT CẬP NHẬT TÍNH NĂNG VÀ KIẾN TRÚC DỰ ÁN (PROJECT UPDATE SUMMARY)
 
+## 13/10/2026 — Build thành công hai APK release 2.1.2
+- Commit mã nguồn và icon: `586c431` trên nhánh `NK_QuocTe_v2.2` theo yêu cầu người dùng; chưa push.
+- Chạy `:app:assembleQuocTeRelease :app:assembleQuangNinhRelease --console=plain --no-daemon`: `BUILD SUCCESSFUL` trong 4 phút 17 giây; lintVital của cả hai variants đã qua.
+- APK: `app/build/outputs/apk/quocTe/release/NK_Telesales-quocTe-release.apk` và `app/build/outputs/apk/quangNinh/release/NK_Telesales-quangNinh-release.apk`.
+- Kiểm tra aapt: cả hai bản có versionName `2.1.2`, versionCode `14` và application ID `com.nhakhoaquangninh.telesales`. apksigner xác nhận chữ ký hợp lệ và cùng chứng chỉ release.
+- Đối chiếu SHA-256 tài nguyên trong APK: Quốc Tế chứa đủ 15/15 ảnh launcher từ main; Quảng Ninh chứa đủ 15/15 ảnh launcher riêng từ flavor quangNinh.
+- Không chạy unit test/integration test hoặc kiểm thử trên thiết bị. Build có cảnh báo SDK XML phiên bản 4, không chặn tạo APK.
+
 ## 13/10/2026 — Chuẩn bị bản release 2.1.2
 - Tăng versionName lên `2.1.2` và versionCode lên `14` cho cả Quốc Tế và Quảng Ninh.
 - Commit cùng bộ icon riêng chi nhánh Quảng Ninh và tài liệu liên quan theo yêu cầu người dùng, sau đó build hai variants release bằng cấu hình ký hiện có.
