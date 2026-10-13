@@ -1,5 +1,16 @@
 # 📌 TÓM TẮT CẬP NHẬT TÍNH NĂNG VÀ KIẾN TRÚC DỰ ÁN (PROJECT UPDATE SUMMARY)
 
+## 13/10/2026 — Chuẩn bị bản release 2.1.2
+- Tăng versionName lên `2.1.2` và versionCode lên `14` cho cả Quốc Tế và Quảng Ninh.
+- Commit cùng bộ icon riêng chi nhánh Quảng Ninh và tài liệu liên quan theo yêu cầu người dùng, sau đó build hai variants release bằng cấu hình ký hiện có.
+- Tại thời điểm chuẩn bị commit, chưa chạy build phiên bản mới. Sẽ cập nhật kết quả sau khi build; không chạy unit test hoặc integration test.
+
+## 13/10/2026 — Icon riêng cho chi nhánh Quảng Ninh
+- Dùng ảnh logo người dùng cung cấp, bỏ toàn bộ chữ “Nha Khoa Việt Mỹ”, căn giữa biểu tượng răng màu cam trên nền trắng bằng imagegen. Lưu ảnh nguồn tại `docs/branding/quang-ninh/logo.png`.
+- Thêm tài nguyên icon riêng tại `app/src/quangNinh/res/`: icon thường/tròn và foreground adaptive đủ 5 mật độ, nền trắng tập trung trong colors.xml. Adaptive icon có khoảng đệm để biểu tượng nằm trong vùng an toàn.
+- Chỉ áp dụng cho `quangNinhDebug` và `quangNinhRelease`; Quốc Tế tiếp tục dùng icon hiện có. Thêm ảnh cửa hàng 512 × 512 px và cập nhật hướng dẫn build chi nhánh.
+- Đã xem ảnh kết quả và kiểm tra kích thước các tài nguyên. Chưa chạy Gradle sync, build/assemble, lint, unit test, integration test hoặc kiểm tra launcher trên thiết bị theo quy định dự án.
+
 ## 12/10/2026 — Build thành công hai APK release
 - Đã commit mã nguồn `020b097` và push lên `origin/NK_QuocTe_v2.2` theo yêu cầu người dùng.
 - Chạy `:app:assembleQuocTeRelease :app:assembleQuangNinhRelease --console=plain --no-daemon`: `BUILD SUCCESSFUL` trong 3 phút 19 giây; cả hai tác vụ lintVital release đã qua.

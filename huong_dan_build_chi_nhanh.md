@@ -14,6 +14,12 @@ Retrofit dùng giá trị này cho toàn bộ API xác thực và upload.
 
 ## Chọn bản trong Android Studio
 
+Icon được chọn tự động theo flavor: `quangNinhDebug` và `quangNinhRelease`
+dùng biểu tượng răng màu cam trên nền trắng, đã bỏ chữ “Nha Khoa Việt Mỹ”.
+Tài nguyên riêng nằm tại `app/src/quangNinh/res/`; bản Quốc Tế dùng icon hiện có.
+Ảnh icon cửa hàng 512 × 512 px của Quảng Ninh nằm tại
+`app/src/quangNinh/ic_launcher-playstore.png`.
+
 1. Sau khi thay đổi Gradle, thực hiện Sync Project with Gradle Files.
 2. Chọn Build > Generate Signed Bundle / APK > APK và module `app`.
 3. Chọn keystore release hiện tại.
