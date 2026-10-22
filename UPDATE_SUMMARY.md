@@ -1,5 +1,12 @@
 # 📌 TÓM TẮT CẬP NHẬT TÍNH NĂNG VÀ KIẾN TRÚC DỰ ÁN (PROJECT UPDATE SUMMARY)
 
+## 22/10/2026 — Build thành công hai APK release 2.1.3
+- Commit mã nguồn ca3d593 trên nhánh NK_QuocTe_v2.2, chưa push.
+- Chạy :app:assembleQuocTeRelease :app:assembleQuangNinhRelease --console=plain --no-daemon: BUILD SUCCESSFUL trong 5 phút 47 giây; lintVital cả hai variants đã qua.
+- APK: app/build/outputs/apk/quocTe/release/NK_Telesales-quocTe-release.apk (5.393.207 bytes) và app/build/outputs/apk/quangNinh/release/NK_Telesales-quangNinh-release.apk (5.323.079 bytes).
+- aapt xác nhận cả hai versionName 2.1.3 / versionCode 15, cùng application ID com.nhakhoaquangninh.telesales. apksigner xác nhận hai chữ ký hợp lệ, cùng chứng chỉ SHA-256 72215fe5c7a7eba9db1fca3042943a45e37a952b38a84427c7f2569afe15313e. BuildConfig sinh đúng backend từng chi nhánh.
+- Không chạy unit/integration test hoặc kiểm tra trên thiết bị. Có cảnh báo SDK XML phiên bản 4 không chặn build. Tạo thêm commit tài liệu kết quả build, không push.
+
 ## 22/10/2026 — Chuẩn bị release 2.1.3 cho hai chi nhánh
 - Theo yêu cầu người dùng, tăng versionName lên 2.1.3 / versionCode 15 cho cả Quốc Tế và Quảng Ninh; commit các thay đổi log chẩn đoán rồi build hai variants release bằng cấu hình ký hiện có. Không push.
 - Tại thời điểm commit, chưa chạy build phiên bản mới. Kết quả build và kiểm tra APK sẽ được cập nhật sau; không chạy unit/integration test.
