@@ -17,6 +17,19 @@ import java.util.concurrent.Executors
  * 2. Đẩy log và Non-Fatal Exceptions lên Firebase Crashlytics để theo dõi từ xa (realtime).
  */
 object FileLogger {
+    val diagnosticSessionId: String = java.util.UUID.randomUUID().toString()
+
+    /** One-line diagnostic values; never use for credentials or raw server bodies. */
+    fun safeDiagnostic(value: String?): String = value.orEmpty()
+        .replace(Regex("[\\r\\n\\t]"), "_")
+        .replace(Regex("\\+?\\d{7,}")) { maskPhone(it.value) }
+        .take(180).ifEmpty { "unknown" }
+
+    private fun redactPhoneTokens(message: String): String =
+        message.replace(Regex("(?<![\\d])\\+?\\d{10,13}(?![\\d])")) { match ->
+            val digits = match.value.removePrefix("+")
+            if (digits.startsWith("0") || digits.startsWith("84")) maskPhone(match.value) else match.value
+        }
     private const val TAG = "FileLogger"
     private val localLogExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "telesales-local-log").apply { isDaemon = true }
@@ -139,7 +152,7 @@ object FileLogger {
 
         // 2. Gửi log lên Firebase Crashlytics timeline
         try {
-            FirebaseCrashlytics.getInstance().log("[$tag] $message")
+            FirebaseCrashlytics.getInstance().log("[$tag] ${redactPhoneTokens(message)}")
         } catch (e: Exception) {
             Log.w(TAG, "Không thể gửi log lên Crashlytics: ${e.message}")
         }
@@ -149,7 +162,7 @@ object FileLogger {
     fun logLocal(context: Context, tag: String, message: String) {
         val appContext = context.applicationContext
         val timestampMillis = System.currentTimeMillis()
-        Log.d(tag, message)
+        Log.d(tag, redactPhoneTokens(message))
         try {
             // Location callbacks run on main; disk writes must not delay call processing.
             localLogExecutor.execute { appendLocalEntry(appContext, tag, message, timestampMillis) }
@@ -161,7 +174,9 @@ object FileLogger {
     @Synchronized
     private fun appendLocalEntry(context: Context, tag: String, message: String, timestampMillis: Long) {
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(timestampMillis))
-        val entry = "[$timestamp] [$tag] $message\n----------------------------------------\n"
+        // Also redact phone tokens inside Kotlin data-class dumps and recording filenames.
+        val redacted = redactPhoneTokens(message)
+        val entry = "[$timestamp] [$tag] schema=2 session=$diagnosticSessionId $redacted\n----------------------------------------\n"
         // 1. Ghi vào file cục bộ
         try {
             val dir =
@@ -197,7 +212,7 @@ object FileLogger {
         try {
             val crashlytics = FirebaseCrashlytics.getInstance()
             crashlytics.setCustomKey("last_error_tag", tag)
-            crashlytics.setCustomKey("last_error_msg", message)
+            crashlytics.setCustomKey("last_error_msg", redactPhoneTokens(message))
             crashlytics.recordException(throwable)
         } catch (e: Exception) {
             Log.w(TAG, "Không thể gửi exception lên Crashlytics: ${e.message}")
@@ -219,10 +234,10 @@ object FileLogger {
         try {
             val crashlytics = FirebaseCrashlytics.getInstance()
             crashlytics.setCustomKey("error_tag", tag)
-            crashlytics.setCustomKey("error_message", message)
+            crashlytics.setCustomKey("error_message", redactPhoneTokens(message))
             customKeys.forEach { (k, v) ->
                 when (v) {
-                    is String -> crashlytics.setCustomKey(k, v)
+                    is String -> crashlytics.setCustomKey(k, redactPhoneTokens(v))
                     is Int -> crashlytics.setCustomKey(k, v)
                     is Long -> crashlytics.setCustomKey(k, v)
                     is Float -> crashlytics.setCustomKey(k, v)
@@ -231,7 +246,7 @@ object FileLogger {
                     else -> if (v != null) crashlytics.setCustomKey(k, v.toString())
                 }
             }
-            crashlytics.recordException(TelesalesNonFatalException("[$tag] $message"))
+            crashlytics.recordException(TelesalesNonFatalException("[$tag] ${redactPhoneTokens(message)}"))
         } catch (e: Exception) {
             Log.w(TAG, "Không thể ghi nhận Non-Fatal error lên Crashlytics: ${e.message}")
         }

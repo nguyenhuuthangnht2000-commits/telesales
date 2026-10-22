@@ -43,6 +43,24 @@ sealed interface RecordingMatchResult {
 }
 
 object RecordingMatchPolicy {
+    /** Uses the matcher itself so diagnostics cannot drift from matching rules. */
+    fun diagnosticReason(call: CallRecordingWindow, phoneNumber: String?, candidate: RecordingCandidate, fallback: Boolean): String {
+        if (!fallback && candidate.modifiedAtMillis !in
+            (call.endedAtMillis - EARLY_TOLERANCE_MILLIS)..(call.endedAtMillis + LATE_TOLERANCE_MILLIS)) {
+            return "end_time_outside_window"
+        }
+        reviewReason(call, candidate)?.let { return it.name.lowercase() }
+        if (fallback && matchFallback(call, phoneNumber, listOf(candidate)) == RecordingMatchResult.NotFound) {
+            val phone = normalizePhoneToken(phoneNumber.orEmpty()) ?: return "call_phone_unavailable"
+            val matches = Regex("\\+?\\d{10,13}").findAll(candidate.displayName).any {
+                candidate.displayName.getOrNull(it.range.first - 1)?.isDigit() != true &&
+                    candidate.displayName.getOrNull(it.range.last + 1)?.isDigit() != true &&
+                    normalizePhoneToken(it.value) == phone
+            }
+            return if (!matches) "filename_phone_mismatch" else "fallback_time_outside_window"
+        }
+        return "eligible_requires_unique_match"
+    }
     private const val EARLY_TOLERANCE_MILLIS = 15_000L
     private const val LATE_TOLERANCE_MILLIS = 75_000L
     private const val MIN_DURATION_TOLERANCE_MILLIS = 10_000L

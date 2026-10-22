@@ -35,8 +35,12 @@ class CallRecordRepositoryImpl(
     private val resolver = appContext.contentResolver
 
     override suspend fun uploadCallRecord(metadata: CallRecordMetadata): Resource<Boolean> {
+        val attemptId = java.util.UUID.randomUUID().toString()
+        val trace = "call_id=${metadata.callId} attempt_id=$attemptId"
+        val started = android.os.SystemClock.elapsedRealtime()
         val token = tokenManager.getToken()
         if (token.isNullOrEmpty()) {
+            FileLogger.logLocal(appContext, "UPLOAD_RESULT", "$trace outcome=not_sent reason=missing_token")
             FileLogger.logNonFatalError(
                 context = appContext,
                 tag = "AUTH_ERROR",
@@ -55,10 +59,12 @@ class CallRecordRepositoryImpl(
         val careTypeValue = metadata.careType ?: tokenManager.getSelectedCareTypeValue()
 
         var bodyPart: MultipartBody.Part? = null
+        var fileDetails = "recording_attached=false"
         val recordingUri = metadata.recordingUri
         if (metadata.isAnswered && !recordingUri.isNullOrBlank()) {
             val payload = resolvePayload(recordingUri)
             if (payload != null) {
+                fileDetails = "recording_attached=true size_bytes=${payload.sizeBytes} mime=${FileLogger.safeDiagnostic(payload.mimeType)}"
                 val recordingBody = ContentUriRequestBody(
                     resolver = resolver,
                     uri = payload.uri,
@@ -74,8 +80,8 @@ class CallRecordRepositoryImpl(
                 FileLogger.logNonFatalError(
                     context = appContext,
                     tag = "FILE_ERROR",
-                    message = "Không thể đọc tệp ghi âm từ URI: $recordingUri. Chuyển sang upload metadata không đính kèm file.",
-                    customKeys = mapOf("recordingUri" to recordingUri)
+                    message = "$trace reason=payload_unreadable uri=${FileLogger.maskUri(recordingUri)}",
+                    customKeys = mapOf("call_id" to metadata.callId)
                 )
             }
         }
@@ -83,7 +89,7 @@ class CallRecordRepositoryImpl(
         FileLogger.log(
             appContext,
             "UPLOAD_START",
-            "Bắt đầu gửi request POST /call-records | careType=$careTypeValue | isAnswered=$isAnsweredString | Từ: ${FileLogger.maskPhone(metadata.phoneNumberFrom)} | Tới: ${FileLogger.maskPhone(metadata.phoneNumberTo)} | Loại: ${metadata.callType.wireValue} | Thời lượng: ${metadata.durationSeconds}s | Lúc: ${metadata.callAtFormatted} | File đính kèm: ${if (bodyPart != null) "Có" else "Không (null)"}"
+            "$trace backend=${RetrofitClient.BASE_URL} $fileDetails care_type=$careTypeValue is_answered=$isAnsweredString from=${FileLogger.maskPhone(metadata.phoneNumberFrom)} to=${FileLogger.maskPhone(metadata.phoneNumberTo)} type=${metadata.callType.wireValue} duration_s=${metadata.durationSeconds} call_at=${metadata.callAtFormatted}"
         )
         android.util.Log.d(
             "API_LOG",
@@ -122,7 +128,12 @@ class CallRecordRepositoryImpl(
                 latitude = latitudePart,
                 longitude = longitudePart
             )
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            FileLogger.logLocal(appContext, "UPLOAD_RESULT", "$trace outcome=cancelled elapsed_ms=${android.os.SystemClock.elapsedRealtime() - started}")
+            throw cancelled
         } catch (ioe: IOException) {
+            FileLogger.logLocal(appContext, "UPLOAD_RESULT",
+                "$trace outcome=io_error exception=${ioe.javaClass.simpleName} cause=${ioe.cause?.javaClass?.simpleName ?: "none"} elapsed_ms=${android.os.SystemClock.elapsedRealtime() - started}")
             val isFileNotFound = ioe is FileNotFoundException || ioe.cause is FileNotFoundException
             if (isFileNotFound) {
                 FileLogger.logNonFatalError(
@@ -149,13 +160,19 @@ class CallRecordRepositoryImpl(
         }
 
         val code = response.code()
+        // Only known diagnostic headers, never raw response content or authentication headers.
+        FileLogger.logLocal(appContext, "UPLOAD_RESULT",
+            "$trace http=$code elapsed_ms=${android.os.SystemClock.elapsedRealtime() - started} " +
+                "server_request_id=${FileLogger.safeDiagnostic(response.headers()["X-Request-ID"] ?: response.headers()["X-Correlation-ID"])} " +
+                "retry_after=${FileLogger.safeDiagnostic(response.headers()["Retry-After"])} " +
+                "server_date=${FileLogger.safeDiagnostic(response.headers()["Date"])}")
         return if (response.isSuccessful && code in setOf(200, 201)) {
             response.body()?.close()
             android.util.Log.d("API_LOG", "Upload thành công - HTTP $code")
             FileLogger.log(
                 appContext,
                 "API_SUCCESS",
-                "Upload thành công (HTTP $code)"
+                "$trace Upload thành công (HTTP $code)"
             )
             Resource.Success(data = true, message = messageProvider.getUploadSuccessMessage())
         } else {
@@ -169,14 +186,14 @@ class CallRecordRepositoryImpl(
                     errors?.keys()?.asSequence()?.filter { it in allowedFields }?.toList().orEmpty()
                 }.getOrDefault(emptyList())
                 FileLogger.logLocal(appContext, "API_VALIDATION",
-                    "http_code=422 call_id=${metadata.callId} rejected_fields=${rejectedFields.joinToString(",").ifEmpty { "unknown" }} " +
+                    "$trace http_code=422 rejected_fields=${rejectedFields.joinToString(",").ifEmpty { "unknown" }} " +
                         "recording_attached=${bodyPart != null} is_answered=$isAnsweredString")
             }
             android.util.Log.d("API_LOG", "Upload thất bại - HTTP $code")
             FileLogger.logNonFatalError(
                 context = appContext,
                 tag = "API_FAILURE",
-                message = "Upload bị từ chối (HTTP $code)",
+                message = "$trace Upload bị từ chối (HTTP $code)",
                 customKeys = mapOf(
                     "http_code" to code,
                     "care_type" to (careTypeValue ?: -1)

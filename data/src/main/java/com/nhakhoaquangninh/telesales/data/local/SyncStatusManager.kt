@@ -123,6 +123,13 @@ class SyncStatusManager private constructor(context: Context) {
         return dao.getById(recordingId)?.failureReason
     }
 
+    fun diagnosticSummary(ownerUserId: Int): String {
+        val counts = listOf("PENDING", "UPLOADING", "FAILED", "NEEDS_REVIEW", "RETRYABLE")
+            .joinToString(" ") { "${it.lowercase()}=${dao.countDiagnosticStatus(ownerUserId, it)}" }
+        val oldest = dao.oldestUnresolvedCall(ownerUserId)
+        return "$counts oldest_unresolved_age_ms=${oldest?.let { (System.currentTimeMillis() - it).coerceAtLeast(0) } ?: -1}"
+    }
+
     @Synchronized
     fun removeStatus(recordingId: String) {
         dao.delete(recordingId)

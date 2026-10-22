@@ -22,19 +22,21 @@ class RecordingLocator(context: Context) {
             durationSeconds = call.durationSeconds
         )
         val originalCandidates = queryRecordings(call.endedAtMillis)
+        logCandidates(call, window, originalCandidates, false)
         val original = RecordingMatchPolicy.match(window, originalCandidates)
         if (original is RecordingMatchResult.NeedsReview) {
             FileLogger.logLocal(appContext, "RECORDING_SEARCH", "outcome=needs_review reason=${original.reason}")
         }
         if (original != RecordingMatchResult.NotFound) return original
         val fallbackCandidates = queryRecordings(call.endedAtMillis, window)
+        logCandidates(call, window, fallbackCandidates, true)
         val fallback = RecordingMatchPolicy.matchFallback(window, call.phoneNumber, fallbackCandidates)
         val readPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             android.Manifest.permission.READ_MEDIA_AUDIO
         } else android.Manifest.permission.READ_EXTERNAL_STORAGE
         val canReadAudio = appContext.checkSelfPermission(readPermission) == android.content.pm.PackageManager.PERMISSION_GRANTED
         FileLogger.logLocal(appContext, "RECORDING_SEARCH",
-            "original_count=${originalCandidates.size} fallback_count=${fallbackCandidates.size} " +
+            "search_id=${call.startedAtMillis}_${call.callType.wireValue} original_count=${originalCandidates.size} fallback_count=${fallbackCandidates.size} " +
                 "read_audio_granted=$canReadAudio " +
                 "result=${when (fallback) {
                     is RecordingMatchResult.Matched -> "matched"
@@ -42,6 +44,21 @@ class RecordingLocator(context: Context) {
                     RecordingMatchResult.NotFound -> "not_found"
                 }} device=${Build.MANUFACTURER}/${Build.MODEL} sdk=${Build.VERSION.SDK_INT}")
         return fallback
+    }
+
+    private fun logCandidates(call: CallLogEntry, window: CallRecordingWindow, candidates: List<RecordingCandidate>, fallback: Boolean) {
+        val searchId = "${call.startedAtMillis}_${call.callType.wireValue}"
+        FileLogger.logLocal(appContext, "RECORDING_CANDIDATES",
+            "search_id=$searchId fallback=$fallback count=${candidates.size} logged=${minOf(candidates.size, 20)} " +
+                "call_start_ms=${window.startedAtMillis} call_end_ms=${window.endedAtMillis} duration_s=${window.durationSeconds}")
+        candidates.take(20).forEach { candidate ->
+            FileLogger.logLocal(appContext, "RECORDING_CANDIDATE",
+                "search_id=$searchId fallback=$fallback uri=${FileLogger.maskUri(candidate.uri)} " +
+                    "source_approved=${RecordingMatchPolicy.isApprovedSource(candidate.relativePath)} " +
+                    "mime=${FileLogger.safeDiagnostic(candidate.mimeType)} size_bytes=${candidate.sizeBytes} duration_ms=${candidate.durationMillis} " +
+                    "modified_ms=${candidate.modifiedAtMillis} added_ms=${candidate.addedAtMillis} " +
+                    "reason=${RecordingMatchPolicy.diagnosticReason(window, call.phoneNumber, candidate, fallback)}")
+        }
     }
 
     fun getApprovedRecordings(): List<RecordingCandidate> =

@@ -57,8 +57,8 @@ android {
         applicationId = "com.nhakhoaquangninh.telesales"
         minSdk = 28
         targetSdk = 36
-        versionCode = 14
-        versionName = "2.1.2"
+        versionCode = 15
+        versionName = "2.1.3"
     }
 
     flavorDimensions += "branch"

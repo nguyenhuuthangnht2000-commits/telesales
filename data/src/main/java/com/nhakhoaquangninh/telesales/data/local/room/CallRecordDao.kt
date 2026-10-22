@@ -7,6 +7,12 @@ import androidx.room.Query
 
 @Dao
 interface CallRecordDao {
+    @Query("SELECT COUNT(*) FROM call_records WHERE ownerUserId = :ownerUserId AND status = :status")
+    fun countDiagnosticStatus(ownerUserId: Int, status: String): Int
+
+    @Query("SELECT MIN(startedAtMillis) FROM call_records WHERE ownerUserId = :ownerUserId AND status IN ('PENDING', 'UPLOADING', 'RETRYABLE', 'FAILED', 'NEEDS_REVIEW') AND startedAtMillis > 0")
+    fun oldestUnresolvedCall(ownerUserId: Int): Long?
+
     @Query("SELECT * FROM call_records WHERE id = :id")
     fun getById(id: String): CallRecordEntity?
 

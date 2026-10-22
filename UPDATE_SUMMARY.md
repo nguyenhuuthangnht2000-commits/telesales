@@ -1,5 +1,16 @@
 # 📌 TÓM TẮT CẬP NHẬT TÍNH NĂNG VÀ KIẾN TRÚC DỰ ÁN (PROJECT UPDATE SUMMARY)
 
+## 22/10/2026 — Chuẩn bị release 2.1.3 cho hai chi nhánh
+- Theo yêu cầu người dùng, tăng versionName lên 2.1.3 / versionCode 15 cho cả Quốc Tế và Quảng Ninh; commit các thay đổi log chẩn đoán rồi build hai variants release bằng cấu hình ký hiện có. Không push.
+- Tại thời điểm commit, chưa chạy build phiên bản mới. Kết quả build và kiểm tra APK sẽ được cập nhật sau; không chạy unit/integration test.
+
+## 22/10/2026 — Bổ sung log chẩn đoán cuộc gọi và upload
+- Nối tìm ghi âm, enqueue, worker và API qua search_id/call_id/work_id/attempt_id; thêm mã phiên tiến trình vào file log. Mỗi lượt API ghi HTTP, thời gian xử lý, X-Request-ID/X-Correlation-ID, Retry-After và Date nếu server trả về; không ghi raw response/token/API key.
+- WORK_CONTEXT ghi thiết bị, SDK, phiên bản/code app, backend, chủ bản ghi, tuổi cuộc gọi, số queued/effective đã che. PHONE_SOURCE ghi nguồn tài khoản/SIM dự phòng, quyền/trạng thái đọc SIM, slot/subscription và chênh lệch số tài khoản với SIM đọc được. Chưa xác định SIM thực sự tham gia cuộc gọi: ghi rõ unknown; không đổi logic ưu tiên số tài khoản.
+- Ghi tối đa 20 ứng viên mỗi lượt tìm và lý do loại dựa trên chính chính sách matcher. Bổ sung quyết định retry/kết quả worker, tình trạng hàng đợi theo chủ bản ghi và tuổi cuộc gọi chưa xử lý lâu nhất.
+- Che thêm số điện thoại trong tên file và data-class dump qua FileLogger; không ghi nguyên nội dung phản hồi API. Log cũ không được sửa ngược. Thêm docs/huong-dan-log-chan-doan.md và RecordingDiagnosticTest (chưa chạy).
+- Chưa chạy Gradle sync, build/assemble, lint, unit test, integration test hoặc kiểm tra thiết bị theo quy định dự án. Chưa commit/push. Đây là thay đổi chẩn đoán, chưa sửa lỗi số người gọi, HTTP 500 hoặc chính sách retry.
+
 ## 13/10/2026 — Build thành công hai APK release 2.1.2
 - Commit mã nguồn và icon: `586c431` trên nhánh `NK_QuocTe_v2.2` theo yêu cầu người dùng; chưa push.
 - Chạy `:app:assembleQuocTeRelease :app:assembleQuangNinhRelease --console=plain --no-daemon`: `BUILD SUCCESSFUL` trong 4 phút 17 giây; lintVital của cả hai variants đã qua.

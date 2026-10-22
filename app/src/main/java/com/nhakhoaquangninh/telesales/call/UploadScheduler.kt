@@ -61,6 +61,10 @@ class UploadScheduler(context: Context) {
                 java.util.concurrent.TimeUnit.MILLISECONDS
             )
             .build()
+        com.nhakhoaquangninh.telesales.core.FileLogger.logLocal(appContext, "UPLOAD_ENQUEUE",
+            "call_id=${metadata.callId} search_id=${metadata.startedAtMillis}_${metadata.callType.wireValue} " +
+                "requested_work_id=${request.id} policy=KEEP network=CONNECTED backoff=EXPONENTIAL base_backoff_s=15 " +
+                "enqueue_outcome=requested_existing_work_may_be_kept")
         workManager.enqueueUniqueWork(
             "Telesales_Upload_${recordingId.hashCode()}",
             ExistingWorkPolicy.KEEP,

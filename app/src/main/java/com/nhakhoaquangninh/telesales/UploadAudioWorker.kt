@@ -64,6 +64,25 @@ class UploadAudioWorker(
         )
 
         return try {
+            val appVersion = runCatching {
+                val info = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    applicationContext.packageManager.getPackageInfo(applicationContext.packageName,
+                        android.content.pm.PackageManager.PackageInfoFlags.of(0))
+                } else {
+                    @Suppress("DEPRECATION")
+                    applicationContext.packageManager.getPackageInfo(applicationContext.packageName, 0)
+                }
+                "${info.versionName}/${androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(info)}"
+            }.getOrDefault("unknown")
+            FileLogger.logLocal(applicationContext, "WORK_CONTEXT",
+                "call_id=$callId work_id=$id attempt=${runAttemptCount + 1} owner_user_id=$ownerUserId " +
+                    "device=${android.os.Build.MANUFACTURER}/${android.os.Build.MODEL} sdk=${android.os.Build.VERSION.SDK_INT} " +
+                    "app_version=$appVersion backend=${com.nhakhoaquangninh.telesales.data.remote.RetrofitClient.BASE_URL} " +
+                    "call_age_ms=${(System.currentTimeMillis() - startedAtMillis).coerceAtLeast(0)} " +
+                    "search_id=${startedAtMillis}_${metadata.callType.wireValue} " +
+                    "queued_from=${FileLogger.maskPhone(queuedMetadata.phoneNumberFrom)} queued_to=${FileLogger.maskPhone(queuedMetadata.phoneNumberTo)} " +
+                    "effective_from=${FileLogger.maskPhone(metadata.phoneNumberFrom)} effective_to=${FileLogger.maskPhone(metadata.phoneNumberTo)}")
+            OwnPhoneNumberResolver.logDiagnostics(applicationContext, callId, id.toString())
             FileLogger.setCustomKey("call_phone_from", FileLogger.maskPhone(metadata.phoneNumberFrom))
             FileLogger.setCustomKey("call_phone_to", FileLogger.maskPhone(metadata.phoneNumberTo))
             FileLogger.setCustomKey("call_type", metadata.callType.wireValue)
@@ -181,6 +200,10 @@ class UploadAudioWorker(
             val uploadResource = ServiceLocator.uploadCallRecordUseCase(finalMetadata)
             val decision = UploadWorkPolicy.decide(uploadResource)
             terminalStatus = decision.terminalStatus
+            FileLogger.logLocal(applicationContext, "WORK_DECISION",
+                "call_id=$callId work_id=$id attempt=${runAttemptCount + 1} next_action=${decision.result} " +
+                    "http=${(uploadResource as? Resource.Error)?.code} error_source=${(uploadResource as? Resource.Error)?.source} " +
+                    "backoff=exponential base_backoff_s=15")
             when (decision.result) {
                 UploadWorkResult.SUCCESS -> {
                     ServiceLocator.complianceNotifier.notifyUploadSuccess(metadata)
@@ -238,7 +261,7 @@ class UploadAudioWorker(
             }
         } catch (cancelled: CancellationException) {
             terminalStatus = SyncStatus.PENDING
-            FileLogger.log(applicationContext, "WORKER_CANCELLED", "Worker bị huỷ bỏ (CancellationException)")
+            FileLogger.log(applicationContext, "WORKER_CANCELLED", "call_id=$callId work_id=$id attempt=${runAttemptCount + 1} next_action=pending cancellation_cause=unknown")
             throw cancelled
         } catch (se: SecurityException) {
             failureReason = "recording_permission_denied"
@@ -251,10 +274,19 @@ class UploadAudioWorker(
             FileLogger.logException(applicationContext, "RUNTIME_EXCEPTION", "Tác vụ đồng bộ gặp lỗi RuntimeException: ${e.message}", e)
             Result.retry()
         } finally {
+            FileLogger.logLocal(applicationContext, "WORK_RESULT",
+                "call_id=$callId work_id=$id attempt=${runAttemptCount + 1} status=$terminalStatus " +
+                    "failure_reason=${failureReason ?: "none"}")
             if (failureReason != null) {
                 syncStatusManager.setFailure(recordingId, failureReason)
             } else {
                 syncStatusManager.setStatus(recordingId, terminalStatus)
+            }
+            try {
+                FileLogger.logLocal(applicationContext, "QUEUE_SNAPSHOT",
+                    "call_id=$callId owner_user_id=$ownerUserId ${syncStatusManager.diagnosticSummary(ownerUserId)}")
+            } catch (_: RuntimeException) {
+                FileLogger.logLocal(applicationContext, "QUEUE_SNAPSHOT", "call_id=$callId outcome=query_failed")
             }
             val intent = android.content.Intent("com.nhakhoaquangninh.telesales.REFRESH_RECORDINGS")
             intent.setPackage(applicationContext.packageName)
