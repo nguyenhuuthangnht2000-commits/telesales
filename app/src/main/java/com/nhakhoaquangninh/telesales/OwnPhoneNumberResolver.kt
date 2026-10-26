@@ -42,16 +42,23 @@ object OwnPhoneNumberResolver {
         val mismatch = if (state != "available" || account == null || numbers.isEmpty()) "unknown"
             else numbers.none { canonical(it) == canonical(account) }.toString()
         com.nhakhoaquangninh.telesales.core.FileLogger.logLocal(appContext, "PHONE_SOURCE",
-            "call_id=$callId work_id=$workId source=${if (account != null) "account" else "sim_fallback_or_unavailable"} " +
+            "call_id=$callId work_id=$workId priority=sim_then_account observed_source=${if (state == "available" && numbers.isNotEmpty()) "sim" else if (state == "query_failed") "unknown" else if (account != null) "account_fallback" else "unavailable"} " +
                 "account_phone=${com.nhakhoaquangninh.telesales.core.FileLogger.maskPhone(account)} " +
                 "sim_state=$state sims=[$sims] account_matches_no_sim=$mismatch call_subscription=unknown")
     }
 
     fun resolve(context: Context): String? {
         val appContext = context.applicationContext
-        TokenManager.getInstance(appContext).getSession()?.phoneNumber.normalize()
-            ?.let { return it }
+        return selectPhoneNumber(
+            simNumber = { readSimNumber(appContext) },
+            userNumber = { TokenManager.getInstance(appContext).getSession()?.phoneNumber }
+        )
+    }
 
+    internal fun selectPhoneNumber(simNumber: () -> String?, userNumber: () -> String?): String? =
+        simNumber().normalize() ?: userNumber().normalize()
+
+    private fun readSimNumber(appContext: Context): String? {
         if (ContextCompat.checkSelfPermission(
                 appContext,
                 Manifest.permission.READ_PHONE_NUMBERS

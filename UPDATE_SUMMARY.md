@@ -1,5 +1,20 @@
 # 📌 TÓM TẮT CẬP NHẬT TÍNH NĂNG VÀ KIẾN TRÚC DỰ ÁN (PROJECT UPDATE SUMMARY)
 
+## 26/10/2026 — Đưa thay đổi ưu tiên SIM lên Git
+- Theo yêu cầu người dùng, commit thay đổi resolver, log nguồn số, 4 ca kiểm thử chưa chạy và tài liệu/kết quả build; push nhánh NK_QuocTe_v2.2 lên origin. Trạng thái thực hiện được xác nhận trong kết quả lệnh Git của phiên làm việc.
+- Hai bản release 2.1.3/code 15 đã build thành công và xác minh chữ ký như mục bên dưới; không chạy lại build, unit/integration test hoặc kiểm tra thiết bị trong bước commit/push này.
+
+## 26/10/2026 — Build hai APK release với ưu tiên số SIM
+- Theo yêu cầu người dùng, build quocTeRelease và quangNinhRelease từ working tree có thay đổi ưu tiên SIM rồi fallback user; giữ versionName 2.1.3 / versionCode 15, chưa commit/push.
+- BUILD SUCCESSFUL trong 2 phút 49 giây; lintVital hai variants đã qua. Loại trừ uploadCrashlyticsMappingFileQuocTeRelease và uploadCrashlyticsMappingFileQuangNinhRelease, không upload mapping trong lần build này.
+- APK Quốc Tế: app/build/outputs/apk/quocTe/release/NK_Telesales-quocTe-release.apk (5.393.431 bytes); Quảng Ninh: app/build/outputs/apk/quangNinh/release/NK_Telesales-quangNinh-release.apk (5.323.279 bytes). apksigner xác nhận chữ ký hợp lệ, cùng chứng chỉ release hiện có.
+- Không chạy unit/integration test hoặc thử trên thiết bị. Cảnh báo SDK XML không chặn build. APK mới ghi đè file output của bản build trước cùng tên.
+
+## 26/10/2026 — Ưu tiên số điện thoại SIM trước số tài khoản
+- OwnPhoneNumberResolver.resolve đọc số SIM trước; nếu thiếu quyền READ_PHONE_NUMBERS, không có SIM/số SIM trống, hoặc truy vấn SIM gặp SecurityException/RuntimeException thì dùng số điện thoại user. Nếu cả hai không có số thì trả null như luồng xử lý hiện tại. Các nơi tạo metadata và worker upload dùng chung resolver nên cùng áp dụng thứ tự mới.
+- Cập nhật PHONE_SOURCE: priority=sim_then_account và observed_source theo lượt đọc chẩn đoán; không khẳng định đó là SIM thực sự tham gia cuộc gọi. Máy nhiều SIM vẫn lấy số hợp lệ đầu tiên trong danh sách SIM đang hoạt động, chưa ghép SIM theo CallLog.
+- Thêm 4 ca OwnPhoneNumberResolverTest về ưu tiên SIM, fallback user khi SIM null/trống, và cả hai không có số. Chưa chạy test, Gradle sync, lint, build/assemble hoặc kiểm tra thiết bị theo quy định dự án. Chưa tăng version, commit/push hay tạo APK mới.
+
 ## 22/10/2026 — Build thành công hai APK release 2.1.3
 - Commit mã nguồn ca3d593 trên nhánh NK_QuocTe_v2.2, chưa push.
 - Chạy :app:assembleQuocTeRelease :app:assembleQuangNinhRelease --console=plain --no-daemon: BUILD SUCCESSFUL trong 5 phút 47 giây; lintVital cả hai variants đã qua.
