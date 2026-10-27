@@ -65,13 +65,25 @@ class OtpVerifyViewModel : BaseViewModel() {
             .callRecordDao()
             .getPendingByOwner(ownerUserId)
         val scheduler = ServiceLocator.uploadScheduler
-        val ownPhoneNumber = OwnPhoneNumberResolver.resolve(context)
+        val callLogDataSource = ServiceLocator.callLogDataSource
 
         pendingRecords.forEach { record ->
+            val callType = CallType.fromWire(record.callType) ?: CallType.OUTGOING
+            val otherPhone = if (callType == CallType.INCOMING) record.phoneNumberFrom else record.phoneNumberTo
+            val matchedCallLog = callLogDataSource.findCallAccount(
+                startedAtMillis = record.startedAtMillis,
+                otherPhoneNumber = otherPhone,
+                callType = callType
+            )
+            val ownPhoneNumber = OwnPhoneNumberResolver.resolve(
+                context = context,
+                phoneAccountId = matchedCallLog?.phoneAccountId,
+                viaNumber = matchedCallLog?.viaNumber
+            )
             val metadata = CallRecordMetadata(
                     phoneNumberFrom = record.phoneNumberFrom,
                     phoneNumberTo = record.phoneNumberTo,
-                    callType = CallType.fromWire(record.callType) ?: CallType.OUTGOING,
+                    callType = callType,
                     durationSeconds = record.durationSeconds,
                     callAtFormatted = record.callAtFormatted,
                     recordingUri = record.recordingUri,

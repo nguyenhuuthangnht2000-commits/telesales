@@ -10,7 +10,9 @@ data class CallLogEntry(
     val phoneNumber: String?,
     val callType: CallType,
     val startedAtMillis: Long,
-    val durationSeconds: Int
+    val durationSeconds: Int,
+    val phoneAccountId: String? = null,
+    val viaNumber: String? = null
 ) {
     val endedAtMillis: Long
         get() = startedAtMillis + durationSeconds.coerceAtLeast(0) * 1_000L

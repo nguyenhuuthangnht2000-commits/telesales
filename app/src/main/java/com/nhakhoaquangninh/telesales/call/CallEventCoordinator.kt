@@ -125,7 +125,11 @@ class CallEventCoordinator(
                     recordingUri = decision.recording.uri,
                     callType = decision.call.callType,
                     otherPhoneNumber = otherPhoneNumberNormalized,
-                    ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
+                    ownPhoneNumber = OwnPhoneNumberResolver.resolve(
+                        context = appContext,
+                        phoneAccountId = decision.call.phoneAccountId,
+                        viaNumber = decision.call.viaNumber
+                    ),
                     durationSeconds = decision.call.durationSeconds,
                     callAtFormatted = formatCallTime(decision.call.startedAtMillis),
                     isAnswered = true,
@@ -228,7 +232,11 @@ class CallEventCoordinator(
             recordingUri = null,
             callType = callType,
             otherPhoneNumber = normalizedOtherPhone,
-            ownPhoneNumber = OwnPhoneNumberResolver.resolve(appContext),
+            ownPhoneNumber = OwnPhoneNumberResolver.resolve(
+                context = appContext,
+                phoneAccountId = callLog?.phoneAccountId,
+                viaNumber = callLog?.viaNumber
+            ),
             durationSeconds = durationSeconds,
             callAtFormatted = formatCallTime(eventTime),
             isAnswered = isAnswered,

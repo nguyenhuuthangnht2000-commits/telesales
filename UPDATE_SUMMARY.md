@@ -1,5 +1,17 @@
 # 📌 TÓM TẮT CẬP NHẬT TÍNH NĂNG VÀ KIẾN TRÚC DỰ ÁN (PROJECT UPDATE SUMMARY)
 
+## 27/10/2026 — Ghép đúng SIM thực hiện cuộc gọi trên máy 2 SIM theo CallLog, chạy Unit Test và build Release 2.1.4
+- Bổ sung đọc `CallLog.Calls.PHONE_ACCOUNT_ID` và `CallLog.Calls.VIA_NUMBER` trong `CallLogDataSource` (`findClosest`, `recoverFromTime`, và hàm mới `findCallAccount` có cơ chế fallback về `BASE_PROJECTION` nếu ContentProvider không hỗ trợ cột mở rộng) cùng `CallLogEntry`; truyền vào `OwnPhoneNumberResolver.resolve` và `OwnPhoneNumberResolver.logDiagnostics` từ `CallEventCoordinator`, `UploadAudioWorker` và `OtpVerifyViewModel.requeuePendingUploads`.
+- Trên máy nhiều SIM (Dual-SIM), `OwnPhoneNumberResolver` ánh xạ thêm `TelecomManager.callCapablePhoneAccounts` sang `subscriptionId` qua `TelephonyManager.getSubscriptionId(PhoneAccountHandle)` (hỗ trợ Android 10+ khi `SubscriptionInfo.getIccId()` bị ẩn), đối chiếu `phoneAccountId` của cuộc gọi với `subscriptionId`, `accountHandleIds` và `iccId` (kể cả hậu tố `F` hoặc token phân cách `/`, `:`, `;`) để lấy đúng số của SIM vừa thực hiện cuộc gọi (`observed_source=call_sim`). Nếu SIM khớp không lưu số trên thẻ nhưng `CallLog.Calls.VIA_NUMBER` có số hợp lệ thì dùng `viaNumber` (`observed_source=call_via_number`). Khi thiết bị nhiều SIM không cung cấp `phoneAccountId`, ưu tiên SIM có số khác với số tài khoản cá nhân của nhân viên (`observed_source=non_account_sim`) trước khi lấy SIM đầu tiên (`sim`) hoặc fallback số tài khoản (`account_fallback`).
+- Trên Android 13+ (`TIRAMISU`), khi `SubscriptionManager.getPhoneNumber(subscriptionId)` trả rỗng sẽ fallback đọc thêm `SubscriptionInfo.number`, `TelephonyManager.createForSubscriptionId(subId).line1Number` và `PhoneAccount.subscriptionAddress`. Log `PHONE_SOURCE` ghi rõ `call_subscription=slot=...,subscription=...` hoặc `unmatched(...)`.
+- Tăng `versionName` lên `2.1.4` và `versionCode` lên `16` trong `app/build.gradle.kts`. Bổ sung 5 unit test Dual-SIM/CallLog/Telecom handle trong `OwnPhoneNumberResolverTest` và cập nhật `docs/huong-dan-log-chan-doan.md`.
+- Đã chạy `.\gradlew.bat test --console=plain --no-daemon`: `BUILD SUCCESSFUL` trong 2 phút 35 giây (toàn bộ unit test của `:domain` và `:app` đều pass).
+- Đã chạy `.\gradlew.bat :app:assembleQuocTeRelease :app:assembleQuangNinhRelease -x uploadCrashlyticsMappingFileQuocTeRelease -x uploadCrashlyticsMappingFileQuangNinhRelease --console=plain --no-daemon`: `BUILD SUCCESSFUL` trong 3 phút 59 giây (`lintVitalQuocTeRelease` và `lintVitalQuangNinhRelease` đều pass).
+- Kết quả APK Release `2.1.4` (`versionCode = 16`):
+  - Quốc Tế: `app/build/outputs/apk/quocTe/release/NK_Telesales-quocTe-release.apk` (`5.400.967` bytes).
+  - Quảng Ninh: `app/build/outputs/apk/quangNinh/release/NK_Telesales-quangNinh-release.apk` (`5.332.735` bytes).
+- Chưa chạy integration test trên thiết bị thật; đã commit và push toàn bộ thay đổi lên nhánh `origin/NK_QuocTe_v2.2` theo yêu cầu người dùng.
+
 ## 26/10/2026 — Đưa thay đổi ưu tiên SIM lên Git
 - Theo yêu cầu người dùng, commit thay đổi resolver, log nguồn số, 4 ca kiểm thử chưa chạy và tài liệu/kết quả build; push nhánh NK_QuocTe_v2.2 lên origin. Trạng thái thực hiện được xác nhận trong kết quả lệnh Git của phiên làm việc.
 - Hai bản release 2.1.3/code 15 đã build thành công và xác minh chữ ký như mục bên dưới; không chạy lại build, unit/integration test hoặc kiểm tra thiết bị trong bước commit/push này.

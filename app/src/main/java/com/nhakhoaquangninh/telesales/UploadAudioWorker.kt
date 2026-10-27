@@ -58,9 +58,23 @@ class UploadAudioWorker(
             longitude = inputData.getDouble(KEY_LONGITUDE, Double.NaN).takeIf { it.isFinite() },
             careType = careType
         )
+        val otherPhoneForLookup = if (queuedMetadata.callType == CallType.INCOMING) {
+            queuedMetadata.phoneNumberFrom
+        } else {
+            queuedMetadata.phoneNumberTo
+        }
+        val matchedCallLog = ServiceLocator.callLogDataSource.findCallAccount(
+            startedAtMillis = startedAtMillis,
+            otherPhoneNumber = otherPhoneForLookup,
+            callType = queuedMetadata.callType
+        )
         val metadata = CallMetadataMapper.applyOwnPhoneNumber(
             queuedMetadata,
-            OwnPhoneNumberResolver.resolve(applicationContext)
+            OwnPhoneNumberResolver.resolve(
+                context = applicationContext,
+                phoneAccountId = matchedCallLog?.phoneAccountId,
+                viaNumber = matchedCallLog?.viaNumber
+            )
         )
 
         return try {
@@ -82,7 +96,13 @@ class UploadAudioWorker(
                     "search_id=${startedAtMillis}_${metadata.callType.wireValue} " +
                     "queued_from=${FileLogger.maskPhone(queuedMetadata.phoneNumberFrom)} queued_to=${FileLogger.maskPhone(queuedMetadata.phoneNumberTo)} " +
                     "effective_from=${FileLogger.maskPhone(metadata.phoneNumberFrom)} effective_to=${FileLogger.maskPhone(metadata.phoneNumberTo)}")
-            OwnPhoneNumberResolver.logDiagnostics(applicationContext, callId, id.toString())
+            OwnPhoneNumberResolver.logDiagnostics(
+                context = applicationContext,
+                callId = callId,
+                workId = id.toString(),
+                phoneAccountId = matchedCallLog?.phoneAccountId,
+                viaNumber = matchedCallLog?.viaNumber
+            )
             FileLogger.setCustomKey("call_phone_from", FileLogger.maskPhone(metadata.phoneNumberFrom))
             FileLogger.setCustomKey("call_phone_to", FileLogger.maskPhone(metadata.phoneNumberTo))
             FileLogger.setCustomKey("call_type", metadata.callType.wireValue)

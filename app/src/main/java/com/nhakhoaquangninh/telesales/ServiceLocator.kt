@@ -75,6 +75,10 @@ object ServiceLocator {
         RecordingLocator(requireContext())
     }
 
+    val callLogDataSource: CallLogDataSource by lazy {
+        CallLogDataSource(requireContext())
+    }
+
     val recordingRepository: RecordingRepository by lazy {
         MediaStoreRecordingRepository(recordingLocator)
     }
@@ -99,7 +103,7 @@ object ServiceLocator {
     val callEventCoordinator: CallEventCoordinator by lazy {
         CallEventCoordinator(
             context = requireContext(),
-            callLogDataSource = CallLogDataSource(requireContext()),
+            callLogDataSource = callLogDataSource,
             recordingLocator = recordingLocator,
             uploadScheduler = uploadScheduler,
             notifier = complianceNotifier
